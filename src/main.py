@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config import db
-from routers import auth, post_job
+from auth.router import router as auth_router 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi_events.middleware import EventHandlerASGIMiddleware
@@ -29,8 +29,7 @@ def init_app():
     def on_startup():
         db.create_all()
    
-    app.include_router(auth.router)
-    app.include_router(post_job.router)
+    app.include_router(auth_router)
     
     return app
 
