@@ -74,15 +74,46 @@ class AuthRequestRepository:
             return False
         return user
     
-    # @staticmethod
-    # def update_password(current_user, hashed_password):
-    #     result = AuthRequestRepository.get_user_by_id(current_user.id)
-    #     result.hashed_password = hashed_password,
-    #     result.updated_at = datetime.now()
-    #     #   Update rights of user => False
-    #     result.is_verify_forgot_password = False
-    #     commit_rollback()
+    @staticmethod
+    def update_password(db_session: Session,
+                        current_user, 
+                        hashed_password):
+        result = AuthRequestRepository.get_user_by_id(db_session, current_user.id)
+        result.password = hashed_password,
+        result.updated_at = datetime.now()
+        db.commit_rollback(db_session)
         
+        
+    @staticmethod
+    def add_admin(
+                db_session: Session,
+                data: schema.MemberBase):
+        db_member = model.User(
+                            fullname=data.fullname,
+                            email=data.email,
+                            password=data.password,
+                            role='admin')
+        db_session.add(db_member)
+        db.commit_rollback(db_session)
+        return db_member
+        
+    @staticmethod
+    def list_admin(db_session: Session):
+        query = select(model.User).where(model.User.role == "admin")
+        results = db_session.execute(query).scalars().all()
+        return results
+
+    @staticmethod
+    def remove_member(db_session: Session, member_id: int):    
+        query = select(model.User).where(model.User.id == member_id)
+        result = db_session.execute(query).scalars().first()
+        if result:
+            #   Delete tag
+            db_session.delete(result)
+            db.commit_rollback(db_session)
+        return result
+    
+    
 
 class OTPRepo:
     @staticmethod
@@ -99,8 +130,8 @@ class OTPRepo:
         return False
     
     @staticmethod
-    def disable_otp(db_session: Session, user_id: int):
-        result = AuthRequestRepository.get_user_by_id(db_session, user_id)
+    def disable_otp(db_session: Session, data_form: schema.VerifyOTP):
+        result = AuthRequestRepository.get_user_by_id(db_session, data_form.user_id)
         result.otp_token = None
         db.commit_rollback(db_session)
         
