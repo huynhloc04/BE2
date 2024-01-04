@@ -41,6 +41,24 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.add_middleware(EventHandlerASGIMiddleware, 
                    handlers=[local_handler])  
 
+# import shutil
+# import json
+# import time
+# import uvicorn
+# from fastapi import FastAPI, UploadFile, File, status
+# from fastapi.responses import FileResponse
+# from fastapi.staticfiles import StaticFiles
+# from fastapi.exceptions import HTTPException
+
+# app = FastAPI()
+
+# @app.post('/upload/download')
+# def upload_download(uploaded_file: UploadFile = File(...)):
+#     filename_path = f"static/{uploaded_file.filename}"
+#     with open(filename_path, 'w+b') as file:
+#         shutil.copyfileobj(uploaded_file.file, file)
+#     return FileResponse(path=filename_path, media_type="application/octet-stream", filename=uploaded_file.filename)
+
 if __name__ == '__main__':    
     uvicorn.run(
             "main:app",

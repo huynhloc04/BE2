@@ -64,12 +64,7 @@ def sign_up(background_tasks: BackgroundTasks,
     #   Check wheather this user is exist?
     user = service.AuthRequestRepository.get_user_by_email(db_session, data.email)
     if user:
-        return JSONResponse(status_code=409,
-                            content={
-                                "message": "Account already exist!",
-                                "data": None,
-                                "errorCode": 4006,
-                                "errors": None})
+        raise HTTPException(status_code=409, detail="Account already exists!")
     
     #   Hash password
     hashed_password = security.get_password_hash(password=data.password)
@@ -90,12 +85,7 @@ def sign_up(background_tasks: BackgroundTasks,
         db.commit_rollback(db_session)
 
     except Exception as error:
-        return JSONResponse(status_code=503,
-                            content={
-                                "message": "Error accounting when creating your account.",
-                                "data": None,
-                                "errorCode": 4006,
-                                "errors": None})
+        print(error)
 
     return schema.SignUpResponse(
                             user_id= user.id,
