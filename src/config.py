@@ -5,15 +5,10 @@ from sqlalchemy import create_engine
 from dotenv import load_dotenv
 
 
-load_dotenv()
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 1
+REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 
-# SECRET_KEY = "49965ba36dd915c9f80ed23e1c111190b8bf9c7c33ffe895f1a68bbcd019e566"
-# REFRESH_SECRET_KEY = "09475a6fdef6a1273a3d85b275df9e62eb7a2811f70e4b97e96b113266e743d6"
-# ALGORITHM = "HS256"
-# ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 1
-# REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
-# DB_CONFIG = 'postgresql://postgres:041101@localhost:5432/sharecv'
-# engine = create_engine(DB_CONFIG)
+load_dotenv()
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 
@@ -33,11 +28,11 @@ class DatabaseSession:
         with Session(self.engine) as session:
             yield session
 
-db = DatabaseSession()
+    def commit_rollback(self, session: Session):
+        try:
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
 
-def commit_rollback(session: Session):
-    try:
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
+db = DatabaseSession()
