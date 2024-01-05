@@ -1,0 +1,16 @@
+[Requirements]
+
+Given the two above context sections: "Resume" and "Job Description". Please compare and score strictly the similarity of the "Resume" to "Job Description" on a scale of 1.
+The answer must be in JSON format as follow: 
+{
+  "Education match": "score/100 (consider on degree and major in 'Resume', must be integer/100)",
+  "Skill match": "score/100 (must be integer/100)",
+  "Experience match": "score/100 (must be integer/100)",
+  "Overall score": "score/100 (must be integer/100)",
+  "Overall evaluation": "(give explanations as detailed as possible for the overall score)"
+}
+
+Important:
+    1. Scores must be exactly graded and must be an integer and there must be no zeros in the decimal part, also it has to present in the form of "score/100". 
+    2. Only use the information explicitly mentioned in the "Resume"
+    3. All answer must be in JSON format!
