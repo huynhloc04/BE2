@@ -1,6 +1,8 @@
 import os
 from config import db
+from typing import List, Optional
 from sqlmodel import Session
+from fastapi import Query, UploadFile
 from datetime import timedelta, datetime
 from starlette.requests import Request
 from postjob import schema, service
@@ -33,6 +35,10 @@ def get_current_active_user(
     
     return token, current_user
 
+
+# ===========================================================
+#                       Company register
+# ===========================================================
 
 @router.post("/collaborator/add-company-info",
              status_code=status.HTTP_201_CREATED, 
@@ -110,3 +116,115 @@ def update_company_info(request: Request,
                         "company_size": info.company_size
                     }
     )
+
+#   =================== Abundant API ===================
+@router.post("/collaborator/add-industry",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def add_industry(
+            industry_name: str,
+            db_session: Session = Depends(db.get_session),
+            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    info = service.Company.add_industry(industry_name, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Add industries information successfully",
+                    data={info.name}
+    )
+
+
+@router.get("/collaborator/list-industry",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def list_industry(db_session: Session = Depends(db.get_session)):
+
+    info = service.Company.list_industry(db_session)
+    return schema.CustomResponse(
+                    message=None,
+                    data={"industries": [industry.name for industry in info]}
+            )
+
+
+# ===========================================================
+#                       NTD post Job
+# ===========================================================
+
+@router.post("/collaborator/upload-jd",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def upload_jd(
+        request: Request,
+        uploaded_file: UploadFile,
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    _ = service.Job.upload_jd(request,uploaded_file, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Uploaded JD successfully",
+                    data=None
+    )
+
+
+@router.put("/collaborator/upload-jd-again",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def upload_jd(
+        request: Request,
+        uploaded_file: UploadFile,
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    _ = service.Job.upload_jd_again(request,uploaded_file, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Uploaded JD successfully",
+                    data=None
+    )
+
+
+@router.post("/collaborator/jd-parsing",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def jd_parsing(
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    _ = service.Job.jd_parsing(db_session, current_user)
+    return schema.CustomResponse(
+                    message=None,
+                    data=None
+    )
+
+
+
+# @router.put("/collaborator/update-job-info",
+#              status_code=status.HTTP_200_OK, 
+#              response_model=schema.CustomResponse)
+# def update_job_info(request: Request,
+#                     db_session: Session = Depends(db.get_session),
+#                     data_form: schema.JobUpdate = Depends(schema.JobUpdate.as_form),
+#                     credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+#     # Get curent active user
+#     _, current_user = get_current_active_user(db_session, credentials)
+
+#     info = service.Company.update_company(request, db_session, data_form, current_user)
+#     return schema.CustomResponse(
+#                     message="Update company information successfully",
+#                     data={
+#                         "company_id": info.id,
+#                         "company_name": info.company_name,
+#                         "company_size": info.company_size
+#                     }
+#     )

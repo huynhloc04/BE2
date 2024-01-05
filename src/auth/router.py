@@ -251,7 +251,7 @@ def logout(db_session: Session = Depends(db.get_session),
            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
     # Get curent active user
-    access_token, current_user = get_current_user(db_session, credentials)
+    access_token, current_user = get_current_active_user(db_session, credentials)
     
     service.OTPRepo.add_to_blacklist(db_session, access_token)
     #   Delete refresh token of the current_user => successfully logout

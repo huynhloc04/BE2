@@ -1,0 +1,44 @@
+Please extract the above [Job Description] exactly according to the corresponding keys and values as the following headers in JSON format. 
+{
+    "job_title": ["string],
+    "industry": ["string],
+    "sex": ["string],     (Please choose "male" or "female")
+    "job_type": ["string],     (Please choose "part_time" or "full_time")
+    "received_job_time": ["string],
+    "working_time": ["string],
+    "skills": ["string],
+    "descriptions": ["string],
+    "requirements": ["string],
+    "benefits": ["string],
+    "levels": ["string],
+    "roles": ["string],
+    "number_year_experience": ["string],
+    "number_candidate": ["string],  (Number of candidate to be recruited)
+    "degree": ["string],
+    "major": ["string],
+    "gpa": ["string],
+    "language_certificate": {
+        "language": ["string],
+        "certificate_name": ["string],
+        "certificate_level": ["string]
+    }
+    "language_certificate_level": ["string],
+    "other_certificates": {
+        "certificate_name": : ["string]
+        "certificate_level": ["string]
+    },
+    "salary": {
+        "min_salary": ["string],
+        "max_salary": ["string],
+    },
+    "location": {
+        "country": ["string],
+        "city": ["string],
+        "detail_address": ["string]
+    }
+}
+
+Important:
+  - Any information is not found, please note it as "N/A"
+  - All the key has to be all lower form and each word must connect by underscore "_"
+  - ["string"] mean a list of string, even if there is only one item, put it in a list of one string item.

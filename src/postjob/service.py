@@ -1,16 +1,13 @@
 import model
 from fastapi import HTTPException, Request
 from sqlalchemy import select
-import smtplib
-import ssl, os, shutil
+from fastapi import UploadFile, status
+import os, shutil
 from config import db
-from passlib.context import CryptContext
-from email.message import EmailMessage
+from config import CVPDF_PATH, JDPDF_PATH, JD_SAVED_DIR, CV_PARSE_PROMPT, JD_PARSE_PROMPT
 from postjob import schema
-from datetime import timedelta, datetime
-from pydantic import BaseModel, EmailStr
 from sqlmodel import Session
-from postjob import schema
+from postjob.api_service.extraction_service import CvExtraction
 
 
 class AuthRequestRepository:
@@ -87,9 +84,6 @@ class Company:
             if not os.path.exists(dir):
                 os.makedirs(dir)
         
-        # filenames = [data.logo.filename,
-        #              data.cover_image.filename,
-        #              data.company_video.filename]
         with open(os.path.join(os.getenv("COMPANY_DIR"), "logo",  data.logo.filename), 'w+b') as file:
             shutil.copyfileobj(data.logo.file, file)
         with open(os.path.join(os.getenv("COMPANY_DIR"), "cover_image",  data.cover_image.filename), 'w+b') as file:
@@ -135,3 +129,94 @@ class Company:
             
         db.commit_rollback(db_session)    
         return result
+    
+    @staticmethod
+    def add_industry(industry_names, db_session, user):
+        db_industry = model.Industry(
+                    user_id=user.id,
+                    name=industry_names
+        )
+        db_session.add(db_industry)
+        db.commit_rollback(db_session)
+        return db_industry
+    
+    
+    @staticmethod
+    def list_industry(db_session: Session):
+        results = db_session.execute(select(model.Industry)).scalars().all()
+        return results
+    
+
+class Job:
+
+    @staticmethod
+    def clean_filename(filename):
+        # Split the filename and file extension
+        name, extension = os.path.splitext(filename)
+        # Replace spaces with underscores in the filename
+        name = name.replace(" ", "_")
+        # Remove dots from the filename
+        name = name.replace(".", "")
+        # Concatenate the cleaned filename with the file extension
+        cleaned_filename = name + extension
+        return cleaned_filename
+    
+
+    @staticmethod
+    def upload_jd(request: Request, 
+                  uploaded_file: UploadFile, 
+                  db_session: Session, 
+                  user):
+        if uploaded_file.content_type != 'application/pdf':
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Must be PDF file")
+        
+        cleaned_filename = Job.clean_filename(uploaded_file.filename)
+        db_job = model.JobDescription(
+                    user_id=user.id,
+                    jd_file=str(request.base_url) + cleaned_filename 
+        )
+        db_session.add(db_job)
+        db.commit_rollback(db_session)
+
+        #   Save JD file
+        with open(os.path.join(JD_SAVED_DIR,  cleaned_filename), 'w+b') as file:
+            shutil.copyfileobj(uploaded_file.file, file)
+    
+
+    @staticmethod
+    def upload_jd_again(request: Request, 
+                        uploaded_file: UploadFile, 
+                        db_session: Session, 
+                        user):
+        if uploaded_file.content_type != 'application/pdf':
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Must be PDF file")
+        
+        query = select(model.JobDescription).where(model.JobDescription.user_id == user.id)
+        result = db_session.execute(query).scalars().first()
+        
+        #   Update other JD file
+        cleaned_filename = Job.clean_filename(uploaded_file.filename)
+        result.jd_file = str(request.base_url) + cleaned_filename 
+        db.commit_rollback(db_session)
+
+        #   Save JD file
+        with open(os.path.join(JD_SAVED_DIR,  cleaned_filename), 'w+b') as file:
+            shutil.copyfileobj(uploaded_file.file, file)
+
+
+    @staticmethod
+    def jd_parsing(db_session: Session, user):
+        query = select(model.JobDescription).where(model.JobDescription.user_id == user.id)
+        result = db_session.execute(query).scalars().first()
+
+        jd_path = result.jd_file
+        prompt_template = CvExtraction.jd_parsing_template(jd_path)
+
+        #   Read parsig requirements
+        with open(JD_PARSE_PROMPT, "r") as file:
+            require = file.read()
+        prompt_template += require 
+        return prompt_template
+        
+
+        

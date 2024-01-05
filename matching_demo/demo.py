@@ -7,7 +7,6 @@ import time
 import sys
 import argparse
 
-
 openai.api_key = "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"
 
 #   Read resume as text file and add prompt to it

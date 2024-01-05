@@ -85,18 +85,14 @@ class Company(TableBase, table=True):
     instagram: Optional[str] = Field(default=None)
 
 
-class Industry(TableBase, table=True):
-    __tablename__ = 'industries'
-    
-    industry_name: str = Field(default=None)
-
-
 class JobDescription(TableBase, table=True):
     __tablename__ = 'job_descriptions'
 
-    company_id: int = Field(default=None, foreign_key="companies.id")
+    user_id: int = Field(default=None, foreign_key="users.id")
+    status: str = Field(default=None)
+    job_form: str = Field(default=None)
     job_title: str = Field(default=None)
-    industry: str = Field(default=None)
+    industries: List[str] = Field(default=None)
     sex: Optional[str] = Field(default=None)
     job_type: str = Field(default=None)
     skills: List[str] = Field(default=None)
@@ -104,32 +100,36 @@ class JobDescription(TableBase, table=True):
     working_time: str = Field(default=None)
     description: str = Field(default=None)
     requirement: str = Field(default=None)
-    benefits: str = Field(default=None)
-    level: str = Field(default=None)          # (Cấp bậc đảm nhiệm)
-    roles: List[str] = Field(default=None)    # (Vai trò đảm nhiệm: Tối đa 3 lựa chọn)
+    benefits: List[str] = Field(default=None)
+    levels: List[str] = Field(default=None)
+    roles: List[str] = Field(default=None)
     yoe: int = Field(default=None)
     num_recruit: int = Field(default=None)
-    #    Học vấn
-    degree: str = Field(default=None)       # (Cử nhân, Thạc sĩ, Tiến sĩ, Kỹ sư)
+    degree: str = Field(default=None)
     major: str = Field(default=None)
-    ranking: str = Field(default=None)       # (Xuất sắc, Giỏi, Khá)
-    language: str = Field(default=None)       # (English, Chinese, Korean, Japan, Vietnamese)
-    language_level: str = Field(default=None)
-    #    Lương thưởng
-    min_salary: str = Field(default=None)     # (default: Thảo thuận)
-    max_salary: str = Field(default=None)     # (default: Thảo thuận)
-    #    Địa chỉ
+    gpa: float = Field(default=None)
+    certificate: str = Field(default=None)
+    certificate_level: str = Field(default=None)
+    min_salary: float = Field(default=None)
+    max_salary: float = Field(default=None)
+    currency: str = Field(default=None)
     address: str = Field(default=None)
     city: str = Field(default=None)
     country: str = Field(default=None)
-    #    Treo thưởng (Chỉ hiển thị khi là Headhunt)
-    point: int = Field(default=None)
-    guarantee: int = Field(default=None)
+    point: float = Field(default=None)
     jd_file: str = Field(default=None)
-    #    Tình trạng Job
-    job_status: str = Field(default="Chờ duyệt")     # JobStatus -[default: Chờ duyệt] (Chờ duyệt, Đang tuyển, Đã tuyeẻn, Tạm dừng)  
-    #    Bản nháp
-    is_draft: bool = Field(default=False)  
+    status: str = Field(default=None)
+    is_draft: bool = Field(default=False)
+    is_admin_approved: bool = Field(default=False)
+    admin_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
+    company_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
+
+
+class Industry(TableBase, table=True):
+    __tablename__ = 'industries'
+
+    job_id: int = Field(default=None, foreign_key="job_descriptions.id")
+    name: str = Field(default=None)
 
 
 class ResumeOld(TableBase, table=True):
@@ -153,7 +153,7 @@ class ResumeVersion(TableBase, table=True):
     old_id: int = Field(default=None, foreign_key="resume_olds.id")
     new_id: int = Field(default=None, foreign_key="resume_news.id")
     filename: str = Field(default=None)
-    is_lastest: bool = Field(default=False)
+    is_lastest: bool = Field(default=True)
     cv_pdf: str = Field(default=None)
     candidate_name: str = Field(default=None) 
     sex: str = Field(default=None)
@@ -173,7 +173,7 @@ class ResumeVersion(TableBase, table=True):
     instagram: Optional[str] = Field(default=None)
     resume_status: bool = Field(default="pending")
     package: str = Field(default=None)
-    point: float = Field(default=0.0)
+    cv_point: float = Field(default=0.0)
     is_valuate: bool = Field(default=False)
     is_ai_matching: bool = Field(default=False)
     is_admin_matching: bool = Field(default=False)
