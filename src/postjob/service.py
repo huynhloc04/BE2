@@ -4,10 +4,12 @@ from sqlalchemy import select
 from fastapi import UploadFile, status
 import os, shutil
 from config import db
-from config import CVPDF_PATH, JDPDF_PATH, JD_SAVED_DIR, CV_PARSE_PROMPT, JD_PARSE_PROMPT
+from config import JD_SAVED_DIR, CV_PARSE_PROMPT, JD_PARSE_PROMPT
 from postjob import schema
 from sqlmodel import Session
 from postjob.api_service.extraction_service import CvExtraction
+from postjob.api_service.openai_service import OpenAIService
+from postjob.db_service.db_service import DatabaseService
 
 
 class AuthRequestRepository:
@@ -143,7 +145,7 @@ class Company:
     
     @staticmethod
     def list_industry(db_session: Session):
-        results = db_session.execute(select(model.Industry)).scalars().all()
+        results = db_session.execute(select(model.Industry.name)).scalars().all()
         return results
     
 
@@ -205,18 +207,140 @@ class Job:
 
 
     @staticmethod
-    def jd_parsing(db_session: Session, user):
-        query = select(model.JobDescription).where(model.JobDescription.user_id == user.id)
-        result = db_session.execute(query).scalars().first()
+    def jd_parsing(job_id: int, db_session: Session, user):
+        query = select(model.JobDescription).where(
+                                            model.JobDescription.user_id == user.id,
+                                            model.JobDescription.id == job_id)
+        result = db_session.execute(query).scalars().first()        
+        if not result.jd_file:
+           raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please upload at least 1 CV_PDF")
 
-        jd_path = result.jd_file
-        prompt_template = CvExtraction.jd_parsing_template(jd_path)
+        filename = result.jd_file.split("/")[-1]
+        prompt_template = CvExtraction.jd_parsing_template(filename)
 
         #   Read parsig requirements
         with open(JD_PARSE_PROMPT, "r") as file:
             require = file.read()
         prompt_template += require 
-        return prompt_template
         
-
+        #   Start parsing
+        extracted_result = OpenAIService.gpt_api(prompt_template)
+        
+        #   Save extracted result
+        saved_path = DatabaseService.store_jd_extraction(extracted_json=extracted_result, jd_file=filename)
+        return extracted_result, saved_path
+        
+        
+    @staticmethod
+    def fill_job(data_form: schema.JobUpdate,
+                 db_session: Session,
+                 user):
+        query = select(model.JobDescription).where(
+                                            model.JobDescription.user_id == user.id,
+                                            model.JobDescription.id == data_form.job_id)
+        result = db_session.execute(query).scalars().first() 
+        
+        for key, value in dict(data_form).items():
+            if key != "job_id":
+                if value is not None and (key != "education" and key != "language_certificates" and key != "other_certificates"):
+                    setattr(result, key, value)  
+        job_edus = [model.JobEducation(job_id=data_form.job_id,
+                                      **dict(education)) for education in data_form.education]
+        lang_certs = [model.LanguageCertificate(job_id=data_form.job_id,
+                                              **dict(lang_cert)) for lang_cert in data_form.language_certificates]
+        other_certs = [model.OtherCertificate(job_id=data_form.job_id,
+                                             **dict(other_cert)) for other_cert in data_form.other_certificates]
+            
+        db_session.add_all(job_edus)
+        db_session.add_all(lang_certs)
+        db_session.add_all(other_certs)
+        db.commit_rollback(db_session) 
+        
+        
+    @staticmethod
+    def update_job(data_form: schema.JobUpdate,
+                 db_session: Session,
+                 user):
+        job_query = select(model.JobDescription).where(
+                                            model.JobDescription.user_id == user.id,
+                                            model.JobDescription.id == data_form.job_id)
+        result = db_session.execute(job_query).scalars().first() 
+        if not result:
+            raise HTTPException(status_code=404, detail="Job doesn't exist!")
+        
+        for key, value in dict(data_form).items():
+            if key != "job_id":
+                if value is not None and (key != "education" and key != "language_certificates" and key != "other_certificates"):
+                    setattr(result, key, value) 
+                    
+        
+        #   Delete all old information and add new ones    (Methoods to delete multiple rows in one Table)      
+        db_session.execute(model.JobEducation.__table__.delete().where(model.JobEducation.job_id == data_form.job_id)) 
+        db_session.execute(model.LanguageCertificate.__table__.delete().where(model.LanguageCertificate.job_id == data_form.job_id)) 
+        db_session.execute(model.OtherCertificate.__table__.delete().where(model.OtherCertificate.job_id == data_form.job_id)) 
+        
+        #   Add new Job information as an Update
+        job_edus = [model.JobEducation(job_id=data_form.job_id,
+                                      **dict(education)) for education in data_form.education]
+        lang_certs = [model.LanguageCertificate(job_id=data_form.job_id,
+                                              **dict(lang_cert)) for lang_cert in data_form.language_certificates]
+        other_certs = [model.OtherCertificate(job_id=data_form.job_id,
+                                             **dict(other_cert)) for other_cert in data_form.other_certificates]
+            
+        db_session.add_all(job_edus)
+        db_session.add_all(lang_certs)
+        db_session.add_all(other_certs)
+        db.commit_rollback(db_session) 
+        
+        
+    @staticmethod
+    def create_draft(job_id: int, db_session: Session, user):
+        job_query = select(model.JobDescription).where(
+                                            model.JobDescription.user_id == user.id,
+                                            model.JobDescription.id == job_id)
+        result = db_session.execute(job_query).scalars().first() 
+        if not result:
+            raise HTTPException(status_code=404, detail="Job doesn't exist!")
+        
+        #   Create draft
+        result.is_draft = True
+        db.commit_rollback(db_session) 
+        
+        
+    @staticmethod
+    def list_job(is_draft, db_session, user):
+        job_query = select(model.JobDescription).where(model.JobDescription.user_id == user.id,
+                                                        model.JobDescription.is_draft == is_draft)
+        results = db_session.execute(job_query).scalars().all() 
+        if not results:
+            raise HTTPException(status_code=404, detail="Job doesn't exist!")
+        
+        if is_draft:
+            return [{
+                "ID": result.id,
+                "Tên vị trí": result.job_title,
+                "Ngành nghề": result.industries,
+                "Loại dịch vụ": result.job_form,
+                "Ngày tạo": result.created_at
+            } for result in results]
+            
+        else:
+            return [{
+                "ID": result.id,
+                "Tên vị trí": result.job_title,
+                "Ngày đăng tuyển": result.created_at,
+                "Loại dịch vụ": result.job_form,
+                "Trạng thái": result.status,
+                "CVs": None
+            } for result in results]
+        
+        
+    @staticmethod
+    def get_job(job_id, db_session, user):
+        job_query = select(model.JobDescription).where(model.JobDescription.user_id == user.id,
+                                                        model.JobDescription.id == job_id)
+        results = db_session.execute(job_query).scalars().first() 
+        if not results:
+            raise HTTPException(status_code=404, detail="Job doesn't exist!")
+        
         

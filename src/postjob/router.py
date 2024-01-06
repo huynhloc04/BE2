@@ -6,7 +6,7 @@ from fastapi import Query, UploadFile
 from datetime import timedelta, datetime
 from starlette.requests import Request
 from postjob import schema, service
-from fastapi.responses import JSONResponse, RedirectResponse
+from enum import Enum
 from fastapi import APIRouter, status, Depends, BackgroundTasks, Security, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from config import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES
@@ -144,7 +144,7 @@ def list_industry(db_session: Session = Depends(db.get_session)):
     info = service.Company.list_industry(db_session)
     return schema.CustomResponse(
                     message=None,
-                    data={"industries": [industry.name for industry in info]}
+                    data=[industry for industry in info]
             )
 
 
@@ -194,37 +194,85 @@ def upload_jd(
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def jd_parsing(
+        job_id: int,
         db_session: Session = Depends(db.get_session),
         credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    _ = service.Job.jd_parsing(db_session, current_user)
+    extracted_result, saved_path = service.Job.jd_parsing(job_id, db_session, current_user)
     return schema.CustomResponse(
-                    message=None,
-                    data=None
+                    message="Extract JD successfully!",
+                    data={
+                        "extracted_result": extracted_result,
+                        "json_saved_path": saved_path
+                    }
     )
 
 
-
-# @router.put("/collaborator/update-job-info",
-#              status_code=status.HTTP_200_OK, 
-#              response_model=schema.CustomResponse)
-# def update_job_info(request: Request,
-#                     db_session: Session = Depends(db.get_session),
-#                     data_form: schema.JobUpdate = Depends(schema.JobUpdate.as_form),
-#                     credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+@router.put("/collaborator/fill-extracted-job",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def fill_parsed_job(data: schema.JobUpdate,
+                    db_session: Session = Depends(db.get_session),
+                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
-#     # Get curent active user
-#     _, current_user = get_current_active_user(db_session, credentials)
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
 
-#     info = service.Company.update_company(request, db_session, data_form, current_user)
-#     return schema.CustomResponse(
-#                     message="Update company information successfully",
-#                     data={
-#                         "company_id": info.id,
-#                         "company_name": info.company_name,
-#                         "company_size": info.company_size
-#                     }
-#     )
+    service.Job.fill_job(data, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Fill-in job information successfully",
+                    data=None
+                )
+
+@router.put("/collaborator/update-job-info",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def update_job_info(data: schema.JobUpdate,
+                    db_session: Session = Depends(db.get_session),
+                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    service.Job.update_job(data, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Update job information successfully",
+                    data=None
+                )
+
+@router.put("/collaborator/create-job-draft",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def create_job_draft(
+                job_id: int,
+                db_session: Session = Depends(db.get_session),
+                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    service.Job.create_draft(job_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Update job information successfully",
+                    data=None
+                )
+    
+@router.get("/collaborator/list-job/{is_draft}",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def list_created_job(
+                is_draft: bool,
+                db_session: Session = Depends(db.get_session),
+                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    jobs = service.Job.list_job(is_draft, db_session, current_user)
+    return schema.CustomResponse(
+                    message=None,
+                    data=jobs
+            )

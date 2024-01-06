@@ -5,7 +5,7 @@ from typing import List, Optional, Set
 from sqlalchemy.dialects.postgresql import TEXT
 from sqlalchemy.dialects import postgresql
 from enum import Enum
-from sqlalchemy.types import Integer, STRINGTYPE
+from sqlalchemy.types import Integer, String
 
 
 class TableBase(SQLModel):
@@ -92,24 +92,19 @@ class JobDescription(TableBase, table=True):
     status: str = Field(default=None)
     job_form: str = Field(default=None)
     job_title: str = Field(default=None)
-    industries: List[str] = Field(default=None)
+    industries: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
     sex: Optional[str] = Field(default=None)
     job_type: str = Field(default=None)
-    skills: List[str] = Field(default=None)
+    skills: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
     recieved_job_time: datetime = Field(default=None)
     working_time: str = Field(default=None)
     description: str = Field(default=None)
     requirement: str = Field(default=None)
-    benefits: List[str] = Field(default=None)
-    levels: List[str] = Field(default=None)
-    roles: List[str] = Field(default=None)
+    benefits: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
+    levels: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
+    roles: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
     yoe: int = Field(default=None)
     num_recruit: int = Field(default=None)
-    degree: str = Field(default=None)
-    major: str = Field(default=None)
-    gpa: float = Field(default=None)
-    certificate: str = Field(default=None)
-    certificate_level: str = Field(default=None)
     min_salary: float = Field(default=None)
     max_salary: float = Field(default=None)
     currency: str = Field(default=None)
@@ -123,6 +118,26 @@ class JobDescription(TableBase, table=True):
     is_admin_approved: bool = Field(default=False)
     admin_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
     company_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
+    
+class JobEducation(TableBase, table=True):
+    __tablename__ = 'job_educations'    
+    job_id: int = Field(default=None, foreign_key="job_descriptions.id")
+    degree: str = Field(default=None)
+    major: str = Field(default=None)
+    gpa: float = Field(default=None)
+    
+class LanguageCertificate(TableBase, table=True):
+    __tablename__ = 'language_certificates'    
+    job_id: int = Field(default=None, foreign_key="job_descriptions.id")
+    language: str = Field(default=None)
+    language_certificate_name: str = Field(default=None)
+    language_certificate_level: str = Field(default=None)
+    
+class OtherCertificate(TableBase, table=True):
+    __tablename__ = 'other_certificates'    
+    job_id: int = Field(default=None, foreign_key="job_descriptions.id")
+    certificate_name: str = Field(default=None)
+    certificate_level: str = Field(default=None)
 
 
 class Industry(TableBase, table=True):
