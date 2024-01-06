@@ -1,7 +1,7 @@
 import model
 from fastapi import HTTPException, Request
 from sqlalchemy import select
-from fastapi import UploadFile, status
+from fastapi import UploadFile, status, Depends
 import os, shutil
 from config import db
 from config import JD_SAVED_DIR, CV_PARSE_PROMPT, JD_PARSE_PROMPT
@@ -150,18 +150,12 @@ class Company:
     
 
 class Job:
-
-    @staticmethod
-    def clean_filename(filename):
-        # Split the filename and file extension
-        name, extension = os.path.splitext(filename)
-        # Replace spaces with underscores in the filename
-        name = name.replace(" ", "_")
-        # Remove dots from the filename
-        name = name.replace(".", "")
-        # Concatenate the cleaned filename with the file extension
-        cleaned_filename = name + extension
-        return cleaned_filename
+    
+    def get_job_by_id(job_id: int, db_session: Session, current_user):
+        job_query = select(model.JobDescription).where(model.JobDescription.user_id == current_user.id,
+                                                        model.JobDescription.id == job_id)
+        job_result = db_session.execute(job_query).scalars().first() 
+        return job_result
     
 
     @staticmethod
@@ -172,7 +166,7 @@ class Job:
         if uploaded_file.content_type != 'application/pdf':
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Must be PDF file")
         
-        cleaned_filename = Job.clean_filename(uploaded_file.filename)
+        cleaned_filename = DatabaseService.clean_filename(uploaded_file.filename)
         db_job = model.JobDescription(
                     user_id=user.id,
                     jd_file=str(request.base_url) + cleaned_filename 
@@ -186,14 +180,16 @@ class Job:
     
 
     @staticmethod
-    def upload_jd_again(request: Request, 
+    def upload_jd_again(job_id: int,
+                        request: Request, 
                         uploaded_file: UploadFile, 
                         db_session: Session, 
                         user):
         if uploaded_file.content_type != 'application/pdf':
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Must be PDF file")
         
-        query = select(model.JobDescription).where(model.JobDescription.user_id == user.id)
+        query = select(model.JobDescription).where(model.JobDescription.user_id == user.id,
+                                                   model.JobDescription.id == job_id)
         result = db_session.execute(query).scalars().first()
         
         #   Update other JD file
@@ -208,10 +204,7 @@ class Job:
 
     @staticmethod
     def jd_parsing(job_id: int, db_session: Session, user):
-        query = select(model.JobDescription).where(
-                                            model.JobDescription.user_id == user.id,
-                                            model.JobDescription.id == job_id)
-        result = db_session.execute(query).scalars().first()        
+        result = Job.get_job_by_id(job_id, db_session, user)       
         if not result.jd_file:
            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please upload at least 1 CV_PDF")
 
@@ -235,10 +228,7 @@ class Job:
     def fill_job(data_form: schema.JobUpdate,
                  db_session: Session,
                  user):
-        query = select(model.JobDescription).where(
-                                            model.JobDescription.user_id == user.id,
-                                            model.JobDescription.id == data_form.job_id)
-        result = db_session.execute(query).scalars().first() 
+        result = Job.get_job_by_id(data_form.job_id, db_session, user)    
         
         for key, value in dict(data_form).items():
             if key != "job_id":
@@ -261,10 +251,7 @@ class Job:
     def update_job(data_form: schema.JobUpdate,
                  db_session: Session,
                  user):
-        job_query = select(model.JobDescription).where(
-                                            model.JobDescription.user_id == user.id,
-                                            model.JobDescription.id == data_form.job_id)
-        result = db_session.execute(job_query).scalars().first() 
+        result = Job.get_job_by_id(data_form.job_id, db_session, user)    
         if not result:
             raise HTTPException(status_code=404, detail="Job doesn't exist!")
         
@@ -295,10 +282,7 @@ class Job:
         
     @staticmethod
     def create_draft(job_id: int, db_session: Session, user):
-        job_query = select(model.JobDescription).where(
-                                            model.JobDescription.user_id == user.id,
-                                            model.JobDescription.id == job_id)
-        result = db_session.execute(job_query).scalars().first() 
+        result = Job.get_job_by_id(job_id, db_session, user)    
         if not result:
             raise HTTPException(status_code=404, detail="Job doesn't exist!")
         
@@ -343,9 +327,7 @@ class Job:
         if not company_result:
             raise HTTPException(status_code=404, detail="Company doesn't exist!")
         #   Job
-        job_query = select(model.JobDescription).where(model.JobDescription.user_id == user.id,
-                                                        model.JobDescription.id == job_id)
-        job_result = db_session.execute(job_query).scalars().first() 
+        job_result = Job.get_job_by_id(job_id, db_session, user)     
 
         job_edus = db_session.execute(select(model.JobEducation).where(model.JobEducation.job_id == job_id)).scalars().all()
         lang_certs = db_session.execute(select(model.LanguageCertificate).where(model.LanguageCertificate.job_id == job_id)).scalars().all()
@@ -393,3 +375,23 @@ class Job:
             "yoe": job_result.yoe,
             "num_recruit": job_result.num_recruit
         }
+        
+        
+    @staticmethod
+    def update_job_status(job_id, status, db_session, user):
+        result = Job.get_job_by_id(job_id, db_session, user)    
+        if not result:
+            raise HTTPException(status_code=404, detail="Job doesn't exist!")        
+        #   Update status
+        result.status = status
+        db.commit_rollback(db_session)
+        return result
+    
+        
+    @staticmethod
+    def get_jd_file(job_id, db_session, user):
+        result = Job.get_job_by_id(job_id, db_session, user)    
+        if not result:
+            raise HTTPException(status_code=404, detail="Job doesn't exist!")        
+        #   Update status
+        return result.jd_file

@@ -19,3 +19,15 @@ class DatabaseService:
         
         except Exception:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Can't save DJ json {jd_file}")
+
+    @staticmethod
+    def clean_filename(filename):
+        # Split the filename and file extension
+        name, extension = os.path.splitext(filename)
+        # Replace spaces with underscores in the filename
+        name = name.replace(" ", "_")
+        # Remove dots from the filename
+        name = name.replace(".", "")
+        # Concatenate the cleaned filename with the file extension
+        cleaned_filename = name + extension
+        return cleaned_filename

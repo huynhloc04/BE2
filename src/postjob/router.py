@@ -171,10 +171,11 @@ def upload_jd(
     )
 
 
-@router.put("/collaborator/upload-jd-again",
+@router.put("/collaborator/upload-jd-again/{job_id}",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def upload_jd(
+        job_id: int,
         request: Request,
         uploaded_file: UploadFile,
         db_session: Session = Depends(db.get_session),
@@ -183,7 +184,7 @@ def upload_jd(
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    _ = service.Job.upload_jd_again(request,uploaded_file, db_session, current_user)
+    _ = service.Job.upload_jd_again(job_id, request, uploaded_file, db_session, current_user)
     return schema.CustomResponse(
                     message="Uploaded JD successfully",
                     data=None
@@ -243,7 +244,7 @@ def update_job_info(data: schema.JobUpdate,
                     data=None
                 )
 
-@router.put("/collaborator/create-job-draft",
+@router.put("/collaborator/create-job-draft/{job_id}",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def create_job_draft(
@@ -277,14 +278,14 @@ def list_created_job(
                     data=jobs
             )
     
-@router.get("/collaborator/get-detail-job",
+    
+@router.get("/collaborator/get-detailed-job",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
-def get_detail_job(
-        job_id: int,
-        db_session: Session = Depends(db.get_session),
-        credentials: HTTPAuthorizationCredentials = Security(security_bearer)
-    ):
+def get_detailed_job(
+                job_id: int,
+                db_session: Session = Depends(db.get_session),
+                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
@@ -293,4 +294,48 @@ def get_detail_job(
     return schema.CustomResponse(
                     message=None,
                     data=jobs
+            )
+
+
+class JobStatus(str, Enum):
+	pending = "Chờ duyệt"
+	browsing = "Đang duyệt"
+	recruiting = "Đang tuyển"
+	paused = "Tạm dừng"	
+
+@router.put("/collaborator/update-job-status/{status}",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def update_job_status(job_id: int,
+                    status: JobStatus,
+                    db_session: Session = Depends(db.get_session),
+                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    result = service.Job.update_job_status(job_id, status, db_session, current_user)
+    
+    return schema.CustomResponse(
+                    message="JD status changed.",
+                    data={
+                        "job_id": result.id,
+                        "status": result.status}
+                )
+    
+@router.get("/collaborator/get-jd-pdf/{job_id}",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_jd_file(
+                job_id: int,
+                db_session: Session = Depends(db.get_session),
+                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    jd_file = service.Job.get_jd_file(job_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message=None,
+                    data=jd_file
             )
