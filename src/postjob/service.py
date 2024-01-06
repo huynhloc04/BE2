@@ -337,10 +337,59 @@ class Job:
         
     @staticmethod
     def get_job(job_id, db_session, user):
+        #   Company
+        company_query = select(model.Company).where(model.Company.user_id == user.id)
+        company_result = db_session.execute(company_query).scalars().first() 
+        if not company_result:
+            raise HTTPException(status_code=404, detail="Company doesn't exist!")
+        #   Job
         job_query = select(model.JobDescription).where(model.JobDescription.user_id == user.id,
                                                         model.JobDescription.id == job_id)
-        results = db_session.execute(job_query).scalars().first() 
-        if not results:
+        job_result = db_session.execute(job_query).scalars().first() 
+
+        job_edus = db_session.execute(select(model.JobEducation).where(model.JobEducation.job_id == job_id)).scalars().all()
+        lang_certs = db_session.execute(select(model.LanguageCertificate).where(model.LanguageCertificate.job_id == job_id)).scalars().all()
+        other_certs = db_session.execute(select(model.OtherCertificate).where(model.OtherCertificate.job_id == job_id)).scalars().all()
+        if not job_result:
             raise HTTPException(status_code=404, detail="Job doesn't exist!")
         
-        
+        return {
+            #   Company
+            "logo": company_result.logo,
+            "company_name": company_result.company_name,
+            "industry": company_result.industry,
+            #   Job
+            "status": job_result.status,
+            "job_form": job_result.job_form,
+            "job_title": job_result.job_title,
+            "address": job_result.address,
+            "city": job_result.city,
+            "country": job_result.country,
+            "job_type": job_result.job_type,
+            "description": job_result.description,
+            "requirement": job_result.requirement,
+            "benefits": job_result.benefits,
+            "skills": job_result.skills,
+            "education": [{
+                "degree": edu.degree,
+                "major": edu.major,
+                "gpa": edu.gpa,
+            } for edu in job_edus],
+            "language_certificate": [{
+                "language": lang_cert.language,
+                "certificate_name": lang_cert.language_certificate_name,
+                "certificate_level": lang_cert.language_certificate_level,
+            } for lang_cert in lang_certs],
+            "other_certificate": [{
+                "certificate_name": cert.certificate_name,
+                "certificate_level": cert.certificate_level,
+            } for cert in other_certs],
+            "min_salary": job_result.min_salary,
+            "max_salary": job_result.max_salary,
+            "recieved_job_time": job_result.recieved_job_time,
+            "working_time": job_result.working_time,
+            "levels": job_result.levels,
+            "roles": job_result.roles,
+            "yoe": job_result.yoe,
+            "num_recruit": job_result.num_recruit
+        }

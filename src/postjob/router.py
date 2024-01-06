@@ -276,3 +276,21 @@ def list_created_job(
                     message=None,
                     data=jobs
             )
+    
+@router.get("/collaborator/get-detail-job",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_detail_job(
+        job_id: int,
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)
+    ):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    jobs = service.Job.get_job(job_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message=None,
+                    data=jobs
+            )
