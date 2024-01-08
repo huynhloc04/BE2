@@ -11,7 +11,7 @@ class CustomResponse(BaseModel):
     data: Any = None
     
 
-class SexChoice(str, Enum):
+class GenderChoice(str, Enum):
     male = "male"
     female = "female"
     both = "both"
@@ -21,7 +21,18 @@ class JobStatus(str, Enum):
 	pending = "pending"
 	browsing = "browsing"
 	recruiting = "recruiting"
-	paused = "paused"	
+	paused = "paused"
+
+class Level(str, Enum):     
+	executive_senior_engineer_developer = "executive_senior_engineer_developer"
+	leader_supervisor_seniorleader_seniorsupervisor_assistmanager = "leader_supervisor_seniorleader_seniorsupervisor_assistmanager"
+	manager_seniormanager_assistantdirector = "manager_seniormanager_assistantdirector"
+	vicedirector_deputydirector = "vicedirector_deputydirector"
+	director = "director"
+	head = "head"
+	group = "group"
+	coo_ceo_cfo_cpo = "coo_ceo_cfo_cpo"
+	generalmanager_generaldirector = "generalmanager_generaldirector"
     
 
 class CompanyInfo(BaseModel):
@@ -193,7 +204,7 @@ class JobUpdate(BaseModel):
     job_id: int
     job_title: Union[str, None]
     industries: Union[List[str], None]
-    sex: Union[SexChoice, None]
+    gender: Union[GenderChoice, None]
     job_type: Union[str, None]
     skills: Union[List[str], None]
     #   Education
@@ -220,3 +231,20 @@ class JobUpdate(BaseModel):
     currency: Union[str, None]
     #   Chỉ xuất hiện bên trang Admin, và lúc NTD xem lại JD đã up (Admin check và gửi lại cho NTD)
     admin_decline_reason: Optional[str]
+
+
+class AddCandidate(BaseModel):
+    job_id: int
+    level: Level
+    cv_pdf: UploadFile
+
+    @classmethod
+    def as_form(cls,
+                job_id: int = Form(...),
+                level: Level = Form(...),
+                cv_pdf: UploadFile = File(...)):
+        
+        return cls(
+            job_id=job_id,
+            level=level,
+            cv_pdf=cv_pdf)

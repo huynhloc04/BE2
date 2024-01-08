@@ -171,7 +171,7 @@ def upload_jd(
     )
 
 
-@router.put("/recruiter/upload-jd-again/{job_id}",
+@router.put("/recruiter/upload-jd-again",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def upload_jd(
@@ -204,12 +204,12 @@ def jd_parsing(
 
     extracted_result, saved_path = service.Job.jd_parsing(job_id, db_session, current_user)
     return schema.CustomResponse(
-                    message="Extract JD successfully!",
+                    message="Extract CV successfully!",
                     data={
                         "extracted_result": extracted_result,
                         "json_saved_path": saved_path
                     }
-    )
+                )
 
 
 @router.put("/recruiter/fill-extracted-job",
@@ -244,7 +244,7 @@ def update_job_info(data: schema.JobUpdate,
                     data=None
                 )
 
-@router.put("/recruiter/create-job-draft/{job_id}",
+@router.put("/recruiter/create-job-draft",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def create_job_draft(
@@ -298,7 +298,7 @@ def get_detailed_job_(
             )
 
 
-@router.put("/recruiter/update-job-status/{status}",
+@router.put("/recruiter/update-job-status",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def update_job_status(job_id: int,
@@ -317,23 +317,6 @@ def update_job_status(job_id: int,
                         "job_id": result.id,
                         "status": result.status}
                 )
-    
-@router.get("/recruiter/get-jd-pdf/{job_id}",
-             status_code=status.HTTP_200_OK, 
-             response_model=schema.CustomResponse)
-def get_jd_file(
-                job_id: int,
-                db_session: Session = Depends(db.get_session),
-                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
-
-    jd_file = service.Job.get_jd_file(job_id, db_session, current_user)
-    return schema.CustomResponse(
-                    message=None,
-                    data=jd_file
-            )
     
     
 # ===========================================================
@@ -391,7 +374,7 @@ def edit_job_info(
     
     
 #   Admin approved/reject Job
-@router.post("/admin/filter-job/{job_id}/{is_approved}",
+@router.post("/admin/filter-job",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def filter_job(
@@ -411,19 +394,8 @@ def filter_job(
             )
     
     
-@router.get("/admin/get-jd-pdf/{job_id}",
-             status_code=status.HTTP_200_OK, 
-             response_model=schema.CustomResponse)
-def admin_get_jd_file(
-            job_id: int,
-            db_session: Session = Depends(db.get_session),
-            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    return get_jd_file(job_id, db_session, credentials)
-    
-    
 #   Admin remove Job
-@router.delete("/admin/remove-job/{job_id}",
+@router.delete("/admin/remove-job",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def remove_job(
@@ -444,3 +416,150 @@ def remove_job(
 # ===========================================================
 #                       CTV uploads Resumes
 # ===========================================================
+    
+@router.get("/collaborator/get-detailed-job/{job_id}",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_detailed_job_(
+                job_id: int,
+                db_session: Session = Depends(db.get_session),
+                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    jobs = service.Job.ctv_get_job_status(job_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message=None,
+                    data=jobs
+            )
+    
+@router.put("/collaborator/add-favorite",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def add_favorite(
+            job_id: int,
+            db_session: Session = Depends(db.get_session),
+            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    jobs = service.Job.add_favorite(job_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Job has been added to your favorites list",
+                    data=jobs
+            )
+    
+@router.get("/collaborator/get-general-company-info/{job_id}",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_general_company_info(
+                job_id: int,
+                db_session: Session = Depends(db.get_session),
+                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    jobs = service.Company.get_general_company_info(job_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message=None,
+                    data=jobs
+            )
+
+@router.post("/collaborator/add-candidate",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def add_candidate(
+        request: Request,
+        data_form: schema.AddCandidate = Depends(schema.AddCandidate.as_form),
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    _ = service.Resume.add_candidate(request, data_form, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Uploaded JD successfully",
+                    data=None
+    )
+
+
+@router.post("/recruiter/cv-parsing",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def cv_parsing(
+        cv_id: int,
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    extracted_result, saved_path = service.Resume.cv_parsing(cv_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Extract CV successfully!",
+                    data={
+                        "extracted_result": extracted_result,
+                        "json_saved_path": saved_path
+                    }
+    )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# @router.get("/collaborator/list-job/{ctv_job_status}}",
+#              status_code=status.HTTP_200_OK, 
+#              response_model=schema.CustomResponse)
+# def ctv_list_job(
+#             ctv_job_status: schema.CTVJobStatus,
+#             db_session: Session = Depends(db.get_session),
+#             credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+#     # Get curent active user
+#     _, current_user = get_current_active_user(db_session, credentials)
+
+    
+#     service.Job.ctv_list_job(ctv_job_status, db_session, current_user)
+    
+#     return get_jd_file(job_id, db_session, credentials)
+
+
+
+
+
+    
+    
+# ===========================================================
+#                       General APIs
+# ===========================================================
+    
+@router.get("/general/get-jd-pdf/{job_id}",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_jd_file(
+                job_id: int,
+                db_session: Session = Depends(db.get_session),
+                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    jd_file = service.Job.get_jd_file(job_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message=None,
+                    data=jd_file
+            )

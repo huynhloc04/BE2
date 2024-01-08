@@ -13,6 +13,8 @@ class OpenAIService:
         model: str = OPENAI_MODEL
         temp: float = 0
 
+        print(" >>> Parsing...")
+
         """Request gpt api with a prompt"""
         start = time.time()
         response = openai.ChatCompletion.create(

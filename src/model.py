@@ -36,12 +36,9 @@ class User(TableBase, table=True):
     fullname: str = Field(default=None)
     email: str = Field(default=None)
     phone: str = Field(default=None)
-    # identification_code: str = Field(default=None, unique=True)
     role: str = Field(default=None)
-    # birthday: str = Field(default=None)
     point: float = Field(default=0)
     avatar: str = Field(default=None)
-    # sex: str = Field(default=None)
     country: str = Field(default=None)
     city: str = Field(default=None)
     address: str = Field(default=None, sa_column=Column(TEXT))
@@ -93,7 +90,7 @@ class JobDescription(TableBase, table=True):
     job_service: str = Field(default=None)
     job_title: str = Field(default=None)
     industries: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
-    sex: Optional[str] = Field(default=None)
+    gender: Optional[str] = Field(default=None)
     job_type: str = Field(default=None)
     skills: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
     received_job_time: datetime = Field(default=None)
@@ -114,6 +111,7 @@ class JobDescription(TableBase, table=True):
     point: float = Field(default=None)
     jd_file: str = Field(default=None)
     status: str = Field(default="pending")
+    is_favorite: bool = Field(default=False)
     is_draft: bool = Field(default=False)
     is_admin_approved: bool = Field(default=False)      # Admin filtered Job
     admin_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
@@ -169,9 +167,10 @@ class ResumeVersion(TableBase, table=True):
     new_id: int = Field(default=None, foreign_key="resume_news.id")
     filename: str = Field(default=None)
     is_lastest: bool = Field(default=True)
-    cv_pdf: str = Field(default=None)
-    candidate_name: str = Field(default=None) 
-    sex: str = Field(default=None)
+    cv_file: str = Field(default=None)
+    name: str = Field(default=None) 
+    level: str = Field(default=None) 
+    gender: str = Field(default=None)
     current_job: str = Field(default=None)
     current_job_industry: str = Field(default=None)
     email: str = Field(default=None)
@@ -186,7 +185,7 @@ class ResumeVersion(TableBase, table=True):
     website: Optional[str] = Field(default=None)
     facebook: Optional[str] = Field(default=None)
     instagram: Optional[str] = Field(default=None)
-    resume_status: bool = Field(default="pending")
+    status: str = Field(default="pending")
     package: str = Field(default=None)
     cv_point: float = Field(default=0.0)
     is_valuate: bool = Field(default=False)
@@ -194,3 +193,50 @@ class ResumeVersion(TableBase, table=True):
     is_admin_matching: bool = Field(default=False)
     matching_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
 
+
+
+
+
+
+# class User(TableBase, table=True):
+#     __tablename__ = 'users'
+
+#     fullname: str = Field(default=None)
+#     email: str = Field(default=None)
+#     phone: str = Field(default=None)
+
+# class Company(TableBase, table=True):
+#     __tablename__ = 'companies'
+    
+#     user_id: int = Field(default=None, foreign_key="users.id")
+#     company_name: str = Field(default=None)
+#     company_logo: str = Field(default=None)
+
+# class JobDescription(TableBase, table=True):
+#     __tablename__ = 'job_descriptions'
+
+#     user_id: int = Field(default=None, foreign_key="users.id")
+#     status: str = Field(default=None)
+#     job_service: str = Field(default=None)
+#     job_title: str = Field(default=None)
+
+
+# class UserJobJoin(TableBase, table=True):
+    
+#     __tablename__ = "job_user_joins"
+#     user_id: Optional[int] = Field(
+#         default=None,
+#         foreign_key="users.id",
+#         primary_key=True,
+#     )
+#     job_id: Optional[int] = Field(
+#         default=None,
+#         foreign_key="job_descriptions.id",
+#         primary_key=True,
+#     )
+#     is_favorite: bool = Field(default=False)
+#     is_referred: bool = Field(default=False)
+#     not_referred: bool = Field(default=False)
+
+
+# Write a SQLModel query to get "company_name", "company_logo" from Company table and ""status", "job_service", "job_title" from "JobDescription" table that UserJobJoin is_favorite=True
