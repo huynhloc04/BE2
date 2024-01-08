@@ -1,3 +1,4 @@
+
 import os
 from sqlmodel import SQLModel, Session
 from sqlalchemy.orm import sessionmaker
@@ -17,6 +18,7 @@ JD_PARSE_PROMPT = "src/postjob/resources/prompts/jd_parsing.txt"
 OPENAI_MODEL="gpt-3.5-turbo-16k"
 CV_EXTRACTION_PATH = "static/job/CVs/extracted_cvs"
 JD_EXTRACTION_PATH = "static/job/JDs/extracted_jds"
+EDITED_JOB = "static/job/JDs/edited_jobs"
 
 load_dotenv()
 DATABASE_URL = os.environ.get("DATABASE_URL")

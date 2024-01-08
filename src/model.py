@@ -90,7 +90,7 @@ class JobDescription(TableBase, table=True):
 
     user_id: int = Field(default=None, foreign_key="users.id")
     status: str = Field(default=None)
-    job_form: str = Field(default="pending")
+    job_service: str = Field(default=None)
     job_title: str = Field(default=None)
     industries: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
     sex: Optional[str] = Field(default=None)
@@ -113,9 +113,9 @@ class JobDescription(TableBase, table=True):
     country: str = Field(default=None)
     point: float = Field(default=None)
     jd_file: str = Field(default=None)
-    status: str = Field(default=None)
+    status: str = Field(default="pending")
     is_draft: bool = Field(default=False)
-    is_admin_approved: bool = Field(default=False)
+    is_admin_approved: bool = Field(default=False)      # Admin filtered Job
     admin_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
     company_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
     
@@ -193,3 +193,4 @@ class ResumeVersion(TableBase, table=True):
     is_ai_matching: bool = Field(default=False)
     is_admin_matching: bool = Field(default=False)
     matching_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
+

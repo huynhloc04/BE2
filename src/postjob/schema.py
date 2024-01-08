@@ -16,6 +16,13 @@ class SexChoice(str, Enum):
     female = "female"
     both = "both"
     
+    
+class JobStatus(str, Enum):
+	pending = "pending"
+	browsing = "browsing"
+	recruiting = "recruiting"
+	paused = "paused"	
+    
 
 class CompanyInfo(BaseModel):
     company_name: str
@@ -199,7 +206,7 @@ class JobUpdate(BaseModel):
     address: Union[str, None]
     city: Union[str, None]
     country: Union[str, None]
-    recieved_job_time: Union[datetime, None]
+    received_job_time: Union[datetime, None]
     working_time: Union[str, None]
     description: Union[str, None]
     requirement: Union[str, None]
@@ -211,3 +218,5 @@ class JobUpdate(BaseModel):
     min_salary: Union[float, None]
     max_salary: Union[float, None]
     currency: Union[str, None]
+    #   Chỉ xuất hiện bên trang Admin, và lúc NTD xem lại JD đã up (Admin check và gửi lại cho NTD)
+    admin_decline_reason: Optional[str]
