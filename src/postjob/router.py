@@ -499,6 +499,7 @@ def cv_parsing(
     _, current_user = get_current_active_user(db_session, credentials)
 
     extracted_result, saved_path = service.Resume.cv_parsing(cv_id, db_session, current_user)
+
     return schema.CustomResponse(
                     message="Extract CV successfully!",
                     data={
@@ -508,6 +509,21 @@ def cv_parsing(
     )
 
 
+@router.put("/collaborator/fill-extracted-resume",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def fill_parsed_resume(data: schema.ResumeUpdate,
+                    db_session: Session = Depends(db.get_session),
+                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    service.Resume.fill_resume(data, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Fill-in resume information successfully",
+                    data=None
+                )
 
 
 

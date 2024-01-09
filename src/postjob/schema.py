@@ -248,3 +248,72 @@ class AddCandidate(BaseModel):
             job_id=job_id,
             level=level,
             cv_pdf=cv_pdf)
+    
+
+    
+# ===========================================================
+#                           Resumes
+# ===========================================================
+
+class ResumeEducation(BaseModel):
+    degree: Union[str, None]
+    institute_name: Union[str, None]
+    major: Union[str, None]
+    gpa: Union[str, None]
+    start_time: Union[str, None]
+    end_time: Union[str, None]
+
+class ResumeExperience(BaseModel):
+    company_name: Union[str, None]
+    job_tile: Union[str, None]
+    working_industry: Union[str, None]
+    levels: Union[str, None]
+    roles: Union[str, None]
+    start_time: Union[str, None]
+    end_time: Union[str, None]
+
+class ResumeAward(BaseModel):
+    name: Union[str, None]
+    time: Union[str, None]
+    description: Union[str, None]
+
+class ResumeProject(BaseModel):
+    project_name: Union[str, None]
+    description: Union[str, None]
+    start_time: Union[datetime, None]
+    end_time: Union[datetime, None]
+    
+class ResumeLanguageCertificate(BaseModel):
+    language: Union[str, None]
+    language_certificate_name: Union[str, None]
+    language_certificate_level: Union[str, None]
+    
+class OtherResumeCertificate(BaseModel):
+    certificate_name: Union[str, None]
+    certificate_level: Union[str, None]
+
+class ResumeUpdate(BaseModel):
+    cv_id: int
+    name: Union[str, None]
+    current_job: Union[str, None]
+    gender: Union[str, None]
+    birthday: Union[str, None]  # => age
+    linkedin: Union[str, None]
+    website: Union[str, None]
+    facebook: Union[str, None]
+    instagram: Union[str, None]        
+    phone: Union[str, None]
+    email: Union[str, None]
+    address: Union[str, None]
+    city: Union[str, None]
+    country: Union[str, None]        
+    objectives: Union[str, None]
+    educations: Union[List[ResumeEducation], None]
+    work_experiences: Union[List[ResumeExperience], None]
+    skills: Union[List[str], None]
+    awards: Union[List[ResumeAward], None]
+    projects: Union[List[ResumeProject], None]
+    #   LanguageCertificate    
+    language_certificates: Union[List[ResumeLanguageCertificate], None]
+    #   OtherCertificates
+    other_certificates: Union[List[OtherResumeCertificate], None]

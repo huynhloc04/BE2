@@ -140,21 +140,18 @@ class OtherCertificate(TableBase, table=True):
 
 class Industry(TableBase, table=True):
     __tablename__ = 'industries'
-
     job_id: int = Field(default=None, foreign_key="job_descriptions.id")
     name: str = Field(default=None)
 
 
 class ResumeOld(TableBase, table=True):
-    __tablename__ = 'resume_olds'
-    
+    __tablename__ = 'resume_olds'    
     industry_id: int = Field(default=None, foreign_key="industries.id")
     user_id: int = Field(default=None, foreign_key="users.id")
 
 
 class ResumeNew(TableBase, table=True):
-    __tablename__ = 'resume_news'
-    
+    __tablename__ = 'resume_news'    
     industry_id: int = Field(default=None, foreign_key="industries.id")
     user_id: int = Field(default=None, foreign_key="users.id")
     job_id: int = Field(default=None, foreign_key="job_descriptions.id")
@@ -194,49 +191,38 @@ class ResumeVersion(TableBase, table=True):
     matching_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
 
 
+class ResumeEducation(TableBase, table=True):
+    __tablename__ = 'resume_educations'
+    cv_id: int = Field(default=None, foreign_key="resume_versions.id")
+    degree: str = Field(default=None)
+    institute_name: str = Field(default=None)
+    major: str = Field(default=None)
+    gpa: str = Field(default=None)
+    start_time: datetime = Field(default=None)
+    end_time: datetime = Field(default=None)
 
+class ResumeExperience(TableBase, table=True):
+    __tablename__ = 'resume_experiences'
+    cv_id: int = Field(default=None, foreign_key="resume_versions.id")
+    company_name: str = Field(default=None)
+    job_tile: str = Field(default=None)
+    working_industry: str = Field(default=None)
+    levels: str = Field(default=None)
+    roles: str = Field(default=None)
+    start_time: datetime = Field(default=None)
+    end_time: datetime = Field(default=None)
 
+class ResumeAward(TableBase, table=True):
+    __tablename__ = 'resume_awards'
+    cv_id: int = Field(default=None, foreign_key="resume_versions.id")
+    name: str = Field(default=None)
+    time: str = Field(default=None)
+    description: str = Field(default=None, sa_column=Column(TEXT))
 
-
-# class User(TableBase, table=True):
-#     __tablename__ = 'users'
-
-#     fullname: str = Field(default=None)
-#     email: str = Field(default=None)
-#     phone: str = Field(default=None)
-
-# class Company(TableBase, table=True):
-#     __tablename__ = 'companies'
-    
-#     user_id: int = Field(default=None, foreign_key="users.id")
-#     company_name: str = Field(default=None)
-#     company_logo: str = Field(default=None)
-
-# class JobDescription(TableBase, table=True):
-#     __tablename__ = 'job_descriptions'
-
-#     user_id: int = Field(default=None, foreign_key="users.id")
-#     status: str = Field(default=None)
-#     job_service: str = Field(default=None)
-#     job_title: str = Field(default=None)
-
-
-# class UserJobJoin(TableBase, table=True):
-    
-#     __tablename__ = "job_user_joins"
-#     user_id: Optional[int] = Field(
-#         default=None,
-#         foreign_key="users.id",
-#         primary_key=True,
-#     )
-#     job_id: Optional[int] = Field(
-#         default=None,
-#         foreign_key="job_descriptions.id",
-#         primary_key=True,
-#     )
-#     is_favorite: bool = Field(default=False)
-#     is_referred: bool = Field(default=False)
-#     not_referred: bool = Field(default=False)
-
-
-# Write a SQLModel query to get "company_name", "company_logo" from Company table and ""status", "job_service", "job_title" from "JobDescription" table that UserJobJoin is_favorite=True
+class ResumeProject(TableBase, table=True):
+    __tablename__ = 'resume_projects'
+    cv_id: int = Field(default=None, foreign_key="resume_versions.id")
+    project_name: str = Field(default=None)
+    description: str = Field(default=None)
+    start_time: datetime = Field(default=None)
+    end_time: datetime = Field(default=None)

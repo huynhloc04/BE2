@@ -670,6 +670,12 @@ class Resume:
                    model.ResumeNew.id == cv_id)
         cv_result = db_session.execute(cv_query).first() 
         return cv_result
+    
+    def get_resume_by_id(cv_id: int, db_session: Session, current_user):
+        query = select(model.ResumeNew).where(model.ResumeNew.user_id == current_user.id,
+                                                model.ResumeNew.id == cv_id)
+        result = db_session.execute(query).first() 
+        return result
         
     @staticmethod
     def add_candidate(request, data, db_session, user):
@@ -722,6 +728,46 @@ class Resume:
             with open(saved_path) as file:
                 extracted_result = file.read()
         return extracted_result, saved_path
+        
+        
+    @staticmethod
+    def fill_resume(data_form: schema.ResumeUpdate,
+                    db_session: Session,
+                    user):
+        result = Resume.get_resume_by_id(data_form.cv_id, db_session, user) 
+        if not result:
+            raise HTTPException(status_code=404, detail="Resume doesn't exist!")   
+        
+        for key, value in dict(data_form).items():
+            if key != "cv_id":
+                if value is not None and key not in ["education",
+                                                     "work_experiences",
+                                                     "awards",
+                                                     "projects",
+                                                     "language_certificates",
+                                                     "other_certificates"]:
+                    setattr(result, key, value)  
+        edus = [model.ResumeEducation(cv_id=data_form.cv_id,
+                                          **dict(education)) for education in data_form.education]
+        expers = [model.ResumeExperience(cv_id=data_form.cv_id,
+                                        **dict(exper)) for exper in data_form.work_experiences]
+        awards = [model.ResumeAward(cv_id=data_form.cv_id,
+                                    **dict(award)) for award in data_form.awards]
+        projects = [model.ResumeAward(cv_id=data_form.cv_id,
+                                    **dict(project)) for project in data_form.projects]
+        lang_certs = [model.ResumeAward(cv_id=data_form.cv_id,
+                                    **dict(lang_cert)) for lang_cert in data_form.language_certificates]
+        other_certs = [model.ResumeAward(cv_id=data_form.cv_id,
+                                    **dict(other_cert)) for other_cert in data_form.other_certificates]
+            
+        db_session.add_all(edus)
+        db_session.add_all(expers)
+        db_session.add_all(awards)
+        db_session.add_all(projects)
+        db_session.add_all(lang_certs)
+        db_session.add_all(other_certs)
+        db.commit_rollback(db_session) 
+        
 
         
 
