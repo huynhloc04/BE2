@@ -14,6 +14,7 @@ from config import (JD_SAVED_DIR,
                     JD_PARSE_PROMPT,
                     CV_EXTRACTION_PATH,
                     JD_EXTRACTION_PATH, 
+                    CANDIDATE_AVATAR_DIR,
                     EDITED_JOB)
 from postjob import schema
 from sqlmodel import Session, func
@@ -285,19 +286,23 @@ class Job:
             raise HTTPException(status_code=404, detail="Job doesn't exist!")   
         
         for key, value in dict(data_form).items():
-            if key != "job_id":
-                if value is not None and (key != "education" and key != "language_certificates" and key != "other_certificates"):
+            if key != "job_id" and value is not None:
+                if (key != "education" and key != "language_certificates" and key != "other_certificates"):
                     setattr(result, key, value)  
-        job_edus = [model.JobEducation(job_id=data_form.job_id,
-                                      **dict(education)) for education in data_form.education]
-        lang_certs = [model.LanguageCertificate(job_id=data_form.job_id,
-                                              **dict(lang_cert)) for lang_cert in data_form.language_certificates]
-        other_certs = [model.OtherCertificate(job_id=data_form.job_id,
-                                             **dict(other_cert)) for other_cert in data_form.other_certificates]
+        
+        if data_form.education:
+            job_edus = [model.JobEducation(job_id=data_form.job_id,
+                                        **dict(education)) for education in data_form.education]
+            db_session.add_all(job_edus)
+        if data_form.language_certificates:
+            lang_certs = [model.LanguageCertificate(job_id=data_form.job_id,
+                                                **dict(lang_cert)) for lang_cert in data_form.language_certificates]
+            db_session.add_all(lang_certs)
+        if data_form.other_certificates:
+            other_certs = [model.OtherCertificate(job_id=data_form.job_id,
+                                                **dict(other_cert)) for other_cert in data_form.other_certificates]
+            db_session.add_all(other_certs)
             
-        db_session.add_all(job_edus)
-        db_session.add_all(lang_certs)
-        db_session.add_all(other_certs)
         db.commit_rollback(db_session) 
         
         
@@ -664,7 +669,7 @@ class Job:
 class Resume:    
     
     def get_detail_resume_by_id(cv_id: int, db_session: Session, current_user):
-        cv_query = select(model.ResumeNew, model.ResumeVersion.filename)    \
+        cv_query = select(model.ResumeNew, model.ResumeVersion)    \
             .join(model.ResumeVersion, model.ResumeVersion.new_id == cv_id) \
             .filter(model.ResumeNew.user_id == current_user.id,
                    model.ResumeNew.id == cv_id)
@@ -677,9 +682,9 @@ class Resume:
         result = db_session.execute(query).first() 
         return result
         
+
     @staticmethod
     def add_candidate(request, data, db_session, user):
-
         #   PDF uploaded file validation        
         if data.cv_pdf.content_type != 'application/pdf':
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Must be PDF file") 
@@ -693,7 +698,6 @@ class Resume:
         db_version = model.ResumeVersion(
                             filename=cleaned_filename,
                             cv_file=str(request.base_url) + cleaned_filename,
-                            level=data.level,
                             new_id=db_resume.id
                         )
         db_session.add(db_version)
@@ -707,11 +711,11 @@ class Resume:
     @staticmethod
     def cv_parsing(cv_id: int, db_session: Session, user):
         result = Resume.get_detail_resume_by_id(cv_id, db_session, user)       
-        if not result.filename:
+        if not result.ResumeVersion.filename:
            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please upload at least 1 CV_PDF")
         #   Check duplicated filename
-        if not DatabaseService.check_file_duplicate(result.filename, CV_EXTRACTION_PATH):
-            prompt_template = Extraction.cv_parsing_template(result.filename)
+        if not DatabaseService.check_file_duplicate(result.ResumeVersion.filename, CV_EXTRACTION_PATH):
+            prompt_template = Extraction.cv_parsing_template(result.ResumeVersion.filename)
 
             #   Read parsing requirements
             with open(CV_PARSE_PROMPT, "r") as file:
@@ -721,53 +725,87 @@ class Resume:
             #   Start parsing
             extracted_result = OpenAIService.gpt_api(prompt_template)            
             #   Save extracted result
-            saved_path = DatabaseService.store_cv_extraction(extracted_json=extracted_result, cv_file=result.filename)
+            saved_path = DatabaseService.store_cv_extraction(extracted_json=extracted_result, cv_file=result.ResumeVersion.filename)
         else:
             #   Read available extracted result
-            saved_path = os.path.join(CV_EXTRACTION_PATH, result.filename.split(".")[0] + ".json")
+            saved_path = os.path.join(CV_EXTRACTION_PATH, result.ResumeVersion.filename.split(".")[0] + ".json")
             with open(saved_path) as file:
                 extracted_result = file.read()
         return extracted_result, saved_path
+    
+
+    @staticmethod
+    def upload_avatar(request: Request,
+                      data: schema.UploadAvatar, 
+                      db_session: Session):
+        
+        cleaned_filename = DatabaseService.clean_filename(data.avatar.filename)
+        data.ResumeVersion.avatar = str(request.base_url) + cleaned_filename
+
+        db.commit_rollback(db_session)
+
+        #   Save JD file
+        with open(os.path.join(CANDIDATE_AVATAR_DIR,  cleaned_filename), 'w+b') as file:
+            shutil.copyfileobj(data.avatar.file, file)
         
         
     @staticmethod
     def fill_resume(data_form: schema.ResumeUpdate,
                     db_session: Session,
                     user):
-        result = Resume.get_resume_by_id(data_form.cv_id, db_session, user) 
+        result = Resume.get_detail_resume_by_id(data_form.new_id, db_session, user) 
         if not result:
             raise HTTPException(status_code=404, detail="Resume doesn't exist!")   
-        
+        print("===============================================")
+        print("===============================================")
+        print(result)
+        #   Check duplicated CVs
+        DatabaseService.check_db_duplicate(data_form, db_session)
+
+        #   If the resume never existed in System => add to Database
         for key, value in dict(data_form).items():
-            if key != "cv_id":
+            if key != "new_id" and key != "level":
                 if value is not None and key not in ["education",
                                                      "work_experiences",
                                                      "awards",
                                                      "projects",
                                                      "language_certificates",
                                                      "other_certificates"]:
-                    setattr(result, key, value)  
-        edus = [model.ResumeEducation(cv_id=data_form.cv_id,
-                                          **dict(education)) for education in data_form.education]
-        expers = [model.ResumeExperience(cv_id=data_form.cv_id,
-                                        **dict(exper)) for exper in data_form.work_experiences]
-        awards = [model.ResumeAward(cv_id=data_form.cv_id,
-                                    **dict(award)) for award in data_form.awards]
-        projects = [model.ResumeAward(cv_id=data_form.cv_id,
-                                    **dict(project)) for project in data_form.projects]
-        lang_certs = [model.ResumeAward(cv_id=data_form.cv_id,
-                                    **dict(lang_cert)) for lang_cert in data_form.language_certificates]
-        other_certs = [model.ResumeAward(cv_id=data_form.cv_id,
-                                    **dict(other_cert)) for other_cert in data_form.other_certificates]
+                    setattr(result.ResumeVersion, key, value) 
+        if data_form.education:
+            edus = [model.ResumeEducation(cv_id=data_form.new_id,
+                                              **dict(education)) for education in data_form.education]
+            db_session.add_all(edus)
+        if data_form.work_experiences:
+            expers = [model.ResumeExperience(cv_id=data_form.new_id,
+                                            **dict(exper)) for exper in data_form.work_experiences]
+            db_session.add_all(expers)
+        if data_form.awards:
+            awards = [model.ResumeAward(cv_id=data_form.new_id,
+                                        **dict(award)) for award in data_form.awards]
+            db_session.add_all(awards)
+        if data_form.projects:
+            projects = [model.ResumeAward(cv_id=data_form.new_id,
+                                        **dict(project)) for project in data_form.projects]
+            db_session.add_all(projects)
+        if data_form.language_certificates:
+            lang_certs = [model.ResumeAward(cv_id=data_form.new_id,
+                                        **dict(lang_cert)) for lang_cert in data_form.language_certificates]
+            db_session.add_all(lang_certs)
+        if data_form.other_certificates:
+            other_certs = [model.ResumeAward(cv_id=data_form.new_id,
+                                        **dict(other_cert)) for other_cert in data_form.other_certificates]
+            db_session.add_all(other_certs)
             
-        db_session.add_all(edus)
-        db_session.add_all(expers)
-        db_session.add_all(awards)
-        db_session.add_all(projects)
-        db_session.add_all(lang_certs)
-        db_session.add_all(other_certs)
         db.commit_rollback(db_session) 
         
+
+    @staticmethod
+    def resume_valuate(cv_id: int, db_session: Session, user):
+        result = Resume.get_detail_resume_by_id(data_form.new_id, db_session, user) 
+        if not result:
+            raise HTTPException(status_code=404, detail="Resume doesn't exist!") 
+
 
         
 

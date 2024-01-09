@@ -59,8 +59,8 @@ def get_current_active_user(
             status_code=status.HTTP_201_CREATED, 
             response_model=schema.SignUpResponse)
 def sign_up(background_tasks: BackgroundTasks,
-            db_session: Session = Depends(db.get_session),
-            data: schema.SignUp = Depends(schema.SignUp.as_form)):
+            data: schema.SignUp,
+            db_session: Session = Depends(db.get_session)):
     #   Check wheather this user is exist?
     user = service.AuthRequestRepository.get_user_by_email(db_session, data.email)
     if user:
@@ -133,8 +133,8 @@ def resend_otp(
     
 @router.post("/verify-otp")
 async def verify_otp(
-                db_session: Session = Depends(db.get_session),
-                data_form: schema.VerifyOTP = Depends(schema.VerifyOTP.as_form)):
+                data_form: schema.VerifyOTP,
+                db_session: Session = Depends(db.get_session)):
 
     if not service.OTPRepo.check_otp(
                             db_session,
@@ -274,9 +274,10 @@ def logout(db_session: Session = Depends(db.get_session),
     
 
 @router.put('/change-password')
-def change_password(db_session: Session = Depends(db.get_session),
-                    data: schema.ChangePassword = Depends(schema.ChangePassword.as_form),
-                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)): 
+def change_password(
+                data: schema.ChangePassword,
+                db_session: Session = Depends(db.get_session),
+                credentials: HTTPAuthorizationCredentials = Security(security_bearer)): 
     
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
@@ -336,8 +337,8 @@ def get_current_user(
             status_code=status.HTTP_200_OK, 
             response_model=schema.UserInfo)
 def upate_user_info(
+                data_form: schema.UserInfo,
                 db_session: Session = Depends(db.get_session),
-                data_form: schema.UserInfo = Depends(schema.UserInfo.as_form),
                 credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
     # Get curent active user
@@ -362,8 +363,8 @@ def upate_user_info(
             status_code=status.HTTP_201_CREATED, 
             response_model=schema.AdminMember)
 def add_admin_member(
-                db_session: Session = Depends(db.get_session),
-                data_form: schema.MemberBase = Depends(schema.MemberBase.as_form)): 
+                data_form: schema.MemberBase,
+                db_session: Session = Depends(db.get_session)): 
     
     member = service.AuthRequestRepository.add_admin(db_session, data_form)
     return schema.AdminMember(

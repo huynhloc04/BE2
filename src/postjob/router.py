@@ -44,8 +44,8 @@ def get_current_active_user(
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def add_company_info(request: Request,
+                     data_form: schema.CompanyBase,
                      db_session: Session = Depends(db.get_session),
-                     data_form: schema.CompanyBase = Depends(schema.CompanyBase.as_form),
                      credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
     # Get curent active user
@@ -100,8 +100,8 @@ def get_company_info(db_session: Session = Depends(db.get_session),
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def update_company_info(request: Request,
+                     data_form: schema.CompanyUpdate,
                      db_session: Session = Depends(db.get_session),
-                     data_form: schema.CompanyUpdate = Depends(schema.CompanyUpdate.as_form),
                      credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
     # Get curent active user
@@ -509,8 +509,28 @@ def cv_parsing(
     )
 
 
+@router.put("/collaborator/upload-avatar",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def upload_avatar(
+        request: Request,
+        data: schema.UploadAvatar = Depends(schema.UploadAvatar.as_form),
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    _ = service.Resume.upload_avatar(request, data, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Uploaded candidate avatar successfully",
+                    data=None
+    )
+
+
+#   Get information filled from User => Check duplicate (by email & phone) => Save to DB 
 @router.put("/collaborator/fill-extracted-resume",
-             status_code=status.HTTP_200_OK, 
+             status_code=status.HTTP_200_OK,
              response_model=schema.CustomResponse)
 def fill_parsed_resume(data: schema.ResumeUpdate,
                     db_session: Session = Depends(db.get_session),
@@ -518,12 +538,28 @@ def fill_parsed_resume(data: schema.ResumeUpdate,
     
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
-
     service.Resume.fill_resume(data, db_session, current_user)
     return schema.CustomResponse(
                     message="Fill-in resume information successfully",
                     data=None
                 )
+
+# @router.post("/collaborator/resume-valuate",
+#              status_code=status.HTTP_200_OK, 
+#              response_model=schema.CustomResponse)
+# def resume_valuate(cv_id: int,
+#                    db_session: Session = Depends(db.get_session),
+#                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+#     # Get curent active user
+#     _, current_user = get_current_active_user(db_session, credentials)
+
+#     service.Resume.resume_valuate(cv_id, db_session, current_user)
+#     return schema.CustomResponse(
+#                     message="Fill-in resume information successfully",
+#                     data=None
+#                 )
+
 
 
 

@@ -11,14 +11,15 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 1
 REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-JD_SAVED_DIR = "static/job/JDs/uploaded_jds"
-CV_SAVED_DIR = "static/job/CVs/uploaded_cvs"
+JD_SAVED_DIR = "static/job/jd/uploaded_jds"
+CV_SAVED_DIR = "static/resume/cv/uploaded_cvs"
 CV_PARSE_PROMPT = "src/postjob/resources/prompts/cv_parsing.txt"
 JD_PARSE_PROMPT = "src/postjob/resources/prompts/jd_parsing.txt"
 OPENAI_MODEL="gpt-3.5-turbo-16k"
-CV_EXTRACTION_PATH = "static/job/CVs/extracted_cvs"
-JD_EXTRACTION_PATH = "static/job/JDs/extracted_jds"
+CV_EXTRACTION_PATH = "static/resume/cv/extracted_cvs"
+JD_EXTRACTION_PATH = "static/job/jd/extracted_jds"
 EDITED_JOB = "static/job/JDs/edited_jobs"
+CANDIDATE_AVATAR_DIR = "static/resume/avatar"
 
 load_dotenv()
 DATABASE_URL = os.environ.get("DATABASE_URL")

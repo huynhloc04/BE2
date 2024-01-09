@@ -56,6 +56,7 @@ class CompanyInfo(BaseModel):
     facebook: Optional[str]
     instagram: Optional[str]
 
+
 class CompanyBase(BaseModel):
     company_name: str
     industry: str
@@ -76,49 +77,6 @@ class CompanyBase(BaseModel):
     website: Optional[str]
     facebook: Optional[str]
     instagram: Optional[str]
-
-    @classmethod
-    def as_form(cls, 
-                company_name: str = Form(...),
-                industry: str = Form(...),
-                description: str = Form(...),
-                tax_code: str = Form(...),
-                phone: str = Form(...),
-                email: str = Form(...),
-                founded_year: int = Form(...),
-                company_size: int = Form(...),
-                address: str = Form(...),
-                city: str = Form(...),
-                country: str = Form(...),
-                logo: UploadFile = File(..., max_lenght=10485760),
-                cover_image: Optional[UploadFile] = File(None, max_lenght=10485760),
-                # company_images: Optional[List[UploadFile]] = File(None, max_lenght=10485760),
-                company_video: Optional[UploadFile] = File(None, max_lenght=10485760),
-                linkedin: Optional[str] = Form(None),
-                website: Optional[str] = Form(None),
-                facebook: Optional[str] = Form(None),
-                instagram: Optional[str] = Form(None)):
-        
-        return cls(
-            company_name=company_name,
-            industry=industry,
-            description=description,
-            tax_code=tax_code,
-            phone=phone,
-            email=email,
-            founded_year=founded_year,
-            company_size=company_size,
-            address=address,
-            city=city,
-            country=country,
-            logo=logo,
-            cover_image=cover_image,
-            # company_images=company_images,
-            company_video=company_video,
-            linkedin=linkedin,
-            website=website,
-            facebook=facebook,
-            instagram=instagram)
     
 
 
@@ -142,49 +100,6 @@ class CompanyUpdate(BaseModel):
     website: Optional[str]
     facebook: Optional[str]
     instagram: Optional[str]
-
-    @classmethod
-    def as_form(cls,
-                company_name: Optional[str] = Form(None),
-                industry: Optional[str] = Form(None),
-                description: Optional[str] = Form(None),
-                tax_code: Optional[str] = Form(None),
-                phone: Optional[str] = Form(None),
-                email: Optional[str] = Form(None),
-                founded_year: Optional[int] = Form(None),
-                company_size: Optional[int] = Form(None),
-                address: Optional[str] = Form(None),
-                city: Optional[str] = Form(None),
-                country: Optional[str] = Form(None),
-                logo: Optional[UploadFile] = File(None, max_lenght=10485760),
-                cover_image: Optional[UploadFile] = File(None, max_lenght=10485760),
-                # company_images: Optional[List[UploadFile]] = File(None, max_lenght=10485760),
-                company_video: Optional[UploadFile] = File(None, max_lenght=10485760),
-                linkedin: Optional[str] = Form(None),
-                website: Optional[str] = Form(None),
-                facebook: Optional[str] = Form(None),
-                instagram: Optional[str] = Form(None)):
-        
-        return cls(
-            company_name=company_name,
-            industry=industry,
-            description=description,
-            tax_code=tax_code,
-            phone=phone,
-            email=email,
-            founded_year=founded_year,
-            company_size=company_size,
-            address=address,
-            city=city,
-            country=country,
-            logo=logo,
-            cover_image=cover_image,
-            # company_images=company_images,
-            company_video=company_video,
-            linkedin=linkedin,
-            website=website,
-            facebook=facebook,
-            instagram=instagram)       
         
 class JobEducation(BaseModel):
     degree: Union[str, None]
@@ -231,23 +146,6 @@ class JobUpdate(BaseModel):
     currency: Union[str, None]
     #   Chỉ xuất hiện bên trang Admin, và lúc NTD xem lại JD đã up (Admin check và gửi lại cho NTD)
     admin_decline_reason: Optional[str]
-
-
-class AddCandidate(BaseModel):
-    job_id: int
-    level: Level
-    cv_pdf: UploadFile
-
-    @classmethod
-    def as_form(cls,
-                job_id: int = Form(...),
-                level: Level = Form(...),
-                cv_pdf: UploadFile = File(...)):
-        
-        return cls(
-            job_id=job_id,
-            level=level,
-            cv_pdf=cv_pdf)
     
 
     
@@ -293,8 +191,9 @@ class OtherResumeCertificate(BaseModel):
     certificate_level: Union[str, None]
 
 class ResumeUpdate(BaseModel):
-    cv_id: int
+    new_id: int
     name: Union[str, None]
+    level: Union[str, None]
     current_job: Union[str, None]
     gender: Union[str, None]
     birthday: Union[str, None]  # => age
@@ -308,7 +207,7 @@ class ResumeUpdate(BaseModel):
     city: Union[str, None]
     country: Union[str, None]        
     objectives: Union[str, None]
-    educations: Union[List[ResumeEducation], None]
+    education: Union[List[ResumeEducation], None]
     work_experiences: Union[List[ResumeExperience], None]
     skills: Union[List[str], None]
     awards: Union[List[ResumeAward], None]
@@ -317,3 +216,33 @@ class ResumeUpdate(BaseModel):
     language_certificates: Union[List[ResumeLanguageCertificate], None]
     #   OtherCertificates
     other_certificates: Union[List[OtherResumeCertificate], None]
+
+
+class AddCandidate(BaseModel):
+    job_id: int
+    cv_pdf: UploadFile
+
+    @classmethod
+    def as_form(cls, 
+                job_id: str = Form(...),
+                cv_pdf: UploadFile = File(...)):
+        
+        return cls(
+                job_id=job_id,
+                cv_pdf=cv_pdf,
+                )
+    
+
+class UploadAvatar(BaseModel):
+    cv_id: int
+    avatar: UploadFile
+
+    @classmethod
+    def as_form(cls, 
+                cv_id: str = Form(...),
+                avatar: UploadFile = File(...)):
+        
+        return cls(
+                cv_id=cv_id,
+                avatar=avatar,
+                )

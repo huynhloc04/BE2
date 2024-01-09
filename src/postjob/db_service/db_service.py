@@ -57,7 +57,7 @@ class DatabaseService:
                             )
         result = db_sesion.execute(query).scalars().first()
         if result:
-            raise HTTPException(status_code=409, detail="This resume already exists in system. Please upload other Resume!")
+            raise HTTPException(status_code=409, detail="This resume already exists in system. Please upload the other!")
     
     @staticmethod
     def check_file_duplicate(file: str, path: str):
