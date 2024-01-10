@@ -591,7 +591,7 @@ def resume_valuate(
                 )
 
 
-@router.put("/collaborator/update_resume-valuate",
+@router.put("/collaborator/update-resume-valuate",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def update_resume_valuate(
