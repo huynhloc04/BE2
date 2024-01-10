@@ -552,7 +552,7 @@ def upload_avatar(
 @router.put("/collaborator/fill-extracted-resume",
              status_code=status.HTTP_200_OK,
              response_model=schema.CustomResponse)
-def fill_parsed_resume(data: schema.ResumeUpdate,
+def fill_extracted_resume(data: schema.ResumeUpdate,
                     db_session: Session = Depends(db.get_session),
                     credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
@@ -562,6 +562,32 @@ def fill_parsed_resume(data: schema.ResumeUpdate,
     return schema.CustomResponse(
                     message="Fill-in resume information successfully",
                     data=None
+                )
+
+
+@router.post("/collaborator/resume-valuate",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def resume_valuate(
+                data: schema.ResumeUpdate,
+                db_session: Session = Depends(db.get_session),
+                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    result = service.Resume.resume_valuate(data, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Resume valuated successfully",
+                    data={
+                        "level/salary": result.hard,
+                        "hard_point": result.hard_point,
+                        "degrees": result.degrees,
+                        "degree_point": result.degree_point,
+                        "certificates": result.certificates,
+                        "certificates_point": result.certificates_point,
+                        "total_point": result.total_point
+                    }
                 )
 
 

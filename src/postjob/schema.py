@@ -205,7 +205,7 @@ class OtherResumeCertificate(BaseModel):
     certificate_level: Union[str, None]
 
 class ResumeUpdate(BaseModel):
-    new_id: int
+    cv_id: int
     name: Union[str, None]
     level: Union[str, None]
     current_job: Union[str, None]

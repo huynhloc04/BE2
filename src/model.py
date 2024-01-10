@@ -157,6 +157,19 @@ class ResumeNew(TableBase, table=True):
     job_id: int = Field(default=None, foreign_key="job_descriptions.id")
 
 
+class ValuationInfo(TableBase, table=True):
+    __tablename__ = 'valuation_infos'
+    new_id: int = Field(default=None, foreign_key="resume_news.id")
+    old_id: int = Field(default=None, foreign_key="resume_olds.id")
+    hard: str = Field(default=None)
+    hard_point: float = Field(default=None)
+    degrees: List[str] = Field(default=None, sa_column=Column(TEXT))
+    degree_point: float = Field(default=None)
+    certificates: List[str] = Field(default=None, sa_column=Column(TEXT))
+    certificates_point: float = Field(default=None)
+    total_point: float = Field(default=None)
+
+
 class ResumeVersion(TableBase, table=True):
     __tablename__ = 'resume_versions'
 
@@ -187,8 +200,6 @@ class ResumeVersion(TableBase, table=True):
     status: str = Field(default="pending")
     package: str = Field(default=None)
     objectives: str = Field(default=None)
-    hard_point: float = Field(default=0.0)
-    soft_point: float = Field(default=0.0)
     is_valuate: bool = Field(default=False)
     is_ai_matching: bool = Field(default=False)
     is_admin_matching: bool = Field(default=False)

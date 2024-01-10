@@ -62,6 +62,18 @@ class OTPRepo:
             return True
         return False
 
+    
+levels = [["Executive", "Senior", "Engineer", "Developer"], 
+                    ["Leader", "Supervisor", "Senior Leader", "Senior Supervisor", "Assitant Manager"], 
+                    ["Manager", "Senior Manager", "Assitant Director"],
+                    ["Vice Direcctor", "Deputy Direcctor"], 
+                    ["Direcctor"], 
+                    ["Head"], 
+                    ["Group"], 
+                    ["Chief Operating Officer (COO)", "Chief Executive Officer (CEO)", "Chief Product Officer (CPO)", "Chief Financial Officer (CFO)"], 
+                    ["General Manager", "General Director"]]
+            
+level_map = {"0": 2, "1": 3, "2": 4, "3": 5, "4": 8, "5": 15, "6": 20, "7": 25, "8": 30}
 
 class Company:
 
@@ -790,7 +802,7 @@ class Resume:
                     user):
         result = Resume.get_detail_resume_by_id(data_form.new_id, db_session, user) 
         if not result:
-            raise HTTPException(status_code=404, detail="Resume doesn't exist!")   
+            raise HTTPException(status_code=404, detail="Resume doesn't exist!")
 
         #   If the resume never existed in System => add to Database
         for key, value in dict(data_form).items():
@@ -830,65 +842,76 @@ class Resume:
         db.commit_rollback(db_session) 
 
 
+    #   ========================= Resume Valuation =========================
+        
     @staticmethod
     def percent_estimate(filename: str):
         prompt_template = Extraction.resume_percent_estimate(filename)      
         #   Start parsing
         extracted_result = OpenAIService.gpt_api(prompt_template)
         point, explain = extracted_result["point"], extracted_result["explanation"]
-        print("-------------------------------------------")
-        print(point)
-        print(explain)
         return point/100, explain
-
-    
-    @staticmethod
-    def valuate_base(db_resume: model.ResumeVersion,
-                     data: Optional[schema.ResumeValuation]) -> List[float]:
-        
-        #   Point initialization
-        hard_point = 0
-        soft_point = 0
-        
-        #   ================================== Hard points ==================================
-        levels = [["Executive", "Senior", "Engineer", "Developer"], 
-                  ["Leader", "Supervisor", "Senior Leader", "Senior Supervisor", "Assitant Manager"], 
-                  ["Manager", "Senior Manager", "Assitant Director"],
-                  ["Vice Direcctor", "Deputy Direcctor"], 
-                  ["Direcctor"], 
-                  ["Head"], 
-                  ["Group"], 
-                  ["Chief Operating Officer (COO)", "Chief Executive Officer (CEO)", "Chief Product Officer (CPO)", "Chief Financial Officer (CFO)"], 
-                  ["General Manager", "General Director"]]
-        
-        level_map = {"0": 2, "1": 3, "2": 4, "3": 5, "4": 8, "5": 15, "6": 20, "7": 25, "8": 30}
-        if data.current_salary:
-            percent, _ = Resume.percent_estimate(filename=db_resume.ResumeVersion.filename)
-            hard_point = round(percent*data.current_salary / 100000, 1)   # Convert money to point: 100000 (vnđ) => 1đ
-        else:
-            for level, point in level_map.items():
-                if db_resume.level in levels[int(level)]:
-                    hard_point += point
-                    break
-
-        #   ================================== Soft point ==================================
-        degrees = [degree for degree in extracted_result["education"]["degree"]]
-
-        return hard_point, soft_point
         
 
     @staticmethod
-    def update_valuate(data: schema.ResumeValuation, db_session: Session, user):
+    def resume_valuate(data: schema.ResumeUpdate, db_session: Session, user):
         result = Resume.get_detail_resume_by_id(data.cv_id, db_session, user) 
         if not result:
             raise HTTPException(status_code=404, detail="Resume doesn't exist!")
         
-        #   Get point after re-define ResumeValuation
-        hard_point, soft_point = Resume.valuate_base(result, data)
-        result.ResumeVersion.hard_point = hard_point
-        result.ResumeVersion.soft_point = soft_point
+        #   Add "hard_point" initialization
+        hard_point = 0
+        for level, point in level_map.items():
+            if data.level in levels[int(level)]:
+                hard_point += point
+                #   Save to Database
+                db_valuate = model.ValuationInfo(hard=data.level,
+                                                 hard_point=point)
+                db_session.add(db_valuate)
+                db.commit_rollback(db_session)
+
+        #   ============================== Soft point ==============================
+            #   Degrees
+        degrees = [edu.degree for edu in data.education]
+        degree_point = 0.5 * len(degrees)
+            #   Certificates
+        certs = [cert.language + " - " + cert.language_certificate_name + " - " + cert.language_certificate_level for cert in data.language_certificates]
+        cert_point = 0.5 * len(certs)
+        #   Add "soft_point" to Database
+        db_valuate.degrees = degrees,
+        db_valuate.degree_point = degree_point,
+        db_valuate.certificates = certs,
+        db_valuate.certificates_point = cert_point,
+        db_valuate.total_point = hard_point + degree_point + cert_point
         db.commit_rollback(db_session)
-        return result
+        return db_valuate
+        
+
+    # @staticmethod
+    # def update_valuate(data: schema.ResumeValuation, db_session: Session, user):
+    #     result = Resume.get_detail_resume_by_id(data.cv_id, db_session, user) 
+    #     if not result:
+    #         raise HTTPException(status_code=404, detail="Resume doesn't exist!")
+        
+    #     #   Point initialization
+    #     hard_point = 0
+    #     soft_point = 0
+    #     if data.current_salary:
+    #         percent, _ = Resume.percent_estimate(filename=result.ResumeVersion.filename)
+    #         hard_point = round(percent*data.current_salary / 100000, 1)   # Convert money to point: 100000 (vnđ) => 1đ
+    #     else:
+    #         for level, point in level_map.items():
+    #             if result.ResumeVersion.level in levels[int(level)]:
+    #                 hard_point += point
+    #                 break
+
+    #     #   ================================== Soft point ==================================
+    #     # degrees = [degree for degree in extracted_result["education"]["degree"]]
+                
+    #     result.ResumeVersion.hard_point = hard_point
+    #     result.ResumeVersion.soft_point = soft_point
+    #     db.commit_rollback(db_session)
+    #     return result
     
     
     @staticmethod

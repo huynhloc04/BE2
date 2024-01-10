@@ -59,9 +59,13 @@ Please extract the above [Resume] exactly according to the corresponding keys an
     ),
   "certificates": {
     "language_certificates": {
-        "language": ["string"],
-        "certificate_name": ["string"],
-        "certificate_level": ["string"]
+        "certificate_language": ["string"],   (Must choose one of the languages after: English, Japan, Korean, Chinese)
+        "certificate_name": ["string"],     (Based on information in Resume, please choose the name of certificate if language extracted above exist in this Resume:
+              - TOEIC or IELTS if "certificate_language" is English
+              - N1, N2, N3, N4 or N5 if "certificate_language" is Japan
+              - Topik if "certificate_language" is Korean
+              - HSK5-HSK6 if "certificate_language" is Chinese)
+        "certificate_point/level": ["string"]
     },
     "other_certificates": {
         "certificate_name": ["string"],
