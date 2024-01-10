@@ -37,7 +37,7 @@ def get_current_active_user(
 
 
 # ===========================================================
-#                       Company register
+#                           Company
 # ===========================================================
 
 @router.post("/recruiter/add-company-info",
@@ -136,6 +136,27 @@ def add_industry(
     )
 
 
+@router.get("/recruiter/list-city",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def list_industry():
+    info = service.Company.list_city()
+    return schema.CustomResponse(
+                    message=None,
+                    data=[industry for industry in info]
+            )
+
+@router.get("/recruiter/list-country",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def list_industry():
+    info = service.Company.list_country()
+    return schema.CustomResponse(
+                    message=None,
+                    data=[industry for industry in info]
+            )
+
+
 @router.get("/recruiter/list-industry",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
@@ -204,11 +225,8 @@ def jd_parsing(
 
     extracted_result, saved_path = service.Job.jd_parsing(job_id, db_session, current_user)
     return schema.CustomResponse(
-                    message="Extract CV successfully!",
-                    data={
-                        "extracted_result": extracted_result,
-                        "json_saved_path": saved_path
-                    }
+                    message="Extract JD successfully!",
+                    data=extracted_result
                 )
 
 
@@ -227,6 +245,7 @@ def fill_parsed_job(data: schema.JobUpdate,
                     message="Fill-in job information successfully",
                     data=None
                 )
+
 
 @router.put("/recruiter/update-job-info",
              status_code=status.HTTP_200_OK, 
@@ -468,24 +487,6 @@ def get_general_company_info(
                     data=jobs
             )
 
-@router.post("/collaborator/add-candidate",
-             status_code=status.HTTP_201_CREATED, 
-             response_model=schema.CustomResponse)
-def add_candidate(
-        request: Request,
-        data_form: schema.AddCandidate = Depends(schema.AddCandidate.as_form),
-        db_session: Session = Depends(db.get_session),
-        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
-
-    _ = service.Resume.add_candidate(request, data_form, db_session, current_user)
-    return schema.CustomResponse(
-                    message="Add candidate successfully",
-                    data=None
-    )
-
 
 @router.post("/recruiter/cv-parsing",
              status_code=status.HTTP_200_OK, 
@@ -506,6 +507,25 @@ def cv_parsing(
                         "extracted_result": extracted_result,
                         "json_saved_path": saved_path
                     }
+    )
+
+
+@router.post("/collaborator/add-candidate",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def add_candidate(
+        request: Request,
+        data_form: schema.AddCandidate = Depends(schema.AddCandidate.as_form),
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    _ = service.Resume.add_candidate(request, data_form, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Add candidate successfully",
+                    data=None
     )
 
 
@@ -544,21 +564,44 @@ def fill_parsed_resume(data: schema.ResumeUpdate,
                     data=None
                 )
 
-# @router.post("/collaborator/resume-valuate",
-#              status_code=status.HTTP_200_OK, 
-#              response_model=schema.CustomResponse)
-# def resume_valuate(cv_id: int,
-#                    db_session: Session = Depends(db.get_session),
-#                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-#     # Get curent active user
-#     _, current_user = get_current_active_user(db_session, credentials)
 
-#     service.Resume.resume_valuate(cv_id, db_session, current_user)
-#     return schema.CustomResponse(
-#                     message="Fill-in resume information successfully",
-#                     data=None
-#                 )
+@router.put("/collaborator/update_resume-valuate",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def update_resume_valuate(
+                    data: schema.ResumeValuation,
+                    db_session: Session = Depends(db.get_session),
+                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    result = service.Resume.update_valuate(data, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Resume re-valuated successfully",
+                    data={
+                        "cv_id": result.ResumeVersion.new_id,
+                        "total_point": result.ResumeVersion.hard_point + result.ResumeVersion.soft_point
+                    }
+                )
+
+
+@router.post("/collaborator/resume-matching",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def resume_matching(
+        cv_id: int,
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    _ = service.Resume.matching_base(cv_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message="CV-JD matching completed.",
+                    data=None
+    )
 
 
 

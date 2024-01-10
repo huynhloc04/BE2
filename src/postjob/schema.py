@@ -24,15 +24,29 @@ class JobStatus(str, Enum):
 	paused = "paused"
 
 class Level(str, Enum):     
-	executive_senior_engineer_developer = "executive_senior_engineer_developer"
-	leader_supervisor_seniorleader_seniorsupervisor_assistmanager = "leader_supervisor_seniorleader_seniorsupervisor_assistmanager"
-	manager_seniormanager_assistantdirector = "manager_seniormanager_assistantdirector"
-	vicedirector_deputydirector = "vicedirector_deputydirector"
-	director = "director"
-	head = "head"
-	group = "group"
-	coo_ceo_cfo_cpo = "coo_ceo_cfo_cpo"
-	generalmanager_generaldirector = "generalmanager_generaldirector"
+    Executive = "Executive"
+    Senior = "Senior"
+    Engineer = "Engineer"
+    Developer = "Developer"
+    Leader = "Leader"
+    Supervisor = "Supervisor"
+    Senior_Leader = "Senior Leader"
+    Senior_Supervisor = "Senior Supervisor"
+    Assitant_Manager = "Assitant Manager"
+    Manager = "Manager"
+    Senior_Manager = "Senior Manager"
+    Assitant_Director = "Assitant Director"
+    Vice_Direcctor = "Vice Direcctor"
+    Deputy_Direcctor = "Deputy Direcctor"
+    Director = "Director"
+    Head = "Head"
+    Group = "Group"
+    COO = "Chief Operating Officer"
+    CEO = "Chief Executive Officer"
+    CPO = "Chief Product Officer"
+    CFO = "Chief Financial Officer"
+    General_Manager = "General Manager"
+    General_Director = "General Director"
     
 
 class CompanyInfo(BaseModel):
@@ -246,3 +260,12 @@ class UploadAvatar(BaseModel):
                 cv_id=cv_id,
                 avatar=avatar,
                 )
+    
+
+class ResumeValuation(BaseModel):
+    cv_id: int
+    level: Level
+    current_salary: float
+    degree: List[str]
+    foreign_languages: List[str]
+    certificates: List[str]

@@ -5,6 +5,7 @@ from fastapi import UploadFile, status, Depends
 import os, shutil
 import pandas as pd
 import json
+from typing import Dict, List, Optional
 import pyarrow as pa
 import pyarrow.parquet as pq
 from config import db
@@ -16,7 +17,9 @@ from config import (JD_SAVED_DIR,
                     JD_EXTRACTION_PATH, 
                     CANDIDATE_AVATAR_DIR,
                     SAVED_TEMP,
-                    EDITED_JOB)
+                    EDITED_JOB,
+                    MATCHING_PROMPT,
+                    MATCHING_DIR)
 from postjob import schema
 from sqlmodel import Session, func
 from postjob.api_service.extraction_service import Extraction
@@ -188,6 +191,22 @@ class Company:
         db_session.add(db_industry)
         db.commit_rollback(db_session)
         return db_industry
+    
+    
+    @staticmethod
+    def list_city():
+        cities = [
+            "Hà Nội", "Hồ Chí Minh", "An Giang", "Bà Rịa - Vũng Tàu", "Bạc Liêu", "Bắc Giang", "Bắc Kạn", "Bắc Ninh", "Bến Tre", "Bình Định", "Bình Dương", "Bình Phước", "Bình Thuận", "Cà Mau", "Cần Thơ", "Cao Bằng", "Đà Nẵng", "Đắk Lắk", "Đắk Nông", "Điện Biên", "Đồng Nai", "Đồng Tháp", "Gia Lai", "Hà Giang", "Hà Nam", "Hà Tĩnh", "Hải Dương", "Hải Phòng", "Hậu Giang", "Hòa Bình", "Hưng Yên", "Khánh Hòa", "Kiên Giang", "Kon Tum", "Lai Châu", "Lâm Đồng", "Lạng Sơn", "Lào Cai", "Long An", "Nam Định", "Nghệ An", "Ninh Bình", "Ninh Thuận", "Phú Thọ", "Phú Yên", "Quảng Bình", "Quảng Nam", "Quảng Ngãi", "Quảng Ninh", "Quảng Trị", "Sóc Trăng", "Sơn La", "Tây Ninh", "Thái Bình", "Thái Nguyên", "Thanh Hóa", "Thừa Thiên Huế", "Tiền Giang", "Trà Vinh", "Tuyên Quang", "Vĩnh Long", "Vĩnh Phúc", "Yên Bái" 
+        ]
+        return cities
+    
+    
+    @staticmethod
+    def list_country():
+        cities = [
+            "Mỹ (US)", "Trung Quốc (CN)", "Ấn Độ (IN)", "Brazil (BR)", "Nga (RU)", "Nhật Bản (JP)", "Đức (DE)", "Anh (GB)", "Pháp (FR)", "Úc (AU)", "Canada (CA)", "Đan Mạch (DK)", "Hà Lan (NL)", "Bỉ (BE)", "Thụy Sĩ (CH)", "Thụy Điển (SE)", "Ý (IT)", "Tây Ban Nha (ES)", "Đức (DE)", "Pháp (FR)", "Hàn Quốc (KR)", "Singapore (SG)", "Malaysia (MY)", "Thái Lan (TH)", "Indonesia (ID)", "Úc (AU)", "New Zealand (NZ)", "Nigeria (NG)", "Nam Phi (ZA)", "Kenya (KE)", "Ghana (GH)", "Ethiopia (ET)", "Mexico (MX)", "Brazil (BR)", "Argentina (AR)", "Colombia (CO)", "Chile (CL)", "Saudi Arabia (SA)", "Israel (IL)", "Thổ Nhĩ Kỳ (TR)", "Iran (IR)"
+        ]
+        return cities
     
     
     @staticmethod
@@ -683,6 +702,7 @@ class Resume:
         result = db_session.execute(query).first() 
         return result
     
+    
     @staticmethod
     def parse_base(filename: str, check_dup: bool = False):
         #   Check duplicated filename
@@ -718,7 +738,7 @@ class Resume:
             
         extracted_result, _ = Resume.parse_base(cleaned_filename, check_dup=True)
         #   Check duplicated CVs
-        DatabaseService.check_db_duplicate(extracted_result["contact_information"], db_session)
+        DatabaseService.check_db_duplicate(extracted_result["contact_information"], cleaned_filename, db_session)
         #   Save Resume's basic info to DB
         shutil.move(os.path.join(SAVED_TEMP, cleaned_filename), os.path.join(CV_SAVED_DIR, cleaned_filename))
         db_resume = model.ResumeNew(
@@ -731,8 +751,9 @@ class Resume:
                             new_id=db_resume.id,
                             filename=cleaned_filename,
                             cv_file=str(request.base_url) + cleaned_filename,
-                            email=extracted_result["contact_information"]["email"],
-                            phone=extracted_result["contact_information"]["phone"]
+                            level=extracted_result["levels"][0],
+                            email=extracted_result["contact_information"]["email"][0],
+                            phone=extracted_result["contact_information"]["phone"][0]
                         )
         db_session.add(db_version)
         db.commit_rollback(db_session)
@@ -807,13 +828,90 @@ class Resume:
             db_session.add_all(other_certs)
             
         db.commit_rollback(db_session) 
+
+
+    @staticmethod
+    def percent_estimate(filename: str):
+        prompt_template = Extraction.resume_percent_estimate(filename)      
+        #   Start parsing
+        extracted_result = OpenAIService.gpt_api(prompt_template)
+        point, explain = extracted_result["point"], extracted_result["explanation"]
+        print("-------------------------------------------")
+        print(point)
+        print(explain)
+        return point/100, explain
+
+    
+    @staticmethod
+    def valuate_base(db_resume: model.ResumeVersion,
+                     data: Optional[schema.ResumeValuation]) -> List[float]:
+        
+        #   Point initialization
+        hard_point = 0
+        soft_point = 0
+        
+        #   ================================== Hard points ==================================
+        levels = [["Executive", "Senior", "Engineer", "Developer"], 
+                  ["Leader", "Supervisor", "Senior Leader", "Senior Supervisor", "Assitant Manager"], 
+                  ["Manager", "Senior Manager", "Assitant Director"],
+                  ["Vice Direcctor", "Deputy Direcctor"], 
+                  ["Direcctor"], 
+                  ["Head"], 
+                  ["Group"], 
+                  ["Chief Operating Officer (COO)", "Chief Executive Officer (CEO)", "Chief Product Officer (CPO)", "Chief Financial Officer (CFO)"], 
+                  ["General Manager", "General Director"]]
+        
+        level_map = {"0": 2, "1": 3, "2": 4, "3": 5, "4": 8, "5": 15, "6": 20, "7": 25, "8": 30}
+        if data.current_salary:
+            percent, _ = Resume.percent_estimate(filename=db_resume.ResumeVersion.filename)
+            hard_point = round(percent*data.current_salary / 100000, 1)   # Convert money to point: 100000 (vnđ) => 1đ
+        else:
+            for level, point in level_map.items():
+                if db_resume.level in levels[int(level)]:
+                    hard_point += point
+                    break
+
+        #   ================================== Soft point ==================================
+        degrees = [degree for degree in extracted_result["education"]["degree"]]
+
+        return hard_point, soft_point
         
 
     @staticmethod
-    def resume_valuate(cv_id: int, db_session: Session, user):
-        result = Resume.get_detail_resume_by_id(data_form.new_id, db_session, user) 
+    def update_valuate(data: schema.ResumeValuation, db_session: Session, user):
+        result = Resume.get_detail_resume_by_id(data.cv_id, db_session, user) 
         if not result:
-            raise HTTPException(status_code=404, detail="Resume doesn't exist!") 
+            raise HTTPException(status_code=404, detail="Resume doesn't exist!")
+        
+        #   Get point after re-define ResumeValuation
+        hard_point, soft_point = Resume.valuate_base(result, data)
+        result.ResumeVersion.hard_point = hard_point
+        result.ResumeVersion.soft_point = soft_point
+        db.commit_rollback(db_session)
+        return result
+    
+    
+    @staticmethod
+    def matching_base(filename: str, check_dup: bool = False):
+        #   Check duplicated filename
+        if not DatabaseService.check_file_duplicate(filename, MATCHING_DIR):
+            prompt_template = Extraction.matching_template(filename, check_dup)
+
+            #   Read parsing requirements
+            with open(MATCHING_PROMPT, "r") as file:
+                require = file.read()
+            prompt_template += require 
+            
+            #   Start parsing
+            extracted_result = OpenAIService.gpt_api(prompt_template)        
+            saved_path = DatabaseService.store_cv_extraction(extracted_json=extracted_result, cv_file=filename)
+        else:
+            #   Read available extracted result
+            saved_path = os.path.join(CV_EXTRACTION_PATH, filename.split(".")[0] + ".json")
+            with open(saved_path) as file:
+                extracted_result = json.loads(file.read())
+        return extracted_result, saved_path
+
 
 
         

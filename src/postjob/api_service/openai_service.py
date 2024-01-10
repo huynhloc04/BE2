@@ -13,7 +13,7 @@ class OpenAIService:
         model: str = OPENAI_MODEL
         temp: float = 0
 
-        print(" >>> Parsing...")
+        print(" >>> AI Processing...")
 
         """Request gpt api with a prompt"""
         start = time.time()

@@ -32,7 +32,7 @@ Please extract the above [Resume] exactly according to the corresponding keys an
     "end_time": ["string"],
     "detailed_descriptions": ["string"] (Do not omit any information)
   }],
-  "level": ["string"] (Based on information provided in [Resume] and levels listed below, you must choose the exact curent working level that this candidate is:
+  "levels": ["string"] (Based on information provided in [Resume] and levels listed below, you must choose the exact curent working level that this candidate is:
     - Executive
     - Senior
     - Engineer
@@ -47,7 +47,7 @@ Please extract the above [Resume] exactly according to the corresponding keys an
     - Assitant Director
     - Vice Direcctor
     - Deputy Direcctor
-    - Direcctor
+    - Director
     - Head
     - Group (All levels that relevant to word: 'Group')
     - Chief Operating Officer (COO)
@@ -114,6 +114,6 @@ Please extract the above [Resume] exactly according to the corresponding keys an
 }
 
 Important:
-  - Any information is not found, please note it as "N/A", except for "iq"; "eq"; "numerology"; "strength"; "weakness", you must generate by your own and do not leave them empty.
-  - All the key has to be all lower form and each word must connect by underscore "_"
   - ["string"] mean a list of string, even if there is only one item, put it in a list of one string item.
+  - Any information is not found, please note it as "N/A".
+  - All the key has to be all lower form and each word must connect by underscore "_"

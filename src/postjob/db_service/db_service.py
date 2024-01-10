@@ -5,7 +5,7 @@ from config import db
 from sqlmodel import select
 from typing import Optional, Dict
 from fastapi import HTTPException, status
-from config import JD_EXTRACTION_PATH, CV_EXTRACTION_PATH
+from config import JD_EXTRACTION_PATH, CV_EXTRACTION_PATH, SAVED_TEMP
 
 
 class DatabaseService:
@@ -49,14 +49,16 @@ class DatabaseService:
         return cleaned_filename
     
     @staticmethod
-    def check_db_duplicate(data, db_sesion):
+    def check_db_duplicate(data, filename, db_sesion):
         query = select(model.ResumeVersion).where(
-                                        model.ResumeVersion.email == data["email"],
-                                        model.ResumeVersion.phone == data["phone"],
+                                        model.ResumeVersion.email == data["email"][0],
+                                        model.ResumeVersion.phone == data["phone"][0],
                                         model.ResumeVersion.is_lastest == True
                             )
         result = db_sesion.execute(query).scalars().first()
         if result:
+            #   Delete uploaded duplicated CV
+            os.remove(os.path.join(SAVED_TEMP, filename))
             raise HTTPException(status_code=409, detail="This resume already exists in system. Please upload the other!")
     
     @staticmethod
