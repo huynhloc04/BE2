@@ -15,6 +15,7 @@ from config import (JD_SAVED_DIR,
                     CV_EXTRACTION_PATH,
                     JD_EXTRACTION_PATH, 
                     CANDIDATE_AVATAR_DIR,
+                    SAVED_TEMP,
                     EDITED_JOB)
 from postjob import schema
 from sqlmodel import Session, func
@@ -681,41 +682,12 @@ class Resume:
                                                 model.ResumeNew.id == cv_id)
         result = db_session.execute(query).first() 
         return result
-        
-
+    
     @staticmethod
-    def add_candidate(request, data, db_session, user):
-        #   PDF uploaded file validation        
-        if data.cv_pdf.content_type != 'application/pdf':
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Must be PDF file") 
-        cleaned_filename = DatabaseService.clean_filename(data.cv_pdf.filename)
-        db_resume = model.ResumeNew(
-                            user_id=user.id,
-                            job_id=data.job_id,
-                        )       
-        db_session.add(db_resume)
-        db.commit_rollback(db_session)
-        db_version = model.ResumeVersion(
-                            filename=cleaned_filename,
-                            cv_file=str(request.base_url) + cleaned_filename,
-                            new_id=db_resume.id
-                        )
-        db_session.add(db_version)
-        db.commit_rollback(db_session)
-
-        #   Save CV file
-        with open(os.path.join(CV_SAVED_DIR,  cleaned_filename), 'w+b') as file:
-            shutil.copyfileobj(data.cv_pdf.file, file)
-
-
-    @staticmethod
-    def cv_parsing(cv_id: int, db_session: Session, user):
-        result = Resume.get_detail_resume_by_id(cv_id, db_session, user)       
-        if not result.ResumeVersion.filename:
-           raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please upload at least 1 CV_PDF")
+    def parse_base(filename: str, check_dup: bool = False):
         #   Check duplicated filename
-        if not DatabaseService.check_file_duplicate(result.ResumeVersion.filename, CV_EXTRACTION_PATH):
-            prompt_template = Extraction.cv_parsing_template(result.ResumeVersion.filename)
+        if not DatabaseService.check_file_duplicate(filename, CV_EXTRACTION_PATH):
+            prompt_template = Extraction.cv_parsing_template(filename, check_dup)
 
             #   Read parsing requirements
             with open(CV_PARSE_PROMPT, "r") as file:
@@ -723,28 +695,70 @@ class Resume:
             prompt_template += require 
             
             #   Start parsing
-            extracted_result = OpenAIService.gpt_api(prompt_template)            
-            #   Save extracted result
-            saved_path = DatabaseService.store_cv_extraction(extracted_json=extracted_result, cv_file=result.ResumeVersion.filename)
+            extracted_result = OpenAIService.gpt_api(prompt_template)        
+            saved_path = DatabaseService.store_cv_extraction(extracted_json=extracted_result, cv_file=filename)
         else:
             #   Read available extracted result
-            saved_path = os.path.join(CV_EXTRACTION_PATH, result.ResumeVersion.filename.split(".")[0] + ".json")
+            saved_path = os.path.join(CV_EXTRACTION_PATH, filename.split(".")[0] + ".json")
             with open(saved_path) as file:
-                extracted_result = file.read()
+                extracted_result = json.loads(file.read())
         return extracted_result, saved_path
+    
+
+    @staticmethod
+    def add_candidate(request, data, db_session, user):
+        #   PDF uploaded file validation        
+        if data.cv_pdf.content_type != 'application/pdf':
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Must be PDF file") 
+        cleaned_filename = DatabaseService.clean_filename(data.cv_pdf.filename)
+
+        #   Save CV file as temporary
+        with open(os.path.join(SAVED_TEMP, cleaned_filename), 'w+b') as file:
+            shutil.copyfileobj(data.cv_pdf.file, file)
+            
+        extracted_result, _ = Resume.parse_base(cleaned_filename, check_dup=True)
+        #   Check duplicated CVs
+        DatabaseService.check_db_duplicate(extracted_result["contact_information"], db_session)
+        #   Save Resume's basic info to DB
+        shutil.move(os.path.join(SAVED_TEMP, cleaned_filename), os.path.join(CV_SAVED_DIR, cleaned_filename))
+        db_resume = model.ResumeNew(
+                            user_id=user.id,
+                            job_id=data.job_id,
+                        )       
+        db_session.add(db_resume)
+        db.commit_rollback(db_session)
+        db_version = model.ResumeVersion(
+                            new_id=db_resume.id,
+                            filename=cleaned_filename,
+                            cv_file=str(request.base_url) + cleaned_filename,
+                            email=extracted_result["contact_information"]["email"],
+                            phone=extracted_result["contact_information"]["phone"]
+                        )
+        db_session.add(db_version)
+        db.commit_rollback(db_session)
+
+
+    @staticmethod
+    def cv_parsing(cv_id: int, db_session: Session, user):
+        result = Resume.get_detail_resume_by_id(cv_id, db_session, user)       
+        if not result.ResumeVersion.filename:
+           raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please upload at least 1 CV_PDF")
+        return Resume.parse_base(result.ResumeVersion.filename)
     
 
     @staticmethod
     def upload_avatar(request: Request,
                       data: schema.UploadAvatar, 
-                      db_session: Session):
+                      db_session: Session,
+                      user):
         
         cleaned_filename = DatabaseService.clean_filename(data.avatar.filename)
-        data.ResumeVersion.avatar = str(request.base_url) + cleaned_filename
-
+        
+        result = Resume.get_detail_resume_by_id(data.cv_id, db_session, user) 
+        result.ResumeVersion.avatar = str(request.base_url) + cleaned_filename
         db.commit_rollback(db_session)
 
-        #   Save JD file
+        #   Save logo image
         with open(os.path.join(CANDIDATE_AVATAR_DIR,  cleaned_filename), 'w+b') as file:
             shutil.copyfileobj(data.avatar.file, file)
         
@@ -756,11 +770,6 @@ class Resume:
         result = Resume.get_detail_resume_by_id(data_form.new_id, db_session, user) 
         if not result:
             raise HTTPException(status_code=404, detail="Resume doesn't exist!")   
-        print("===============================================")
-        print("===============================================")
-        print(result)
-        #   Check duplicated CVs
-        DatabaseService.check_db_duplicate(data_form, db_session)
 
         #   If the resume never existed in System => add to Database
         for key, value in dict(data_form).items():

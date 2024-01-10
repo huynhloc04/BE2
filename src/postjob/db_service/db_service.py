@@ -51,8 +51,8 @@ class DatabaseService:
     @staticmethod
     def check_db_duplicate(data, db_sesion):
         query = select(model.ResumeVersion).where(
-                                        model.ResumeVersion.email == data.email,
-                                        model.ResumeVersion.phone == data.phone,
+                                        model.ResumeVersion.email == data["email"],
+                                        model.ResumeVersion.phone == data["phone"],
                                         model.ResumeVersion.is_lastest == True
                             )
         result = db_sesion.execute(query).scalars().first()

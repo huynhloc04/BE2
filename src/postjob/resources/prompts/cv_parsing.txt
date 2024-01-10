@@ -32,6 +32,31 @@ Please extract the above [Resume] exactly according to the corresponding keys an
     "end_time": ["string"],
     "detailed_descriptions": ["string"] (Do not omit any information)
   }],
+  "level": ["string"] (Based on information provided in [Resume] and levels listed below, you must choose the exact curent working level that this candidate is:
+    - Executive
+    - Senior
+    - Engineer
+    - Developer
+    - Leader
+    - Supervisor
+    - Senior Leader
+    - Senior Supervisor
+    - Assitant Manager
+    - Manager
+    - Senior Manager
+    - Assitant Director
+    - Vice Direcctor
+    - Deputy Direcctor
+    - Direcctor
+    - Head
+    - Group (All levels that relevant to word: 'Group')
+    - Chief Operating Officer (COO)
+    - Chief Executive Officer (CEO)
+    - Chief Product Officer (CPO)
+    - Chief Financial Officer (CFO)
+    - General Manager
+    - General Director
+    ),
   "certificates": {
     "language_certificates": {
         "language": ["string"],
@@ -73,9 +98,9 @@ Please extract the above [Resume] exactly according to the corresponding keys an
     "current_job_position": ["string"],
     "gender": ["string"],
     "linkedin": ["string"],
-	"website": ["string"],
-	"facebook": ["string"],
-	"instagram": ["string"],
+    "website": ["string"],
+    "facebook": ["string"],
+    "instagram": ["string"],
     "earliest_university_year": ["string"],
     "birthday": ["string"], (if the birthday is not available, calculate exactly "year of birth" based on the earliest education year if birthday information is not provided in resume. The earliest education when candidate is 18 years old, so "year of birth" equal "Earliest university year" minus 18.)
   },
@@ -85,7 +110,7 @@ Please extract the above [Resume] exactly according to the corresponding keys an
     "country": ["string"],
     "city": ["string"],
     "address": ["string"]
-  },
+  }
 }
 
 Important:

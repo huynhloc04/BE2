@@ -482,7 +482,7 @@ def add_candidate(
 
     _ = service.Resume.add_candidate(request, data_form, db_session, current_user)
     return schema.CustomResponse(
-                    message="Uploaded JD successfully",
+                    message="Add candidate successfully",
                     data=None
     )
 

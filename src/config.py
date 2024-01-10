@@ -20,6 +20,7 @@ CV_EXTRACTION_PATH = "static/resume/cv/extracted_cvs"
 JD_EXTRACTION_PATH = "static/job/jd/extracted_jds"
 EDITED_JOB = "static/job/JDs/edited_jobs"
 CANDIDATE_AVATAR_DIR = "static/resume/avatar"
+SAVED_TEMP = "static/resume/cv/temp"
 
 load_dotenv()
 DATABASE_URL = os.environ.get("DATABASE_URL")
