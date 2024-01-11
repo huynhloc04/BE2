@@ -22,31 +22,6 @@ class JobStatus(str, Enum):
 	browsing = "browsing"
 	recruiting = "recruiting"
 	paused = "paused"
-
-class Level(str, Enum):     
-    Executive = "Executive"
-    Senior = "Senior"
-    Engineer = "Engineer"
-    Developer = "Developer"
-    Leader = "Leader"
-    Supervisor = "Supervisor"
-    Senior_Leader = "Senior Leader"
-    Senior_Supervisor = "Senior Supervisor"
-    Assitant_Manager = "Assitant Manager"
-    Manager = "Manager"
-    Senior_Manager = "Senior Manager"
-    Assitant_Director = "Assitant Director"
-    Vice_Direcctor = "Vice Direcctor"
-    Deputy_Direcctor = "Deputy Direcctor"
-    Director = "Director"
-    Head = "Head"
-    Group = "Group"
-    COO = "Chief Operating Officer"
-    CEO = "Chief Executive Officer"
-    CPO = "Chief Product Officer"
-    CFO = "Chief Financial Officer"
-    General_Manager = "General Manager"
-    General_Director = "General Director"
     
 
 class CompanyInfo(BaseModel):
@@ -85,12 +60,56 @@ class CompanyBase(BaseModel):
     country: str
     logo: UploadFile
     cover_image: Optional[UploadFile]
-    # company_images: Optional[List[UploadFile]]
+    company_images: Optional[List[UploadFile]]
     company_video: Optional[UploadFile]
     linkedin: Optional[str]
     website: Optional[str]
     facebook: Optional[str]
     instagram: Optional[str]
+
+    @classmethod
+    def as_form(cls, 
+                company_name: str = Form(...),
+                industry: str = Form(...),
+                description: str = Form(...),
+                phone: str = Form(...),
+                email: str = Form(...),
+                founded_year: int = Form(...),
+                company_size: int = Form(...),
+                tax_code: str = Form(...),
+                address: str = Form(...),
+                city: str = Form(...),
+                country: str = Form(...),
+                logo: UploadFile = File(...),
+                cover_image: Optional[UploadFile] = File(None),
+                company_images: Optional[List[UploadFile]] = File(None),
+                company_video: Optional[UploadFile] = File(None),
+                linkedin: Optional[str] = Form(None),
+                website: Optional[str] = Form(None),
+                facebook: Optional[str] = Form(None),
+                instagram: Optional[str] = Form(None)):
+        
+        return cls(
+            company_name=company_name,
+            industry=industry,
+            description=description,
+            phone=phone,
+            email=email,
+            founded_year=founded_year,
+            company_size=company_size,
+            tax_code=tax_code,
+            address=address,
+            city=city,
+            country=country,
+            logo=logo,
+            cover_image=cover_image,
+            company_images=company_images,
+            company_video=company_video,
+            linkedin=linkedin,
+            website=website,
+            facebook=facebook,
+            instagram=instagram
+        )
     
 
 
@@ -196,9 +215,9 @@ class ResumeProject(BaseModel):
     end_time: Union[datetime, None]
     
 class ResumeLanguageCertificate(BaseModel):
-    language: Union[str, None]
-    language_certificate_name: Union[str, None]
-    language_certificate_level: Union[str, None]
+    certificate_language: Union[str, None]
+    certificate_name: Union[str, None]
+    certificate_point_level: Union[str, None]
     
 class OtherResumeCertificate(BaseModel):
     certificate_name: Union[str, None]
@@ -262,10 +281,44 @@ class UploadAvatar(BaseModel):
                 )
     
 
+
+class Level(str, Enum):     
+    Executive = "Executive"
+    Senior = "Senior"
+    Engineer = "Engineer"
+    Developer = "Developer"
+    Leader = "Leader"
+    Supervisor = "Supervisor"
+    Senior_Leader = "Senior Leader"
+    Senior_Supervisor = "Senior Supervisor"
+    Assitant_Manager = "Assitant Manager"
+    Manager = "Manager"
+    Senior_Manager = "Senior Manager"
+    Assitant_Director = "Assitant Director"
+    Vice_Direcctor = "Vice Direcctor"
+    Deputy_Direcctor = "Deputy Direcctor"
+    Director = "Director"
+    Head = "Head"
+    Group = "Group"
+    COO = "Chief Operating Officer"
+    CEO = "Chief Executive Officer"
+    CPO = "Chief Product Officer"
+    CFO = "Chief Financial Officer"
+    General_Manager = "General Manager"
+    General_Director = "General Director"
+    
+class ValuationDegree(str, Enum):
+    english = "english"
+    japan = "japan"
+    korean = "korean"
+    chinese = "chinese"    
+    
 class ResumeValuation(BaseModel):
     cv_id: int
     level: Level
-    current_salary: float
-    degree: List[str]
-    foreign_languages: List[str]
-    certificates: List[str]
+    current_salary: Optional[float]
+    degrees: List[ValuationDegree]
+    certificates: List[ResumeLanguageCertificate]
+    
+    
+    

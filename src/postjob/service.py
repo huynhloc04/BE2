@@ -97,7 +97,7 @@ class Company:
                                 country=data.country, 
                                 logo=str(request.base_url) + data.logo.filename if data.logo else None,
                                 cover_image=str(request.base_url) + data.cover_image.filename if data.cover_image else None, 
-                                # company_images=[str(request.base_url) + company_img.filename for company_img in data.company_images] if data.company_images else None,
+                                company_images=[str(request.base_url) + company_img.filename for company_img in data.company_images] if data.company_images else None,
                                 company_video=str(request.base_url) + data.company_video.filename if data.company_video else None,
                                 linkedin=data.linkedin,
                                 website=data.website,
@@ -107,7 +107,7 @@ class Company:
         db.commit_rollback(db_session)
 
         #   Save file
-        companies = ["logo", "cover_image", "company_video"]
+        companies = ["logo", "cover_image", "company_images", "company_video"]
         for folder in companies:
             dir = os.path.join(os.getenv("COMPANY_DIR"), folder)
             if not os.path.exists(dir):
@@ -118,6 +118,11 @@ class Company:
         if data.cover_image:
             with open(os.path.join(os.getenv("COMPANY_DIR"), "cover_image",  data.cover_image.filename), 'w+b') as file:
                 shutil.copyfileobj(data.cover_image.file, file)
+                shutil.copyfileobj(data.logo.file, file)
+        if data.company_images:
+            for image in data.company_images:
+                with open(os.path.join(os.getenv("COMPANY_DIR"), "company_images",  image.filename), 'w+b') as file:
+                    shutil.copyfileobj(image.file, file)
         if data.company_video:
             with open(os.path.join(os.getenv("COMPANY_DIR"), "company_video",  data.company_video.filename), 'w+b') as file:
                 shutil.copyfileobj(data.company_video.file, file)
@@ -762,13 +767,11 @@ class Resume:
         db_version = model.ResumeVersion(
                             new_id=db_resume.id,
                             filename=cleaned_filename,
-                            cv_file=str(request.base_url) + cleaned_filename,
-                            level=extracted_result["levels"][0],
-                            email=extracted_result["contact_information"]["email"][0],
-                            phone=extracted_result["contact_information"]["phone"][0]
+                            cv_file=str(request.base_url) + cleaned_filename
                         )
         db_session.add(db_version)
         db.commit_rollback(db_session)
+        return extracted_result
 
 
     @staticmethod
@@ -840,6 +843,8 @@ class Resume:
             db_session.add_all(other_certs)
             
         db.commit_rollback(db_session) 
+        
+        return data_form
 
 
     #   ========================= Resume Valuation =========================
@@ -862,6 +867,10 @@ class Resume:
         #   Add "hard_point" initialization
         hard_point = 0
         for level, point in level_map.items():
+            print("==============================================")
+            print("==============================================")
+            print(data.level)
+            print(levels[int(level)])
             if data.level in levels[int(level)]:
                 hard_point += point
                 #   Save to Database
@@ -872,10 +881,23 @@ class Resume:
 
         #   ============================== Soft point ==============================
             #   Degrees
-        degrees = [edu.degree for edu in data.education]
+        degrees = [edu.degree for edu in data.education if edu.degree in ["Bachelor", "Master", "Ph.D"]]
         degree_point = 0.5 * len(degrees)
             #   Certificates
-        certs = [cert.language + " - " + cert.language_certificate_name + " - " + cert.language_certificate_level for cert in data.language_certificates]
+        certs = []
+        for cert in data.language_certificates:
+            if cert.certificate_language == "English":
+                if (cert.certificate_name == "TOEIC" and float(cert.certificate_point_level) > 700) or (cert.certificate_name == "IELTS" and float(cert.certificate_point_level) > 7.0):
+                    certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
+            elif cert.certificate_language == "Japan":
+                if cert.certificate_point_level in ["N1", "N2"]:
+                    certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
+            elif cert.certificate_language == "Korean":
+                if cert.certificate_name == "Topik" and cert.certificate_point_level in ["5", "6"]:
+                    certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
+            elif cert.certificate_language == "Chinese":
+                if cert.certificate_name == "HSK5-HSK6":
+                    certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
         cert_point = 0.5 * len(certs)
         #   Add "soft_point" to Database
         db_valuate.degrees = degrees,
@@ -887,31 +909,31 @@ class Resume:
         return db_valuate
         
 
-    # @staticmethod
-    # def update_valuate(data: schema.ResumeValuation, db_session: Session, user):
-    #     result = Resume.get_detail_resume_by_id(data.cv_id, db_session, user) 
-    #     if not result:
-    #         raise HTTPException(status_code=404, detail="Resume doesn't exist!")
+    @staticmethod
+    def update_valuate(data: schema.ResumeValuation, db_session: Session, user):
+        result = Resume.get_detail_resume_by_id(data.cv_id, db_session, user) 
+        if not result:
+            raise HTTPException(status_code=404, detail="Resume doesn't exist!")
         
-    #     #   Point initialization
-    #     hard_point = 0
-    #     soft_point = 0
-    #     if data.current_salary:
-    #         percent, _ = Resume.percent_estimate(filename=result.ResumeVersion.filename)
-    #         hard_point = round(percent*data.current_salary / 100000, 1)   # Convert money to point: 100000 (vnđ) => 1đ
-    #     else:
-    #         for level, point in level_map.items():
-    #             if result.ResumeVersion.level in levels[int(level)]:
-    #                 hard_point += point
-    #                 break
+        #   Point initialization
+        hard_point = 0
+        soft_point = 0
+        if data.current_salary:
+            percent, _ = Resume.percent_estimate(filename=result.ResumeVersion.filename)
+            hard_point = round(percent*data.current_salary / 100000, 1)   # Convert money to point: 100000 (vnđ) => 1đ
+        else:
+            for level, point in level_map.items():
+                if result.ResumeVersion.level in levels[int(level)]:
+                    hard_point += point
+                    break
 
-    #     #   ================================== Soft point ==================================
-    #     # degrees = [degree for degree in extracted_result["education"]["degree"]]
+        #   ================================== Soft point ==================================
+        # degrees = [degree for degree in extracted_result["education"]["degree"]]
                 
-    #     result.ResumeVersion.hard_point = hard_point
-    #     result.ResumeVersion.soft_point = soft_point
-    #     db.commit_rollback(db_session)
-    #     return result
+        result.ResumeVersion.hard_point = hard_point
+        result.ResumeVersion.soft_point = soft_point
+        db.commit_rollback(db_session)
+        return result
     
     
     @staticmethod

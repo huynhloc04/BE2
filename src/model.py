@@ -74,7 +74,7 @@ class Company(TableBase, table=True):
     country: str = Field(default=None)    
     logo: str = Field(default=None)
     cover_image: Optional[str] = Field(default=None)
-    company_images: Optional[List[str]] = Field(default=None)
+    company_images: Optional[List[str]] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
     company_video: Optional[str] = Field(default=None)
     linkedin: Optional[str] = Field(default=None)
     website: Optional[str] = Field(default=None)

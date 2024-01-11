@@ -44,7 +44,7 @@ def get_current_active_user(
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def add_company_info(request: Request,
-                     data_form: schema.CompanyBase,
+                     data_form: schema.CompanyBase = Depends(schema.CompanyBase.as_form),
                      db_session: Session = Depends(db.get_session),
                      credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
@@ -79,7 +79,7 @@ def get_company_info(db_session: Session = Depends(db.get_session),
                     logo=info.logo,
                     description=info.description,
                     cover_image=info.cover_image,
-                    # company_images=info.company_images#,
+                    company_images=info.company_images,
                     company_video=info.company_video,
                     industry=info.industry,
                     phone=info.phone,
@@ -510,6 +510,7 @@ def cv_parsing(
     )
 
 
+#   Add preliminary information to the table
 @router.post("/collaborator/add-candidate",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
@@ -522,10 +523,10 @@ def add_candidate(
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    _ = service.Resume.add_candidate(request, data_form, db_session, current_user)
+    result = service.Resume.add_candidate(request, data_form, db_session, current_user)
     return schema.CustomResponse(
                     message="Add candidate successfully",
-                    data=None
+                    data=result
     )
 
 
@@ -559,15 +560,26 @@ def fill_extracted_resume(data: schema.ResumeUpdate,
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
     service.Resume.fill_resume(data, db_session, current_user)
+    
+    result = service.Resume.resume_valuate(data, db_session, current_user)
     return schema.CustomResponse(
-                    message="Fill-in resume information successfully",
-                    data=None
+                    message="Resume valuated successfully",
+                    data={
+                        "level/salary": result.hard,
+                        "hard_point": result.hard_point,
+                        "degrees": result.degrees,
+                        "degree_point": result.degree_point,
+                        "certificates": result.certificates,
+                        "certificates_point": result.certificates_point,
+                        "total_point": result.total_point
+                    }
                 )
 
 
 @router.post("/collaborator/resume-valuate",
              status_code=status.HTTP_200_OK, 
-             response_model=schema.CustomResponse)
+             response_model=schema.CustomResponse,
+             summary="============== This is an abundant API ==============")
 def resume_valuate(
                 data: schema.ResumeUpdate,
                 db_session: Session = Depends(db.get_session),
