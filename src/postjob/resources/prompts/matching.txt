@@ -23,7 +23,7 @@ The answer must be in JSON format as follow:
       "score": ["string"],
       "explanation": ["string"]
   }, 
-  "Overall":{
+  "overall":{
       "score": ["string"],
       "explanation": ["string"]   (Give explanations as detailed as possible for the overall score)
   }

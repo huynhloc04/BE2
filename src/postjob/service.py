@@ -1,14 +1,17 @@
 import model
-from fastapi import HTTPException, Request
-from sqlalchemy import select
-from fastapi import UploadFile, status, Depends
-import os, shutil
+import os, shutil, json
 import pandas as pd
-import json
-from typing import Dict, List, Optional
 import pyarrow as pa
 import pyarrow.parquet as pq
 from config import db
+from postjob import schema
+from sqlmodel import Session, func
+from sqlalchemy import select
+from fastapi import HTTPException, Request, BackgroundTasks, UploadFile, status
+from postjob.gg_service.gg_service import GoogleService
+from postjob.api_service.extraction_service import Extraction
+from postjob.api_service.openai_service import OpenAIService
+from postjob.db_service.db_service import DatabaseService
 from config import (JD_SAVED_DIR, 
                     CV_SAVED_DIR, 
                     CV_PARSE_PROMPT, 
@@ -20,11 +23,6 @@ from config import (JD_SAVED_DIR,
                     EDITED_JOB,
                     MATCHING_PROMPT,
                     MATCHING_DIR)
-from postjob import schema
-from sqlmodel import Session, func
-from postjob.api_service.extraction_service import Extraction
-from postjob.api_service.openai_service import OpenAIService
-from postjob.db_service.db_service import DatabaseService
 
 
 class AuthRequestRepository:
@@ -714,6 +712,22 @@ class Resume:
         result = db_session.execute(query).first() 
         return result
     
+
+    @staticmethod
+    def send_email_request(cv_id: int, 
+                           content: str,
+                           db_session: Session,
+                           current_user,
+                           background_tasks: BackgroundTasks):
+        resume_data = Resume.get_detail_resume_by_id(cv_id, db_session, current_user)
+        try:
+            background_tasks.add_task(
+                                GoogleService.CONTENT_GOOGLE,
+                                message=content, 
+                                input_email=resume_data.ResumeVersion.email)
+        except:
+            raise HTTPException(status_code=503, detail="Could not send email!")
+    
     
     @staticmethod
     def parse_base(filename: str, check_dup: bool = False):
@@ -897,6 +911,9 @@ class Resume:
         db_valuate.certificates_point = cert_point,
         db_valuate.total_point = hard_point + degree_point + cert_point
         db.commit_rollback(db_session)
+
+        #   Update Resume valuation status
+        result.ResumeVersion.is_valuate = True
         return db_valuate
         
         
@@ -960,6 +977,9 @@ class Resume:
         valuate_result.certificates = certs,
         valuate_result.certificates_point = cert_point,
         valuate_result.total_point = hard_point + degree_point + cert_point
+
+        #   Update Resume valuation status
+        result.ResumeVersion.is_valuate = True
         db.commit_rollback(db_session)
         return valuate_result
     
@@ -985,11 +1005,13 @@ class Resume:
             saved_path = os.path.join(MATCHING_DIR, match_filename.split(".")[0] + ".json")
             with open(saved_path) as file:
                 matching_result = json.loads(file.read())
+            from pprint import pprint
+            pprint(matching_result)
         return matching_result, saved_path
 
 
     @staticmethod
-    def cv_jd_matching(cv_id: int, db_session: Session, user):
+    def cv_jd_matching(cv_id: int, db_session: Session, user, background_task: BackgroundTasks):
         resume_result = Resume.get_detail_resume_by_id(cv_id, db_session, user)       
         if not resume_result.ResumeVersion.filename:
            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please upload at least 1 CV_PDF")
@@ -999,8 +1021,38 @@ class Resume:
                                        db_session,
                                        user)
 
-        return Resume.matching_base(cv_filename=resume_result.ResumeVersion.filename, 
-                                    jd_filename=job_result.jd_file.split("/")[-1])
+        matching_result, saved_dir = Resume.matching_base(cv_filename=resume_result.ResumeVersion.filename, 
+                                                          jd_filename=job_result.jd_file.split("/")[-1])
+        
+        overall_score = int(matching_result["overall"]["score"])
+        print("=========================")
+        print("=========================")
+        print(overall_score)
+        if overall_score >= 50:
+            mail_content = f"""
+            <html>
+                <body>
+                    <p> Dear {resume_result.ResumeVersion.name}, <br>
+                        Warm greetings from sharecv.vn ! 
+                        Your profile has been recommended on sharecv.vn. However, please be aware that only when we have your permission, the profile will be sent to the employer to review and evaluate. <br>
+                        Hence, please CLICK to below: <br>
+                        - <a href="https://sharecv.vn/?page=accept&id=14284&token=&act=accept">"Accept"</a> Job referral acceptance letter. <br>
+                        - <a href="https://sharecv.vn/?page=accept&id=14284&token=&act=decline">"Decline"</a> Job referral refusal letter. <br>
+                        Thank you for your cooperation. Should you need any further information or assistance, please do not hesitate to contact us. <br>
+
+                        Thanks and best regards, <br>
+                        Team ShareCV Customer Support <br>
+                        Hotline: 0888818006 – 0914171381 <br>
+                        Email: info@sharecv.vn <br>
+
+                        THANK YOU
+                    </p>
+                </body>
+            </html>
+            """
+            #  Send mail
+            Resume.send_email_request(cv_id, mail_content, db_session, user, background_task)
+        return matching_result, saved_dir
 
 
     @staticmethod
@@ -1123,3 +1175,8 @@ class Resume:
     #             "Loại dịch vụ": result.job_service,
     #             "CVs": cv_count
     #         } for result in results]
+
+
+
+    
+
