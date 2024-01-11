@@ -653,13 +653,14 @@ def update_resume_valuate(
              response_model=schema.CustomResponse)
 def resume_matching(
         cv_id: int,
+        background_task: BackgroundTasks,
         db_session: Session = Depends(db.get_session),
         credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    _ = service.Resume.cv_jd_matching(cv_id, db_session, current_user)
+    _ = service.Resume.cv_jd_matching(cv_id, db_session, current_user, background_task)
     return schema.CustomResponse(
                     message="CV-JD matching completed.",
                     data=None
