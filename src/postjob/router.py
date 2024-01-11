@@ -735,7 +735,11 @@ def get_detailed_resume(
 
 
 
-
+""" 
+1. Xeem thoong tin parsing
+2. Xem danh sach Job (trang dau)
+3. Xem danh sach Ung vien (Da gui/ Nhap)
+"""
 
 
 
@@ -780,6 +784,24 @@ def get_jd_file(
     _, current_user = get_current_active_user(db_session, credentials)
 
     jd_file = service.Job.get_jd_file(job_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message=None,
+                    data=jd_file
+            )
+    
+    
+@router.get("/general/get-cv-pdf/{cv_id}",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_cv_file(
+                cv_id: int,
+                db_session: Session = Depends(db.get_session),
+                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    jd_file = service.Resume.get_cv_file(cv_id, db_session, current_user)
     return schema.CustomResponse(
                     message=None,
                     data=jd_file

@@ -1143,6 +1143,15 @@ class Resume:
                 } for other_cert in other_certs]
           }
         }
+    
+        
+    @staticmethod
+    def get_cv_file(cv_id, db_session, user):
+        result = Resume.get_detail_resume_by_id(cv_id, db_session, user)    
+        if not result:
+            raise HTTPException(status_code=404, detail="Resume doesn't exist!")        
+        #   Return link to JD PDF file 
+        return result.ResumeVersion.cv_file
 
 
         
