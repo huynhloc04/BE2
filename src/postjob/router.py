@@ -263,20 +263,21 @@ def update_job_info(data: schema.JobUpdate,
                     data=None
                 )
 
-@router.put("/recruiter/create-job-draft",
+@router.put("/recruiter/update-job-draft",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
-def create_job_draft(
+def update_job_draft(
                 job_id: int,
+                is_draft: bool,
                 db_session: Session = Depends(db.get_session),
                 credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    service.Job.create_draft(job_id, db_session, current_user)
+    service.Job.update_draft(job_id, is_draft, db_session, current_user)
     return schema.CustomResponse(
-                    message="Update job information successfully",
+                    message="Create job drate successfully",
                     data=None
                 )
     
@@ -439,7 +440,7 @@ def remove_job(
 @router.get("/collaborator/get-detailed-job/{job_id}",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
-def get_detailed_job_(
+def get_detailed_job(
                 job_id: int,
                 db_session: Session = Depends(db.get_session),
                 credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
@@ -447,7 +448,7 @@ def get_detailed_job_(
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    jobs = service.Job.ctv_get_job_status(job_id, db_session, current_user)
+    jobs = service.Job.ctv_get_detail_job(job_id, db_session, current_user)
     return schema.CustomResponse(
                     message=None,
                     data=jobs
@@ -575,6 +576,24 @@ def fill_extracted_resume(data: schema.ResumeUpdate,
                     }
                 )
 
+@router.put("/recruiter/update-resume-draft",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def update_resume_draft(
+                cv_id: int,
+                is_draft: bool,
+                db_session: Session = Depends(db.get_session),
+                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    service.Resume.update_draft(cv_id, is_draft, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Create resume draft successfully",
+                    data=None
+                )
+
 
 @router.post("/collaborator/resume-valuate",
              status_code=status.HTTP_200_OK, 
@@ -618,8 +637,13 @@ def update_resume_valuate(
     return schema.CustomResponse(
                     message="Resume re-valuated successfully",
                     data={
-                        "cv_id": result.ResumeVersion.new_id,
-                        "total_point": result.ResumeVersion.hard_point + result.ResumeVersion.soft_point
+                        "level/salary": result.hard,
+                        "hard_point": result.hard_point,
+                        "degrees": result.degrees,
+                        "degree_point": result.degree_point,
+                        "certificates": result.certificates,
+                        "certificates_point": result.certificates_point,
+                        "total_point": result.total_point
                     }
                 )
 
@@ -635,13 +659,29 @@ def resume_matching(
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    _ = service.Resume.matching_base(cv_id, db_session, current_user)
+    _ = service.Resume.cv_jd_matching(cv_id, db_session, current_user)
     return schema.CustomResponse(
                     message="CV-JD matching completed.",
                     data=None
     )
+    
+    
+@router.get("/collaborator/get-detailed-resume/{cv_id}",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_detailed_resume(
+                cv_id: int,
+                db_session: Session = Depends(db.get_session),
+                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
 
-
+    resume_info = service.Resume.get_detail_resume(cv_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Get resume information successfully!",
+                    data=resume_info
+            )
 
 
 

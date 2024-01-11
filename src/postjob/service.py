@@ -236,7 +236,7 @@ class Job:
     
     def get_job_by_id(job_id: int, db_session: Session, current_user):
         job_query = select(model.JobDescription).where(model.JobDescription.user_id == current_user.id,
-                                                        model.JobDescription.id == job_id)
+                                                       model.JobDescription.id == job_id)
         job_result = db_session.execute(job_query).scalars().first() 
         return job_result
     
@@ -332,11 +332,11 @@ class Job:
                                         **dict(education)) for education in data_form.education]
             db_session.add_all(job_edus)
         if data_form.language_certificates:
-            lang_certs = [model.LanguageCertificate(job_id=data_form.job_id,
+            lang_certs = [model.LanguageJobCertificate(job_id=data_form.job_id,
                                                 **dict(lang_cert)) for lang_cert in data_form.language_certificates]
             db_session.add_all(lang_certs)
         if data_form.other_certificates:
-            other_certs = [model.OtherCertificate(job_id=data_form.job_id,
+            other_certs = [model.OtherJobCertificate(job_id=data_form.job_id,
                                                 **dict(other_cert)) for other_cert in data_form.other_certificates]
             db_session.add_all(other_certs)
             
@@ -359,15 +359,15 @@ class Job:
         
         #   Delete all old information and add new ones    (Methoods to delete multiple rows in one Table)      
         db_session.execute(model.JobEducation.__table__.delete().where(model.JobEducation.job_id == data_form.job_id)) 
-        db_session.execute(model.LanguageCertificate.__table__.delete().where(model.LanguageCertificate.job_id == data_form.job_id)) 
-        db_session.execute(model.OtherCertificate.__table__.delete().where(model.OtherCertificate.job_id == data_form.job_id)) 
+        db_session.execute(model.LanguageJobCertificate.__table__.delete().where(model.LanguageJobCertificate.job_id == data_form.job_id)) 
+        db_session.execute(model.OtherJobCertificate.__table__.delete().where(model.OtherJobCertificate.job_id == data_form.job_id)) 
         
         #   Add new Job information as an Update
         job_edus = [model.JobEducation(job_id=data_form.job_id,
                                       **dict(education)) for education in data_form.education]
-        lang_certs = [model.LanguageCertificate(job_id=data_form.job_id,
+        lang_certs = [model.LanguageJobCertificate(job_id=data_form.job_id,
                                               **dict(lang_cert)) for lang_cert in data_form.language_certificates]
-        other_certs = [model.OtherCertificate(job_id=data_form.job_id,
+        other_certs = [model.OtherJobCertificate(job_id=data_form.job_id,
                                              **dict(other_cert)) for other_cert in data_form.other_certificates]
             
         db_session.add_all(job_edus)
@@ -377,13 +377,13 @@ class Job:
         
         
     @staticmethod
-    def create_draft(job_id: int, db_session: Session, user):
+    def create_draft(job_id: int, is_draft: bool, db_session: Session, user):
         result = Job.get_job_by_id(job_id, db_session, user)    
         if not result:
             raise HTTPException(status_code=404, detail="Job doesn't exist!")
         
         #   Create draft
-        result.is_draft = True
+        result.is_draft = is_draft
         db.commit_rollback(db_session) 
         
         
@@ -395,8 +395,7 @@ class Job:
         if not results:
             raise HTTPException(status_code=404, detail="Job doesn't exist!")
         
-        query = select(func.count(model.ResumeNew.job_id))  \
-                                        .where(model.ResumeNew.job_id == model.JobDescription.id)
+        query = select(func.count(model.Resume.job_id)).where(model.Resume.job_id == model.JobDescription.id)
         cv_count = db_session.execute(query).scalar()
         
         if is_draft:
@@ -435,8 +434,8 @@ class Job:
             raise HTTPException(status_code=404, detail="Job doesn't exist!")
 
         job_edus = db_session.execute(select(model.JobEducation).where(model.JobEducation.job_id == job_id)).scalars().all()
-        lang_certs = db_session.execute(select(model.LanguageCertificate).where(model.LanguageCertificate.job_id == job_id)).scalars().all()
-        other_certs = db_session.execute(select(model.OtherCertificate).where(model.OtherCertificate.job_id == job_id)).scalars().all()
+        lang_certs = db_session.execute(select(model.LanguageJobCertificate).where(model.LanguageJobCertificate.job_id == job_id)).scalars().all()
+        other_certs = db_session.execute(select(model.OtherJobCertificate).where(model.OtherJobCertificate.job_id == job_id)).scalars().all()
         if not job_result:
             raise HTTPException(status_code=404, detail="Job doesn't exist!")
         
@@ -463,9 +462,9 @@ class Job:
                     "gpa": edu.gpa,
                 } for edu in job_edus],
                 "language_certificate": [{
-                    "language": lang_cert.language,
-                    "certificate_name": lang_cert.language_certificate_name,
-                    "certificate_level": lang_cert.language_certificate_level,
+                    "language": lang_cert.certificate_language,
+                    "certificate_name": lang_cert.certificate_name,
+                    "certificate_level": lang_cert.certificate_level,
                 } for lang_cert in lang_certs],
                 "other_certificate": [{
                     "certificate_name": cert.certificate_name,
@@ -502,9 +501,9 @@ class Job:
                     "gpa": edu.gpa,
                 } for edu in job_edus],
                 "language_certificate": [{
-                    "language": lang_cert.language,
-                    "certificate_name": lang_cert.language_certificate_name,
-                    "certificate_level": lang_cert.language_certificate_level,
+                    "language": lang_cert.certificate_language,
+                    "certificate_name": lang_cert.certificate_name,
+                    "certificate_level": lang_cert.certificate_level,
                 } for lang_cert in lang_certs],
                 "other_certificate": [{
                     "certificate_name": cert.certificate_name,
@@ -555,8 +554,8 @@ class Job:
         if not results:
             raise HTTPException(status_code=404, detail="Job doesn't exist!")
         
-        query = select(func.count(model.ResumeNew.job_id))  \
-                                        .where(model.ResumeNew.job_id == model.JobDescription.id)
+        query = select(func.count(model.Resume.job_id))  \
+                                        .where(model.Resume.job_id == model.JobDescription.id)
         cv_count = db_session.execute(query).scalar()
         
         if status == schema.JobStatus.pending or status == schema.JobStatus.browsing:   #  Chờ duyệt - Đang duyệt
@@ -627,12 +626,10 @@ class Job:
     
     # ===========================================================
     #                       CTV uploads Resumes
-    # =========================================================== 
-
-        
+    # ===========================================================         
         
     @staticmethod
-    def ctv_get_job_status(status, job_id, db_session, user):
+    def ctv_get_detail_job(job_id, db_session, user):
         #   Company
         company_query = select(model.Company).where(model.Company.user_id == user.id)
         company_result = db_session.execute(company_query).scalars().first() 
@@ -640,15 +637,14 @@ class Job:
             raise HTTPException(status_code=404, detail="Company doesn't exist!")
         #   Job
         job_query = select(model.JobDescription).where(model.JobDescription.user_id == user.id,
-                                                       model.JobDescription.id == job_id,
-                                                       model.JobDescription.status == status)
+                                                       model.JobDescription.id == job_id)
         job_result = db_session.execute(job_query).scalars().first() 
         if not job_result:
             raise HTTPException(status_code=404, detail="Job doesn't exist!")
 
         job_edus = db_session.execute(select(model.JobEducation).where(model.JobEducation.job_id == job_id)).scalars().all()
-        lang_certs = db_session.execute(select(model.LanguageCertificate).where(model.LanguageCertificate.job_id == job_id)).scalars().all()
-        other_certs = db_session.execute(select(model.OtherCertificate).where(model.OtherCertificate.job_id == job_id)).scalars().all()
+        lang_certs = db_session.execute(select(model.LanguageJobCertificate).where(model.LanguageJobCertificate.job_id == job_id)).scalars().all()
+        other_certs = db_session.execute(select(model.OtherJobCertificate).where(model.OtherJobCertificate.job_id == job_id)).scalars().all()
         
         return {
             #   Company
@@ -673,9 +669,9 @@ class Job:
                 "gpa": edu.gpa,
             } for edu in job_edus],
             "language_certificate": [{
-                "language": lang_cert.language,
-                "certificate_name": lang_cert.language_certificate_name,
-                "certificate_level": lang_cert.language_certificate_level,
+                "language": lang_cert.certificate_language,
+                "certificate_name": lang_cert.certificate_name,
+                "certificate_level": lang_cert.certificate_level,
             } for lang_cert in lang_certs],
             "other_certificate": [{
                 "certificate_name": cert.certificate_name,
@@ -702,20 +698,19 @@ class Job:
         return result.jd_file
 
 
-
 class Resume:    
     
     def get_detail_resume_by_id(cv_id: int, db_session: Session, current_user):
-        cv_query = select(model.ResumeNew, model.ResumeVersion)    \
-            .join(model.ResumeVersion, model.ResumeVersion.new_id == cv_id) \
-            .filter(model.ResumeNew.user_id == current_user.id,
-                   model.ResumeNew.id == cv_id)
+        cv_query = select(model.Resume, model.ResumeVersion)    \
+            .join(model.ResumeVersion, model.ResumeVersion.cv_id == cv_id) \
+            .filter(model.Resume.user_id == current_user.id,
+                   model.Resume.id == cv_id)
         cv_result = db_session.execute(cv_query).first() 
         return cv_result
     
     def get_resume_by_id(cv_id: int, db_session: Session, current_user):
-        query = select(model.ResumeNew).where(model.ResumeNew.user_id == current_user.id,
-                                                model.ResumeNew.id == cv_id)
+        query = select(model.Resume).where(model.Resume.user_id == current_user.id,
+                                                model.Resume.id == cv_id)
         result = db_session.execute(query).first() 
         return result
     
@@ -758,14 +753,14 @@ class Resume:
         DatabaseService.check_db_duplicate(extracted_result["contact_information"], cleaned_filename, db_session)
         #   Save Resume's basic info to DB
         shutil.move(os.path.join(SAVED_TEMP, cleaned_filename), os.path.join(CV_SAVED_DIR, cleaned_filename))
-        db_resume = model.ResumeNew(
+        db_resume = model.Resume(
                             user_id=user.id,
                             job_id=data.job_id,
                         )       
         db_session.add(db_resume)
         db.commit_rollback(db_session)
         db_version = model.ResumeVersion(
-                            new_id=db_resume.id,
+                            cv_id=db_resume.id,
                             filename=cleaned_filename,
                             cv_file=str(request.base_url) + cleaned_filename
                         )
@@ -803,13 +798,13 @@ class Resume:
     def fill_resume(data_form: schema.ResumeUpdate,
                     db_session: Session,
                     user):
-        result = Resume.get_detail_resume_by_id(data_form.new_id, db_session, user) 
+        result = Resume.get_detail_resume_by_id(data_form.cv_id, db_session, user) 
         if not result:
             raise HTTPException(status_code=404, detail="Resume doesn't exist!")
 
         #   If the resume never existed in System => add to Database
         for key, value in dict(data_form).items():
-            if key != "new_id" and key != "level":
+            if key != "cv_id" and key != "level":
                 if value is not None and key not in ["education",
                                                      "work_experiences",
                                                      "awards",
@@ -818,27 +813,27 @@ class Resume:
                                                      "other_certificates"]:
                     setattr(result.ResumeVersion, key, value) 
         if data_form.education:
-            edus = [model.ResumeEducation(cv_id=data_form.new_id,
+            edus = [model.ResumeEducation(cv_id=data_form.cv_id,
                                               **dict(education)) for education in data_form.education]
             db_session.add_all(edus)
         if data_form.work_experiences:
-            expers = [model.ResumeExperience(cv_id=data_form.new_id,
+            expers = [model.ResumeExperience(cv_id=data_form.cv_id,
                                             **dict(exper)) for exper in data_form.work_experiences]
             db_session.add_all(expers)
         if data_form.awards:
-            awards = [model.ResumeAward(cv_id=data_form.new_id,
+            awards = [model.ResumeAward(cv_id=data_form.cv_id,
                                         **dict(award)) for award in data_form.awards]
             db_session.add_all(awards)
         if data_form.projects:
-            projects = [model.ResumeAward(cv_id=data_form.new_id,
+            projects = [model.ResumeAward(cv_id=data_form.cv_id,
                                         **dict(project)) for project in data_form.projects]
             db_session.add_all(projects)
         if data_form.language_certificates:
-            lang_certs = [model.ResumeAward(cv_id=data_form.new_id,
+            lang_certs = [model.ResumeAward(cv_id=data_form.cv_id,
                                         **dict(lang_cert)) for lang_cert in data_form.language_certificates]
             db_session.add_all(lang_certs)
         if data_form.other_certificates:
-            other_certs = [model.ResumeAward(cv_id=data_form.new_id,
+            other_certs = [model.ResumeAward(cv_id=data_form.cv_id,
                                         **dict(other_cert)) for other_cert in data_form.other_certificates]
             db_session.add_all(other_certs)
             
@@ -867,15 +862,13 @@ class Resume:
         #   Add "hard_point" initialization
         hard_point = 0
         for level, point in level_map.items():
-            print("==============================================")
-            print("==============================================")
-            print(data.level)
-            print(levels[int(level)])
             if data.level in levels[int(level)]:
                 hard_point += point
                 #   Save to Database
-                db_valuate = model.ValuationInfo(hard=data.level,
-                                                 hard_point=point)
+                db_valuate = model.ValuationInfo(
+                                            cv_id=data.cv_id,
+                                            hard=data.level,
+                                            hard_point=point)
                 db_session.add(db_valuate)
                 db.commit_rollback(db_session)
 
@@ -889,14 +882,12 @@ class Resume:
             if cert.certificate_language == "English":
                 if (cert.certificate_name == "TOEIC" and float(cert.certificate_point_level) > 700) or (cert.certificate_name == "IELTS" and float(cert.certificate_point_level) > 7.0):
                     certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
-            elif cert.certificate_language == "Japan":
-                if cert.certificate_point_level in ["N1", "N2"]:
+            elif cert.certificate_language == "Japan" and cert.certificate_point_level in ["N1", "N2"]:
                     certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
             elif cert.certificate_language == "Korean":
-                if cert.certificate_name == "Topik" and cert.certificate_point_level in ["5", "6"]:
+                if cert.certificate_name == "Topik II" and cert.certificate_point_level in ["Level 5", "Level 6"]:
                     certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
-            elif cert.certificate_language == "Chinese":
-                if cert.certificate_name == "HSK5-HSK6":
+            elif cert.certificate_language == "Chinese" and cert.certificate_point_level == ["HSK-5", "HSK6"]:
                     certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
         cert_point = 0.5 * len(certs)
         #   Add "soft_point" to Database
@@ -908,39 +899,78 @@ class Resume:
         db.commit_rollback(db_session)
         return db_valuate
         
+        
+    @staticmethod
+    def update_draft(cv_id: int, is_draft: bool, db_session: Session, user):
+        result = Resume.get_detail_resume_by_id(cv_id, db_session, user)    
+        if not result:
+            raise HTTPException(status_code=404, detail="Resume doesn't exist!")
+        
+        #   Create draft
+        result.ResumeVersion.is_draft = is_draft
+        db.commit_rollback(db_session) 
+        
 
     @staticmethod
     def update_valuate(data: schema.ResumeValuation, db_session: Session, user):
         result = Resume.get_detail_resume_by_id(data.cv_id, db_session, user) 
         if not result:
             raise HTTPException(status_code=404, detail="Resume doesn't exist!")
+        valuation_query = select(model.ValuationInfo).where(model.ValuationInfo.cv_id == data.cv_id)
+        valuate_result = db_session.execute(valuation_query).scalars().first()
+        if not valuate_result:
+            raise HTTPException(status_code=404, detail="This Resume has not been valuated!")
         
         #   Point initialization
         hard_point = 0
-        soft_point = 0
-        if data.current_salary:
+        if data.current_salary != 0:
             percent, _ = Resume.percent_estimate(filename=result.ResumeVersion.filename)
             hard_point = round(percent*data.current_salary / 100000, 1)   # Convert money to point: 100000 (vnđ) => 1đ
+            valuate_result.hard = data.current_salary
+            valuate_result.hard_point = hard_point
         else:
             for level, point in level_map.items():
-                if result.ResumeVersion.level in levels[int(level)]:
+                if data.level in levels[int(level)]:
                     hard_point += point
+                    valuate_result.hard = data.level
+                    valuate_result.hard_point = hard_point
                     break
 
         #   ================================== Soft point ==================================
-        # degrees = [degree for degree in extracted_result["education"]["degree"]]
-                
-        result.ResumeVersion.hard_point = hard_point
-        result.ResumeVersion.soft_point = soft_point
+            #   Degrees
+        degrees = [degree for degree in data.degrees if degree in ["Bachelor", "Master", "Ph.D"]]
+        degree_point = 0.5 * len(degrees)
+            #   Certificates
+        certs = []
+        for cert in data.language_certificates:
+            if cert.certificate_language == "English":
+                if (cert.certificate_name == "TOEIC" and float(cert.certificate_point_level) > 700) or (cert.certificate_name == "IELTS" and float(cert.certificate_point_level) > 7.0):
+                    certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
+            elif cert.certificate_language == "Japan" and cert.certificate_point_level in ["N1", "N2"]:
+                    certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
+            elif cert.certificate_language == "Korean":
+                if cert.certificate_name == "Topik II" and cert.certificate_point_level in ["Level 5", "Level 6"]:
+                    certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
+            elif cert.certificate_language == "Chinese" and cert.certificate_point_level == ["HSK-5", "HSK6"]:
+                    certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
+        cert_point = 0.5 * len(certs)
+        #   Add "soft_point" to Database
+        valuate_result.degrees = degrees,
+        valuate_result.degree_point = degree_point,
+        valuate_result.certificates = certs,
+        valuate_result.certificates_point = cert_point,
+        valuate_result.total_point = hard_point + degree_point + cert_point
         db.commit_rollback(db_session)
-        return result
+        return valuate_result
     
     
     @staticmethod
-    def matching_base(filename: str, check_dup: bool = False):
+    def matching_base(cv_filename: str, jd_filename: str):
+        #   Create saved file name
+        match_filename = jd_filename.split(".")[0] + "__" + cv_filename
         #   Check duplicated filename
-        if not DatabaseService.check_file_duplicate(filename, MATCHING_DIR):
-            prompt_template = Extraction.matching_template(filename, check_dup)
+        if not DatabaseService.check_file_duplicate(match_filename, MATCHING_DIR):
+            prompt_template = Extraction.matching_template(cv_filename, jd_filename)
 
             #   Read parsing requirements
             with open(MATCHING_PROMPT, "r") as file:
@@ -948,15 +978,106 @@ class Resume:
             prompt_template += require 
             
             #   Start parsing
-            extracted_result = OpenAIService.gpt_api(prompt_template)        
-            saved_path = DatabaseService.store_cv_extraction(extracted_json=extracted_result, cv_file=filename)
+            matching_result = OpenAIService.gpt_api(prompt_template)        
+            saved_path = DatabaseService.store_matching_result(extracted_json=matching_result, saved_name=match_filename)
         else:
             #   Read available extracted result
-            saved_path = os.path.join(CV_EXTRACTION_PATH, filename.split(".")[0] + ".json")
+            saved_path = os.path.join(MATCHING_DIR, match_filename.split(".")[0] + ".json")
             with open(saved_path) as file:
-                extracted_result = json.loads(file.read())
-        return extracted_result, saved_path
+                matching_result = json.loads(file.read())
+        return matching_result, saved_path
 
+
+    @staticmethod
+    def cv_jd_matching(cv_id: int, db_session: Session, user):
+        resume_result = Resume.get_detail_resume_by_id(cv_id, db_session, user)       
+        if not resume_result.ResumeVersion.filename:
+           raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please upload at least 1 CV_PDF")
+        
+        #   Get Job by cv_id
+        job_result = Job.get_job_by_id(resume_result.Resume.job_id,
+                                       db_session,
+                                       user)
+
+        return Resume.matching_base(cv_filename=resume_result.ResumeVersion.filename, 
+                                    jd_filename=job_result.jd_file.split("/")[-1])
+
+
+    @staticmethod
+    def get_detail_resume(cv_id, db_session, user):
+        
+        resume_result = Resume.get_detail_resume_by_id(cv_id, db_session, user) 
+        if not resume_result:
+            raise HTTPException(status_code=404, detail="Resume doesn't exist!")
+        job_result = Job.get_job_by_id(cv_id, db_session, user)
+        if not job_result:
+            raise HTTPException(status_code=404, detail="Job doesn't exist!")
+
+        educations = db_session.execute(select(model.ResumeEducation).where(model.ResumeEducation.cv_id == cv_id)).scalars().all()
+        experience = db_session.execute(select(model.ResumeExperience).where(model.ResumeExperience.cv_id == cv_id)).scalars().all()
+        projects = db_session.execute(select(model.ResumeProject).where(model.ResumeProject.cv_id == cv_id)).scalars().all()
+        awards = db_session.execute(select(model.ResumeAward).where(model.ResumeAward.cv_id == cv_id)).scalars().all()
+        lang_certs = db_session.execute(select(model.LanguageResumeCertificate).where(model.LanguageResumeCertificate.cv_id == cv_id)).scalars().all()
+        other_certs = db_session.execute(select(model.OtherResumeCertificate).where(model.OtherResumeCertificate.cv_id == cv_id)).scalars().all()
+        
+        return {
+            "status": resume_result.ResumeVersion.status,
+            "job_service": job_result.job_service,
+            "avatar": resume_result.ResumeVersion.avatar,
+            "candidate_name": resume_result.ResumeVersion.name,
+            "current_job": resume_result.ResumeVersion.current_job,
+            "industry": resume_result.ResumeVersion.industry,
+            "birthday": resume_result.ResumeVersion.birthday,
+            "gender": resume_result.ResumeVersion.gender,
+            "objectives": resume_result.ResumeVersion.objectives,
+            "email": resume_result.ResumeVersion.email,
+            "phone": resume_result.ResumeVersion.phone,
+            "identification_code": resume_result.ResumeVersion.identification_code,
+            "address": resume_result.ResumeVersion.address,
+            "city": resume_result.ResumeVersion.city,
+            "country": resume_result.ResumeVersion.country,
+            "linkedin": resume_result.ResumeVersion.linkedin,
+            "website": resume_result.ResumeVersion.website,
+            "facebook": resume_result.ResumeVersion.facebook,
+            "instagram": resume_result.ResumeVersion.instagram,
+            "experience": [{
+                "job_tile": exper.job_tile,
+                "company_name": exper.company_name,
+                "start_time": exper.start_time,
+                "end_time": exper.end_time,
+                "levels": exper.levels,  #   Cấp bậc đảm nhiêm 
+                "roles": exper.roles,    #   Vai trò đảm nhiệm
+            } for exper in experience],
+            "educations": [{
+                "institute": edu.institute_name,
+                "degree": edu.degree,
+                "major": edu.major,
+                "start_time": edu.start_time,
+                "end_time": edu.end_time,
+            } for edu in educations],
+            "projects": [{
+                "project_name": project.project_name,
+                "description": project.description,
+                "start_time": project.start_time,
+                "end_time": project.end_time,
+            } for project in projects],
+            "awards": [{
+                "name": award.name,
+                "time": award.time,
+                "description": award.description,
+            } for award in awards],
+            "certificates": {
+                "language_certificates": [{
+                    "certificate_language": lang_cert.certificate_language,
+                    "certificate_name": lang_cert.certificate_name,
+                    "certificate_level": lang_cert.certificate_level
+                } for lang_cert in lang_certs],
+                "other_certificate": [{
+                    "certificate_name": other_cert.certificate_name,
+                    "certificate_level": other_cert.certificate_level
+                } for other_cert in other_certs]
+          }
+        }
 
 
         
@@ -980,8 +1101,8 @@ class Resume:
     #     if not results:
     #         raise HTTPException(status_code=404, detail="Could not find any jobs!")
         
-    #     query = select(func.count(model.ResumeNew.job_id))  \
-    #                                     .where(model.ResumeNew.job_id == model.JobDescription.id)
+    #     query = select(func.count(model.Resume.job_id))  \
+    #                                     .where(model.Resume.job_id == model.JobDescription.id)
     #     cv_count = db_session.execute(query).scalar()
 
         

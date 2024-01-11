@@ -127,7 +127,7 @@ class CompanyUpdate(BaseModel):
     country: Optional[str]
     logo: Optional[UploadFile]
     cover_image: Optional[UploadFile]
-    # company_images: Optional[List[UploadFile]]
+    company_images: Optional[List[UploadFile]]
     company_video: Optional[UploadFile]
     linkedin: Optional[str]
     website: Optional[str]
@@ -138,11 +138,18 @@ class JobEducation(BaseModel):
     degree: Union[str, None]
     major: Union[str, None]
     gpa: Union[str, None]
+
+    
+class Language(str, Enum):
+    english = "English"
+    japan = "Japan"
+    korean = "Korean"
+    chinese = "Chinese"  
     
 class LanguageCertificate(BaseModel):
-    language: Union[str, None]
-    language_certificate_name: Union[str, None]
-    language_certificate_level: Union[str, None]
+    certificate_language: Union[Language, None]
+    certificate_name: Union[str, None]
+    certificate_point_level: Union[str, None]
     
 class OtherCertificate(BaseModel):
     certificate_name: Union[str, None]
@@ -213,15 +220,6 @@ class ResumeProject(BaseModel):
     description: Union[str, None]
     start_time: Union[datetime, None]
     end_time: Union[datetime, None]
-    
-class ResumeLanguageCertificate(BaseModel):
-    certificate_language: Union[str, None]
-    certificate_name: Union[str, None]
-    certificate_point_level: Union[str, None]
-    
-class OtherResumeCertificate(BaseModel):
-    certificate_name: Union[str, None]
-    certificate_level: Union[str, None]
 
 class ResumeUpdate(BaseModel):
     cv_id: int
@@ -246,9 +244,9 @@ class ResumeUpdate(BaseModel):
     awards: Union[List[ResumeAward], None]
     projects: Union[List[ResumeProject], None]
     #   LanguageCertificate    
-    language_certificates: Union[List[ResumeLanguageCertificate], None]
+    language_certificates: Union[List[LanguageCertificate], None]
     #   OtherCertificates
-    other_certificates: Union[List[OtherResumeCertificate], None]
+    other_certificates: Union[List[OtherCertificate], None]
 
 
 class AddCandidate(BaseModel):
@@ -308,17 +306,16 @@ class Level(str, Enum):
     General_Director = "General Director"
     
 class ValuationDegree(str, Enum):
-    english = "english"
-    japan = "japan"
-    korean = "korean"
-    chinese = "chinese"    
+    bachelor = "Bachelor"
+    master = "Master"
+    ph_d = "Ph.D"  
     
 class ResumeValuation(BaseModel):
     cv_id: int
     level: Level
     current_salary: Optional[float]
     degrees: List[ValuationDegree]
-    certificates: List[ResumeLanguageCertificate]
+    language_certificates: List[LanguageCertificate]
     
     
     

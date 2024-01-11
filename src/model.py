@@ -124,43 +124,29 @@ class JobEducation(TableBase, table=True):
     major: str = Field(default=None)
     gpa: float = Field(default=None)
     
-class LanguageCertificate(TableBase, table=True):
-    __tablename__ = 'language_certificates'    
+class LanguageJobCertificate(TableBase, table=True):
+    __tablename__ = 'language_job_certificates'    
     job_id: int = Field(default=None, foreign_key="job_descriptions.id")
-    language: str = Field(default=None)
-    language_certificate_name: str = Field(default=None)
-    language_certificate_level: str = Field(default=None)
+    certificate_language: str = Field(default=None)
+    certificate_name: str = Field(default=None)
+    certificate_point_level: str = Field(default=None)
     
-class OtherCertificate(TableBase, table=True):
-    __tablename__ = 'other_certificates'    
+class OtherJobCertificate(TableBase, table=True):
+    __tablename__ = 'other_job_certificates'    
     job_id: int = Field(default=None, foreign_key="job_descriptions.id")
     certificate_name: str = Field(default=None)
     certificate_level: str = Field(default=None)
 
 
-class Industry(TableBase, table=True):
-    __tablename__ = 'industries'
-    job_id: int = Field(default=None, foreign_key="job_descriptions.id")
-    name: str = Field(default=None)
-
-
-class ResumeOld(TableBase, table=True):
-    __tablename__ = 'resume_olds'    
-    industry_id: int = Field(default=None, foreign_key="industries.id")
-    user_id: int = Field(default=None, foreign_key="users.id")
-
-
-class ResumeNew(TableBase, table=True):
-    __tablename__ = 'resume_news'    
-    industry_id: int = Field(default=None, foreign_key="industries.id")
+class Resume(TableBase, table=True):
+    __tablename__ = 'resumes'    
     user_id: int = Field(default=None, foreign_key="users.id")
     job_id: int = Field(default=None, foreign_key="job_descriptions.id")
 
 
 class ValuationInfo(TableBase, table=True):
     __tablename__ = 'valuation_infos'
-    new_id: int = Field(default=None, foreign_key="resume_news.id")
-    old_id: int = Field(default=None, foreign_key="resume_olds.id")
+    cv_id: int = Field(default=None, foreign_key="resumes.id")
     hard: str = Field(default=None)
     hard_point: float = Field(default=None)
     degrees: List[str] = Field(default=None, sa_column=Column(TEXT))
@@ -173,8 +159,7 @@ class ValuationInfo(TableBase, table=True):
 class ResumeVersion(TableBase, table=True):
     __tablename__ = 'resume_versions'
 
-    old_id: int = Field(default=None, foreign_key="resume_olds.id")
-    new_id: int = Field(default=None, foreign_key="resume_news.id")
+    cv_id: int = Field(default=None, foreign_key="resumes.id")
     filename: str = Field(default=None)
     is_lastest: bool = Field(default=True)
     cv_file: str = Field(default=None)
@@ -183,6 +168,7 @@ class ResumeVersion(TableBase, table=True):
     level: str = Field(default=None) 
     gender: str = Field(default=None)
     current_job: str = Field(default=None)
+    industry: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
     skills: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
     current_job_industry: str = Field(default=None)
     email: str = Field(default=None)
@@ -201,6 +187,7 @@ class ResumeVersion(TableBase, table=True):
     package: str = Field(default=None)
     objectives: str = Field(default=None)
     is_valuate: bool = Field(default=False)
+    is_draft: bool = Field(default=False)
     is_ai_matching: bool = Field(default=False)
     is_admin_matching: bool = Field(default=False)
     matching_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
@@ -241,3 +228,16 @@ class ResumeProject(TableBase, table=True):
     description: str = Field(default=None)
     start_time: datetime = Field(default=None)
     end_time: datetime = Field(default=None)
+    
+class LanguageResumeCertificate(TableBase, table=True):
+    __tablename__ = 'language_resume_certificates'    
+    cv_id: int = Field(default=None, foreign_key="resumes.id")
+    certificate_language: str = Field(default=None)
+    certificate_name: str = Field(default=None)
+    certificate_point_level: str = Field(default=None)
+    
+class OtherResumeCertificate(TableBase, table=True):
+    __tablename__ = 'other_resume_certificates'    
+    cv_id: int = Field(default=None, foreign_key="resumes.id")
+    certificate_name: str = Field(default=None)
+    certificate_level: str = Field(default=None)

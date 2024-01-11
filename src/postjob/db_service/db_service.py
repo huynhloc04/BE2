@@ -5,7 +5,7 @@ from config import db
 from sqlmodel import select
 from typing import Optional, Dict
 from fastapi import HTTPException, status
-from config import JD_EXTRACTION_PATH, CV_EXTRACTION_PATH, SAVED_TEMP
+from config import JD_EXTRACTION_PATH, CV_EXTRACTION_PATH, SAVED_TEMP, MATCHING_DIR
 
 
 class DatabaseService:
@@ -35,6 +35,19 @@ class DatabaseService:
         
         except Exception:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Can't save CV json {cv_file}")
+
+    @staticmethod
+    def store_matching_result(extracted_json: Dict, saved_name: str):
+        try:
+            json_file = saved_name.split(".")[0] + ".json"
+            save_path = os.path.join(MATCHING_DIR, json_file)
+            with open(save_path, 'w') as file:
+                json.dump(extracted_json, file)
+            print(f"===> Saved matching json to: {save_path}")
+            return save_path
+        
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Can't save matched result json {saved_name}")
 
     @staticmethod
     def clean_filename(filename):
