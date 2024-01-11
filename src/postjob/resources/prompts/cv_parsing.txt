@@ -56,15 +56,64 @@ Please extract the above [Resume] exactly according to the corresponding keys an
     - Chief Financial Officer (CFO)
     - General Manager
     - General Director
-    ),
-  "certificates": {
+  ),
+  "certificates":    (Based on "certificate_format" defined as below, please choose "certificate_language", "certificate_name", "certificate_point_level" exactly with certificate information provided in Resume
+        "certificate_format": {
+            "certificate_language": {
+                "English": {
+                    "certificate_name": {
+                        "TOEIC": {
+                            "certificate_point/level": [0 - 990]   (Choose TOEIC point from 0 to 990)
+                        },
+                        "IELTS": {
+                            "certificate_point/level": [0 - 9.0]   (Choose IELTS point from 0 to 9.0)
+                        }
+                    }
+                },
+                "Japan": {
+                    "certificate_point/level": {
+                        "N1",
+                        "N2",
+                        "N3",
+                        "N4",
+                        "N5"
+                    }
+                },
+                "Korean": {
+                    "certificate_name": {
+                        "Topik I": {
+                            "certificate_point/level": {
+                                "Level 1",
+                                "Level 2"
+                            }
+                        },
+                        "Topik II": {
+                            "certificate_point/level": {
+                                "Level 3",
+                                "Level 4",
+                                "Level 5",
+                                "Level 6"
+                            }
+                        }
+                    }
+                },
+                "Chinese": {
+                    "certificate_point/level": {
+                        "HSK-1",
+                        "HSK-2",
+                        "HSK-3",
+                        "HSK-4",
+                        "HSK-5",
+                        "HSK-6"
+                    }
+                }
+            }
+        }
+    ). The certificate result must follows strictly as format below.
+    {
     "language_certificates": {
-        "certificate_language": ["string"],   (Must choose one of the languages after: English, Japan, Korean, Chinese)
-        "certificate_name": ["string"],     (Based on information in Resume, please choose the name of certificate if language extracted above exist in this Resume:
-              - TOEIC or IELTS if "certificate_language" is English
-              - N1, N2, N3, N4 or N5 if "certificate_language" is Japan
-              - Topik if "certificate_language" is Korean
-              - HSK5-HSK6 if "certificate_language" is Chinese)
+        "certificate_language": ["string"],
+        "certificate_name": ["string"],
         "certificate_point/level": ["string"]
     },
     "other_certificates": {     (Certificates that is not relevant to language certificates)

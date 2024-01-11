@@ -25,7 +25,7 @@ class Extraction:
 
             [Requirements]
             """  
-            print(" >>> Get JD parsing template.")
+            print(" >>> Getting JD parsing template.")
             return prompt_template
         except:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot extract JD data!")
@@ -44,27 +44,32 @@ class Extraction:
 
             [Requirements]
             """  
-            print(" >>> Get CV parsing template.")
+            print(" >>> Getting CV parsing template.")
             return prompt_template
         except:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot extract CV data!")
     
     
-    # @staticmethod
-    # def matching_template(cv_file: str, jd_file: str):
-    #     try:
-    #         cv_text = Extraction.text_extract(os.path.join(CV_SAVED_DIR, cv_file))
-    #         jd_text = Extraction.text_extract(os.path.join(JD_SAVED_DIR, jd_file))
-    #         prompt_template = f"""
-    #         [Resume]
-    #         {text}
-
-    #         [Requirements]
-    #         """  
-    #         print(" >>> Get CV parsing template.")
-    #         return prompt_template
-    #     except:
-    #         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot extract CV data!")
+    @staticmethod
+    def matching_template(cv_file: str, jd_file: str):
+        # try:
+        cv_text = Extraction.text_extract(os.path.join(CV_SAVED_DIR, cv_file))
+        jd_text = Extraction.text_extract(os.path.join(JD_SAVED_DIR, jd_file))
+        print("=====================================")
+        print("=====================================")
+        print(cv_file)
+        print(jd_file)
+        prompt_template = f"""
+        [Job Description]
+        {jd_text}
+        [Resume]
+        {cv_text}
+        [Requirements]
+        """  
+        print(" >>> Getting matching template.")
+        return prompt_template
+        # except:
+        #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not extract CV-JD data!")
     
     
     @staticmethod
@@ -83,5 +88,5 @@ class Extraction:
                 "explanation":
             }}
         """  
-        print(" >>> Estimate resume percentage.")
+        print(" >>> Estimating resume percentage.")
         return prompt_template
