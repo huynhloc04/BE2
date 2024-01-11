@@ -186,10 +186,10 @@ class ResumeVersion(TableBase, table=True):
     status: str = Field(default="pending")
     package: str = Field(default=None)
     objectives: str = Field(default=None)
-    is_valuate: bool = Field(default=False)
-    is_draft: bool = Field(default=False)
-    is_ai_matching: bool = Field(default=False)
-    is_admin_matching: bool = Field(default=False)
+    # is_valuate: bool = Field(default=False)
+    # is_draft: bool = Field(default=False)
+    # is_ai_matching: bool = Field(default=False)
+    # is_admin_matching: bool = Field(default=False)
     matching_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
 
 

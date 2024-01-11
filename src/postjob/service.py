@@ -724,7 +724,8 @@ class Resume:
             background_tasks.add_task(
                                 GoogleService.CONTENT_GOOGLE,
                                 message=content, 
-                                input_email=resume_data.ResumeVersion.email)
+                                # input_email=resume_data.ResumeVersion.email,
+                                input_email="hloc5874@gmail.com")
         except:
             raise HTTPException(status_code=503, detail="Could not send email!")
     
@@ -913,7 +914,7 @@ class Resume:
         db.commit_rollback(db_session)
 
         #   Update Resume valuation status
-        result.ResumeVersion.is_valuate = True
+        result.ResumeVersion.status = "Pricing Approved"
         return db_valuate
         
         
@@ -979,7 +980,7 @@ class Resume:
         valuate_result.total_point = hard_point + degree_point + cert_point
 
         #   Update Resume valuation status
-        result.ResumeVersion.is_valuate = True
+        result.ResumeVersion.status = "Pricing Approved"
         db.commit_rollback(db_session)
         return valuate_result
     
@@ -1005,8 +1006,6 @@ class Resume:
             saved_path = os.path.join(MATCHING_DIR, match_filename.split(".")[0] + ".json")
             with open(saved_path) as file:
                 matching_result = json.loads(file.read())
-            from pprint import pprint
-            pprint(matching_result)
         return matching_result, saved_path
 
 
@@ -1025,9 +1024,6 @@ class Resume:
                                                           jd_filename=job_result.jd_file.split("/")[-1])
         
         overall_score = int(matching_result["overall"]["score"])
-        print("=========================")
-        print("=========================")
-        print(overall_score)
         if overall_score >= 50:
             mail_content = f"""
             <html>
@@ -1036,8 +1032,8 @@ class Resume:
                         Warm greetings from sharecv.vn ! 
                         Your profile has been recommended on sharecv.vn. However, please be aware that only when we have your permission, the profile will be sent to the employer to review and evaluate. <br>
                         Hence, please CLICK to below: <br>
-                        - <a href="https://sharecv.vn/?page=accept&id=14284&token=&act=accept">"Accept"</a> Job referral acceptance letter. <br>
-                        - <a href="https://sharecv.vn/?page=accept&id=14284&token=&act=decline">"Decline"</a> Job referral refusal letter. <br>
+                        - <a href="https://sharecv.vn/?page=accept&id={user.id}&token=&act=accept">"Accept"</a> Job referral acceptance letter. <br>
+                        - <a href="https://sharecv.vn/?page=decline&id={user.id}&token=&act=decline">"Decline"</a> Job referral refusal letter. <br>
                         Thank you for your cooperation. Should you need any further information or assistance, please do not hesitate to contact us. <br>
 
                         Thanks and best regards, <br>
@@ -1052,7 +1048,24 @@ class Resume:
             """
             #  Send mail
             Resume.send_email_request(cv_id, mail_content, db_session, user, background_task)
-        return matching_result, saved_dir
+            #   Update resume status 
+            resume_result.ResumeVersion.status = "Waiting Candidate Approve"
+        else:
+            #   Update resume status 
+            resume_result.ResumeVersion.status = "AI Matching Rejected"
+        db.commit_rollback(db_session)
+        return matching_result, saved_dir, cv_id
+
+
+    @staticmethod
+    def candidate_reply(cv_id: int, reply_status: str, db_session: Session, user):
+        resume_result = Resume.get_detail_resume_by_id(cv_id, db_session, user)       
+        if not resume_result.ResumeVersion.filename:
+           raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please upload at least 1 CV_PDF")
+        
+        #   Update resume status 
+        resume_result.ResumeVersion.status = reply_status
+        db.commit_rollback(db_session)
 
 
     @staticmethod
