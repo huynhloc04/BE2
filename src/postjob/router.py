@@ -433,10 +433,10 @@ def remove_job(
             )
 
 
-@router.post("/admin/get-matching-result",
+@router.get("/admin/get-matching-result",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
-def get_matching_result(
+def collaborator_get_matching_result(
         cv_id: int,
         job_id: int,
         db_session: Session = Depends(db.get_session),
@@ -450,7 +450,6 @@ def get_matching_result(
                     message="CV-JD matching completed.",
                     data={
                         "resume_id": cv_id,
-                        "job_id": job_id,
                         "match data": matching_result
                     }
     )
@@ -671,6 +670,33 @@ def update_resume_valuate(
                 )
 
 
+@router.get("/collaborator/get-resume-valuate",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_resume_valuate(
+                    cv_id: int,
+                    db_session: Session = Depends(db.get_session),
+                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    result = service.Resume.get_resume_valuate(cv_id, db_session)
+    return schema.CustomResponse(
+                    message="Get resume valuation successfully",
+                    data={
+                        "cv_id": cv_id,
+                        "level/salary": result.hard,
+                        "hard_point": result.hard_point,
+                        "degrees": result.degrees,
+                        "degree_point": result.degree_point,
+                        "certificates": result.certificates,
+                        "certificates_point": result.certificates_point,
+                        "total_point": result.total_point
+                    }
+                )
+
+
 @router.post("/collaborator/resume-matching",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
@@ -755,35 +781,94 @@ def get_detailed_resume(
             )
 
 
+@router.get("/collaborator/list-job/{job_status}",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def ctv_list_job(
+            job_status: schema.CollaborateJobStatus,
+            db_session: Session = Depends(db.get_session),
+            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
 
+    
+    result, num_result = service.Resume.list_job(job_status, db_session, current_user)
+    
+    return schema.CustomResponse(
+                        message="Get list job successfully!",
+                        data={
+                            "data_lst": result,
+                            "num_cvs": num_result
+                        }
+    )
+
+
+@router.get("/collaborator/get-matching-result",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def get_matching_result(
+        cv_id: int,
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    matching_result = service.Resume.get_matching_result(cv_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message="CV-JD matching completed.",
+                    data={
+                        "resume_id": cv_id,
+                        "match data": matching_result
+                    }
+    )
+
+
+@router.get("/collaborator/get-list-candidate",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def list_candidate(
+            db_session: Session = Depends(db.get_session),
+            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    result = service.Resume.list_candidate(db_session, current_user)
+    return schema.CustomResponse(
+                    message="Get list candidate successfully.",
+                    data=result
+    )
+
+
+@router.get("/collaborator/list-draft-candidate",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def list_draft_candidate(
+            db_session: Session = Depends(db.get_session),
+            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    result = service.Resume.list_draft_candidate(db_session, current_user)
+    return schema.CustomResponse(
+                    message="Get list candidate successfully.",
+                    data=result
+    )
 
 
 """ 
-1. Xeem thoong tin parsing
+1. Xem thoong tin parsing
 2. Xem danh sach Job (trang dau)
 3. Xem danh sach Ung vien (Da gui/ Nhap)
 """
 
 
 
-
-
-
-# @router.get("/collaborator/list-job/{ctv_job_status}}",
-#              status_code=status.HTTP_200_OK, 
-#              response_model=schema.CustomResponse)
-# def ctv_list_job(
-#             ctv_job_status: schema.CTVJobStatus,
-#             db_session: Session = Depends(db.get_session),
-#             credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-#     # Get curent active user
-#     _, current_user = get_current_active_user(db_session, credentials)
-
-    
-#     service.Job.ctv_list_job(ctv_job_status, db_session, current_user)
-    
-#     return get_jd_file(job_id, db_session, credentials)
 
 
 
