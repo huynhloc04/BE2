@@ -5,7 +5,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from config import db
 from postjob import schema
-from sqlmodel import Session, func
+from sqlmodel import Session, func, and_
 from sqlalchemy import select
 from fastapi import HTTPException, Request, BackgroundTasks, UploadFile, status
 from postjob.gg_service.gg_service import GoogleService
@@ -724,8 +724,7 @@ class Resume:
             background_tasks.add_task(
                                 GoogleService.CONTENT_GOOGLE,
                                 message=content, 
-                                # input_email=resume_data.ResumeVersion.email,
-                                input_email="hloc5874@gmail.com")
+                                input_email=resume_data.ResumeVersion.email)
         except:
             raise HTTPException(status_code=503, detail="Could not send email!")
     
@@ -999,6 +998,17 @@ class Resume:
     
     
     @staticmethod
+    def get_resume_valuate(cv_id, db_session):
+        valuation_query = select(model.ValuationInfo).where(model.ValuationInfo.cv_id == cv_id)
+        valuate_result = db_session.execute(valuation_query).scalars().first()
+        if not valuate_result:
+            raise HTTPException(status_code=404, detail="This resume has not been valuated!")
+        return valuate_result
+
+        
+
+    
+    @staticmethod
     def matching_base(cv_filename: str, jd_filename: str):
         #   Create saved file name
         match_filename = jd_filename.split(".")[0] + "__" + cv_filename
@@ -1089,9 +1099,11 @@ class Resume:
     
     
     @staticmethod
-    def get_matching_result(cv_id: int, job_id, db_session: Session, user):
+    def get_matching_result(cv_id: int, db_session: Session, user):
+        #   Get resume information
+        resume = Resume.get_detail_resume_by_id(cv_id, db_session, user)
         matching_query = select(model.ResumeMatching).where(model.ResumeMatching.cv_id == cv_id,
-                                                            model.ResumeMatching.job_id == job_id)
+                                                            model.ResumeMatching.job_id == resume.Resume.job_id)
         matching_result = db_session.execute(matching_query).scalars().first()
         if not matching_result:
            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This CV and JD have not been matched")
@@ -1153,6 +1165,7 @@ class Resume:
         other_certs = db_session.execute(select(model.OtherResumeCertificate).where(model.OtherResumeCertificate.cv_id == cv_id)).scalars().all()
         
         return {
+            "cv_id": cv_id,
             "status": resume_result.ResumeVersion.status,
             "job_service": job_result.job_service,
             "avatar": resume_result.ResumeVersion.avatar,
@@ -1223,85 +1236,135 @@ class Resume:
 
     @staticmethod
     def list_job(job_status, db_session, user):
-        subquery = (
-            select(model.JobDescription.id, func.count(Resume.id).label("resume_count"))
-            .join(Resume, model.JobDescription.id == Resume.job_id)
-            .group_by(model.JobDescription.id)
-            .alias("resume_counts")
-        )
         #   ======================= Đã giới thiệu =======================
-        query_referred = (
-            select(model.Company.logo, 
-                   model.Company.company_name, 
-                   model.JobDescription.job_title, 
-                   model.JobDescription.industries, 
-                   model.JobDescription.created_at, 
-                   model.JobDescription.job_service, 
-                   model.JobDescription.status)
-            .join(model.JobDescription, Company.user_id == model.JobDescription.user_id)
-            .join(subquery, subquery.c.id == model.JobDescription.id)
-            .where(subquery.c.resume_count >= 0)
-        )
-        result_referred = db_session.execute(query_referred).all() 
-        if not result_referred:
-            raise HTTPException(status_code=404, detail="Could not find any referred jobs!")
+        if job_status == schema.CollaborateJobStatus.referred:
+            query_referred = (
+                        select(
+                            model.Company.id,
+                            model.Company.logo, 
+                            model.Company.company_name, 
+                            model.JobDescription.id,
+                            model.JobDescription.job_title,
+                            model.JobDescription.industries,
+                            model.JobDescription.created_at,
+                            model.JobDescription.job_service, 
+                            model.JobDescription.status
+                        )
+                        .join(model.JobDescription, model.Company.user_id == model.JobDescription.user_id)
+                        .outerjoin(model.Resume, model.JobDescription.id == model.Resume.job_id)
+                        .group_by(
+                            model.Company.id,
+                            model.Company.logo, 
+                            model.Company.company_name, 
+                            model.JobDescription.id,
+                            model.JobDescription.job_title,
+                            model.JobDescription.industries,
+                            model.JobDescription.created_at,
+                            model.JobDescription.job_service, 
+                            model.JobDescription.status)
+                        .having(func.count(model.Resume.id) > 0)
+                    )
+            result_referred = db_session.execute(query_referred).all() 
+            if not result_referred:
+                raise HTTPException(status_code=404, detail="Could not find any referred jobs!")
+            return result_referred, len(result_referred)
         
-        #  ======================= Favorite Jobs =======================
-        query_favorite = (
-            select(model.Company.logo, 
-                   model.Company.company_name, 
-                   model.JobDescription.job_title, 
-                   model.JobDescription.industries, 
-                   model.JobDescription.created_at, 
-                   model.JobDescription.job_service, 
-                   model.JobDescription.status)
-                    .join(model.JobDescription, model.JobDescription.user_id == user.id)
-                    .filter(model.JobDescription.is_favorite == True)
-        )
-        result_favorite = db_session.execute(query_favorite).all() 
-        if not result_favorite:
-            raise HTTPException(status_code=404, detail="Could not find any favorited jobs!")
+        #  ======================= Favorite Jobs ======================= 
+        
+        elif job_status == schema.CollaborateJobStatus.favorite:
+            query_favorite = (
+                        select(
+                            model.Company.id,
+                            model.Company.logo,
+                            model.Company.company_name, 
+                            model.JobDescription.id,
+                            model.JobDescription.job_title,
+                            model.JobDescription.industries,
+                            model.JobDescription.created_at,
+                            model.JobDescription.job_service, 
+                            model.JobDescription.status
+                        )
+                        .join(model.JobDescription, model.JobDescription.user_id == model.Company.user_id)
+                        .filter(model.JobDescription.is_favorite == True)
+                    )
+            result_favorite = db_session.execute(query_favorite).all() 
+            if not result_favorite:
+                raise HTTPException(status_code=404, detail="Could not find any favorite jobs!")
+            return result_favorite, len(result_favorite)
         
         #  ======================= Chưa giới thiệu =======================
-        query_not_referred = (
-            select(model.Company.logo, 
-                   model.Company.company_name, 
-                   model.JobDescription.job_title, 
-                   model.JobDescription.industries, 
-                   model.JobDescription.created_at, 
-                   model.JobDescription.job_service, 
-                   model.JobDescription.status)
-                    .join(model.JobDescription, model.JobDescription.user_id == user.id)
-                    .filter(model.JobDescription.is_favorite == False)
-        )
-        result_not_referred = db_session.execute(query_favorite).all() 
-        if not result_not_referred:
-            raise HTTPException(status_code=404, detail="Could not find any jobs that weren't already referred!")
-        
-        
-        query = select(func.count(model.Resume.job_id))  \
-                                        .where(model.Resume.job_id == model.JobDescription.id)
-        cv_count = db_session.execute(query).scalar()
+        elif job_status == schema.CollaborateJobStatus.unreferred:
+            query_unreferred = (
+                        select(
+                            model.Company.id,
+                            model.Company.logo, 
+                            model.Company.company_name, 
+                            model.JobDescription.id,
+                            model.JobDescription.job_title,
+                            model.JobDescription.industries,
+                            model.JobDescription.created_at,
+                            model.JobDescription.job_service, 
+                            model.JobDescription.status
+                        )
+                        .join(model.JobDescription, model.Company.user_id == model.JobDescription.user_id)
+                        .outerjoin(model.Resume, model.JobDescription.id == model.Resume.job_id)
+                        .group_by(
+                            model.Company.id,
+                            model.Company.logo, 
+                            model.Company.company_name, 
+                            model.JobDescription.id,
+                            model.JobDescription.job_title,
+                            model.JobDescription.industries,
+                            model.JobDescription.created_at,
+                            model.JobDescription.job_service, 
+                            model.JobDescription.status)
+                        .having(func.count(model.Resume.id) == 0)
+                        .filter(model.JobDescription.is_favorite == False)
+            )
+            result_unreferred = db_session.execute(query_unreferred).all() 
+            if not result_unreferred:
+                raise HTTPException(status_code=404, detail="Could not find any unreferred jobs")
+            return result_unreferred, len(result_unreferred)
+        else:
+            pass
 
-        
-        if status == schema.JobStatus.pending or status == schema.JobStatus.browsing:   #  Chờ duyệt - Đang duyệt
-            return [{
-                "ID": result.id,
-                "Tên vị trí": result.job_title,
-                "Ngày tạo": result.created_at,
-                "Ngành nghề": result.industries,
-                "Loại dịch vụ": result.job_service
-            } for result in results]
-            
-        else:       #  Đang tủyển - Đã tủyển
-            return [{
-                "ID": result.id,
-                "Tên vị trí": result.job_title,
-                "Ngày đăng tuyển": result.created_at,
-                "Loại dịch vụ": result.job_service,
-                "CVs": cv_count
-            } for result in results]
+    
+    @staticmethod
+    def list_candidate(db_session: Session, current_user):
+        resume_query = select(model.ResumeVersion).where(model.ResumeVersion.cv_id == current_user.id)
+        resume_result = db_session.execute(resume_query).all() 
 
+        return {
+            "data_lst": [{
+                "id": result.id,
+                "fullname": result.name,
+                "email": result.email,
+                "phone": result.phone,
+                "job_title": result.job_title,
+                "industry": result.industry,
+                "job_service": Job.get_job_by_id(),
+                "status": result.status,
+                "referred_time": result.created_at
+            } for result in resume_result],
+            "data_len": len(resume_result)
+        }
+
+
+    @staticmethod
+    def list_draft_candidate(db_session: Session, current_user):
+        resume_query = select(model.ResumeVersion).where(model.ResumeVersion.cv_id == current_user.id)
+        resume_result = db_session.execute(resume_query).scalars().all() 
+
+        return {
+            "data_lst": [{
+                "id": result.cv_id,
+                "fullname": result.name,
+                "job_title": result.current_job,
+                "industry": result.industry,
+                "drafted_time": result.created_at
+            } for result in resume_result],
+            "data_len": len(resume_result)
+        }
 
 
     

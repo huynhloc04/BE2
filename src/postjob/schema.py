@@ -28,17 +28,17 @@ class CompanyInfo(BaseModel):
     company_name: str
     logo: str
     description: str
-    # company_images: Optional[List[UploadFile]]
     industry: str
     phone: str
     email: str
     founded_year: int
-    company_size: int
+    company_size: str
     tax_code: str
     address: str
     city: str
     country: str
     company_video: Optional[str]
+    company_images: Optional[List[UploadFile]]
     cover_image: Optional[str]
     linkedin: Optional[str]
     website: Optional[str]
@@ -53,15 +53,15 @@ class CompanyBase(BaseModel):
     phone: str
     email: str
     founded_year: int
-    company_size: int
+    company_size: str
     tax_code: str
     address: str
     city: str
     country: str
     logo: UploadFile
-    cover_image: Optional[UploadFile]
-    company_images: Optional[List[UploadFile]]
-    company_video: Optional[UploadFile]
+    cover_image: Optional[Union[UploadFile, None]]
+    company_images: Optional[List[Union[UploadFile, None]]]
+    company_video: Optional[Union[UploadFile, None]]
     linkedin: Optional[str]
     website: Optional[str]
     facebook: Optional[str]
@@ -75,15 +75,15 @@ class CompanyBase(BaseModel):
                 phone: str = Form(...),
                 email: str = Form(...),
                 founded_year: int = Form(...),
-                company_size: int = Form(...),
+                company_size: str = Form(...),
                 tax_code: str = Form(...),
                 address: str = Form(...),
                 city: str = Form(...),
                 country: str = Form(...),
                 logo: UploadFile = File(...),
-                cover_image: Optional[UploadFile] = File(None),
-                company_images: Optional[List[UploadFile]] = File(None),
-                company_video: Optional[UploadFile] = File(None),
+                cover_image: Optional[Union[UploadFile, None]] = File(None),
+                company_images: Optional[List[Union[UploadFile, None]]] = File(None),
+                company_video: Optional[Union[UploadFile, None]] = File(None),
                 linkedin: Optional[str] = Form(None),
                 website: Optional[str] = Form(None),
                 facebook: Optional[str] = Form(None),
@@ -121,7 +121,7 @@ class CompanyUpdate(BaseModel):
     phone: Optional[str]
     email: Optional[str]
     founded_year: Optional[int]
-    company_size: Optional[int]
+    company_size: Optional[str]
     address: Optional[str]
     city: Optional[str]
     country: Optional[str]
@@ -139,6 +139,12 @@ class JobEducation(BaseModel):
     major: Union[str, None]
     gpa: Union[str, None]
 
+
+class CollaborateJobStatus(str, Enum):
+    referred = "referred"
+    favorite = "favorite"
+    unreferred = "unreferred"
+    
     
 class Language(str, Enum):
     english = "English"

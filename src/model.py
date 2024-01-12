@@ -67,7 +67,7 @@ class Company(TableBase, table=True):
     email: str = Field(default=None)
     description: str = Field(default=None, sa_column=Column(TEXT))
     founded_year: int = Field(default=None)
-    company_size: int = Field(default=None)
+    company_size: str = Field(default=None)
     tax_code: str = Field(default=None)    
     address: str = Field(default=None, sa_column=Column(TEXT))
     city: str = Field(default=None)
@@ -86,6 +86,7 @@ class JobDescription(TableBase, table=True):
     __tablename__ = 'job_descriptions'
 
     user_id: int = Field(default=None, foreign_key="users.id")
+    company_id: int = Field(default=None, foreign_key="companies.id")
     status: str = Field(default=None)
     job_service: str = Field(default=None)
     job_title: str = Field(default=None)
