@@ -946,42 +946,55 @@ class Resume:
             hard_point = round(percent*data.current_salary / 100000, 1)   # Convert money to point: 100000 (vnđ) => 1đ
             valuate_result.hard = data.current_salary
             valuate_result.hard_point = hard_point
-        else:
+            #   Commit to Database
+            result.ResumeVersion.status = "Pricing Approved"
+            db.commit_rollback(db_session)
+        elif data.level:
             for level, point in level_map.items():
                 if data.level in levels[int(level)]:
                     hard_point += point
                     valuate_result.hard = data.level
                     valuate_result.hard_point = hard_point
+                    #   Commit to Database
+                    result.ResumeVersion.status = "Pricing Approved"
+                    db.commit_rollback(db_session)
                     break
+        else:
+            pass
 
         #   ================================== Soft point ==================================
-            #   Degrees
-        degrees = [degree for degree in data.degrees if degree in ["Bachelor", "Master", "Ph.D"]]
-        degree_point = 0.5 * len(degrees)
-            #   Certificates
-        certs = []
-        for cert in data.language_certificates:
-            if cert.certificate_language == "English":
-                if (cert.certificate_name == "TOEIC" and float(cert.certificate_point_level) > 700) or (cert.certificate_name == "IELTS" and float(cert.certificate_point_level) > 7.0):
-                    certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
-            elif cert.certificate_language == "Japan" and cert.certificate_point_level in ["N1", "N2"]:
-                    certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
-            elif cert.certificate_language == "Korean":
-                if cert.certificate_name == "Topik II" and cert.certificate_point_level in ["Level 5", "Level 6"]:
-                    certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
-            elif cert.certificate_language == "Chinese" and cert.certificate_point_level == ["HSK-5", "HSK6"]:
-                    certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
-        cert_point = 0.5 * len(certs)
-        #   Add "soft_point" to Database
-        valuate_result.degrees = degrees,
-        valuate_result.degree_point = degree_point,
-        valuate_result.certificates = certs,
-        valuate_result.certificates_point = cert_point,
-        valuate_result.total_point = hard_point + degree_point + cert_point
+        #   Degrees
+        if data.degrees:
+            degrees = [degree for degree in data.degrees if degree in ["Bachelor", "Master", "Ph.D"]]
+            degree_point = 0.5 * len(degrees)
+            #   Add "soft_point" to Database
+            valuate_result.degrees = degrees
+            valuate_result.degree_point = degree_point
+            result.ResumeVersion.status = "Pricing Approved"
+            db.commit_rollback(db_session)
+        #   Certificates
+        if data.language_certificates:
+            certs = []
+            for cert in data.language_certificates:
+                if cert.certificate_language == "English":
+                    if (cert.certificate_name == "TOEIC" and float(cert.certificate_point_level) > 700) or (cert.certificate_name == "IELTS" and float(cert.certificate_point_level) > 7.0):
+                        certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
+                elif cert.certificate_language == "Japan" and cert.certificate_point_level in ["N1", "N2"]:
+                        certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
+                elif cert.certificate_language == "Korean":
+                    if cert.certificate_name == "Topik II" and cert.certificate_point_level in ["Level 5", "Level 6"]:
+                        certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
+                elif cert.certificate_language == "Chinese" and cert.certificate_point_level == ["HSK-5", "HSK6"]:
+                        certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
+            cert_point = 0.5 * len(certs)
+            #   Add "soft_point" to Database
+            valuate_result.certificates = certs
+            valuate_result.certificates_point = cert_point
+            valuate_result.total_point = hard_point + degree_point + cert_point
 
-        #   Update Resume valuation status
-        result.ResumeVersion.status = "Pricing Approved"
-        db.commit_rollback(db_session)
+            #   Update Resume valuation status
+            result.ResumeVersion.status = "Pricing Approved"
+            db.commit_rollback(db_session)
         return valuate_result
     
     
@@ -1012,8 +1025,8 @@ class Resume:
     @staticmethod
     def cv_jd_matching(cv_id: int, db_session: Session, user, background_task: BackgroundTasks):
         resume_result = Resume.get_detail_resume_by_id(cv_id, db_session, user)       
-        if not resume_result.ResumeVersion.filename:
-           raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please upload at least 1 CV_PDF")
+        if not resume_result:
+           raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Resume does not exist")
         
         #   Get Job by cv_id
         job_result = Job.get_job_by_id(resume_result.Resume.job_id,
@@ -1050,18 +1063,72 @@ class Resume:
             Resume.send_email_request(cv_id, mail_content, db_session, user, background_task)
             #   Update resume status 
             resume_result.ResumeVersion.status = "Waiting Candidate Approve"
+            #   Write matching result to Database
+            matching_db = model.ResumeMatching(
+                                    job_id=resume_result.Resume.job_id,
+                                    cv_id=cv_id,
+                                    title_score=int(matching_result["job_title"]["score"]),
+                                    title_explain=matching_result["job_title"]["explanation"],
+                                    exper_score=int(matching_result["experience"]["score"]),
+                                    exper_explain=matching_result["experience"]["explanation"],
+                                    skill_score=int(matching_result["skill"]["score"]),
+                                    skill_explain=matching_result["skill"]["explanation"],
+                                    education_score=int(matching_result["education"]["score"]),
+                                    education_explain=matching_result["education"]["explanation"],
+                                    orientation_score=int(matching_result["orientation"]["score"]),
+                                    orientation_explain=matching_result["orientation"]["explanation"],
+                                    overall_score=int(matching_result["overall"]["score"]),
+                                    overall_explain=matching_result["overall"]["explanation"]
+            )
+            db_session.add(matching_db)
         else:
             #   Update resume status 
             resume_result.ResumeVersion.status = "AI Matching Rejected"
         db.commit_rollback(db_session)
         return matching_result, saved_dir, cv_id
+    
+    
+    @staticmethod
+    def get_matching_result(cv_id: int, job_id, db_session: Session, user):
+        matching_query = select(model.ResumeMatching).where(model.ResumeMatching.cv_id == cv_id,
+                                                            model.ResumeMatching.job_id == job_id)
+        matching_result = db_session.execute(matching_query).scalars().first()
+        if not matching_result:
+           raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This CV and JD have not been matched")
+       
+        return {
+            "job_title": {
+                "score": matching_result.title_score,
+                "explanation": matching_result.title_explain
+            },
+            "experience": {
+                "score": matching_result.exper_score,
+                "explanation": matching_result.exper_explain
+            },
+            "skill": {
+                "score": matching_result.skill_score,
+                "explanation": matching_result.skill_explain
+            },
+            "education": {
+                "score": matching_result.education_score,
+                "explanation": matching_result.education_explain
+            },
+            "orientation": {
+                "score": matching_result.orientation_score,
+                "explanation": matching_result.orientation_explain
+            },
+            "overall": {
+                "score": matching_result.overall_score,
+                "explanation": matching_result.overall_explain
+            }
+        }
 
 
     @staticmethod
     def candidate_reply(cv_id: int, reply_status: str, db_session: Session, user):
         resume_result = Resume.get_detail_resume_by_id(cv_id, db_session, user)       
         if not resume_result.ResumeVersion.filename:
-           raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please upload at least 1 CV_PDF")
+           raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please upload atleast 1 CV PDF")
         
         #   Update resume status 
         resume_result.ResumeVersion.status = reply_status
@@ -1154,49 +1221,86 @@ class Resume:
         return result.ResumeVersion.cv_file
 
 
+    @staticmethod
+    def list_job(job_status, db_session, user):
+        subquery = (
+            select(model.JobDescription.id, func.count(Resume.id).label("resume_count"))
+            .join(Resume, model.JobDescription.id == Resume.job_id)
+            .group_by(model.JobDescription.id)
+            .alias("resume_counts")
+        )
+        #   ======================= Đã giới thiệu =======================
+        query_referred = (
+            select(model.Company.logo, 
+                   model.Company.company_name, 
+                   model.JobDescription.job_title, 
+                   model.JobDescription.industries, 
+                   model.JobDescription.created_at, 
+                   model.JobDescription.job_service, 
+                   model.JobDescription.status)
+            .join(model.JobDescription, Company.user_id == model.JobDescription.user_id)
+            .join(subquery, subquery.c.id == model.JobDescription.id)
+            .where(subquery.c.resume_count >= 0)
+        )
+        result_referred = db_session.execute(query_referred).all() 
+        if not result_referred:
+            raise HTTPException(status_code=404, detail="Could not find any referred jobs!")
         
-
-
-    # @staticmethod
-    # def ctv_list_job(job_status, db_session, user):
-
-    #     query = (
-    #         select(model.Company.logo, model.Company.company_name, 
-    #                model.JobDescription.job_title, 
-    #                model.JobDescription.industries, 
-    #                model.JobDescription.created_at, 
-    #                model.JobDescription.job_title, 
-    #                model.JobDescription.job_service, 
-    #                model.JobDescription.status)
-    #                 .join(model.JobDescription, model.JobDescription.user_id == user.id)
-    #                 .filter(model.JobDescription.ctv_job_status == job_status)
-    #     )
-    #     results = db_session.execute(query).all() 
-    #     if not results:
-    #         raise HTTPException(status_code=404, detail="Could not find any jobs!")
+        #  ======================= Favorite Jobs =======================
+        query_favorite = (
+            select(model.Company.logo, 
+                   model.Company.company_name, 
+                   model.JobDescription.job_title, 
+                   model.JobDescription.industries, 
+                   model.JobDescription.created_at, 
+                   model.JobDescription.job_service, 
+                   model.JobDescription.status)
+                    .join(model.JobDescription, model.JobDescription.user_id == user.id)
+                    .filter(model.JobDescription.is_favorite == True)
+        )
+        result_favorite = db_session.execute(query_favorite).all() 
+        if not result_favorite:
+            raise HTTPException(status_code=404, detail="Could not find any favorited jobs!")
         
-    #     query = select(func.count(model.Resume.job_id))  \
-    #                                     .where(model.Resume.job_id == model.JobDescription.id)
-    #     cv_count = db_session.execute(query).scalar()
+        #  ======================= Chưa giới thiệu =======================
+        query_not_referred = (
+            select(model.Company.logo, 
+                   model.Company.company_name, 
+                   model.JobDescription.job_title, 
+                   model.JobDescription.industries, 
+                   model.JobDescription.created_at, 
+                   model.JobDescription.job_service, 
+                   model.JobDescription.status)
+                    .join(model.JobDescription, model.JobDescription.user_id == user.id)
+                    .filter(model.JobDescription.is_favorite == False)
+        )
+        result_not_referred = db_session.execute(query_favorite).all() 
+        if not result_not_referred:
+            raise HTTPException(status_code=404, detail="Could not find any jobs that weren't already referred!")
+        
+        
+        query = select(func.count(model.Resume.job_id))  \
+                                        .where(model.Resume.job_id == model.JobDescription.id)
+        cv_count = db_session.execute(query).scalar()
 
         
-    #     if status == schema.JobStatus.pending or status == schema.JobStatus.browsing:   #  Chờ duyệt - Đang duyệt
-    #         return [{
-    #             "ID": result.id,
-    #             "Tên vị trí": result.job_title,
-    #             "Ngày tạo": result.created_at,
-    #             "Ngành nghề": result.industries,
-    #             "Loại dịch vụ": result.job_service
-    #         } for result in results]
+        if status == schema.JobStatus.pending or status == schema.JobStatus.browsing:   #  Chờ duyệt - Đang duyệt
+            return [{
+                "ID": result.id,
+                "Tên vị trí": result.job_title,
+                "Ngày tạo": result.created_at,
+                "Ngành nghề": result.industries,
+                "Loại dịch vụ": result.job_service
+            } for result in results]
             
-    #     else:       #  Đang tủyển - Đã tủyển
-    #         return [{
-    #             "ID": result.id,
-    #             "Tên vị trí": result.job_title,
-    #             "Ngày đăng tuyển": result.created_at,
-    #             "Loại dịch vụ": result.job_service,
-    #             "CVs": cv_count
-    #         } for result in results]
+        else:       #  Đang tủyển - Đã tủyển
+            return [{
+                "ID": result.id,
+                "Tên vị trí": result.job_title,
+                "Ngày đăng tuyển": result.created_at,
+                "Loại dịch vụ": result.job_service,
+                "CVs": cv_count
+            } for result in results]
 
 
 

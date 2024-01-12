@@ -431,6 +431,29 @@ def remove_job(
                     message="Remove job successfully!!!",
                     data=None
             )
+
+
+@router.post("/admin/get-matching-result",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def get_matching_result(
+        cv_id: int,
+        job_id: int,
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    matching_result = service.Resume.get_matching_result(cv_id, job_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message="CV-JD matching completed.",
+                    data={
+                        "resume_id": cv_id,
+                        "job_id": job_id,
+                        "match data": matching_result
+                    }
+    )
     
     
 # ===========================================================

@@ -186,10 +186,7 @@ class ResumeVersion(TableBase, table=True):
     status: str = Field(default="pending")
     package: str = Field(default=None)
     objectives: str = Field(default=None)
-    # is_valuate: bool = Field(default=False)
-    # is_draft: bool = Field(default=False)
-    # is_ai_matching: bool = Field(default=False)
-    # is_admin_matching: bool = Field(default=False)
+    is_draft: bool = Field(default=False)
     matching_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
 
 
@@ -241,3 +238,21 @@ class OtherResumeCertificate(TableBase, table=True):
     cv_id: int = Field(default=None, foreign_key="resumes.id")
     certificate_name: str = Field(default=None)
     certificate_level: str = Field(default=None)
+    
+
+class ResumeMatching(TableBase, table=True):
+    __tablename__ = 'matching_results'      
+    job_id: int = Field(default=None, foreign_key="job_descriptions.id")
+    cv_id: int = Field(default=None, foreign_key="resumes.id")
+    title_score: int = Field(default=None)
+    title_explain: str = Field(default=None, sa_column=Column(TEXT))
+    exper_score: int = Field(default=None)
+    exper_explain: str = Field(default=None, sa_column=Column(TEXT))
+    skill_score: int = Field(default=None)
+    skill_explain: str = Field(default=None, sa_column=Column(TEXT))
+    education_score: int = Field(default=None)
+    education_explain: str = Field(default=None, sa_column=Column(TEXT))
+    orientation_score: int = Field(default=None)
+    orientation_explain: str = Field(default=None, sa_column=Column(TEXT))
+    overall_score: int = Field(default=None)
+    overall_explain: str = Field(default=None, sa_column=Column(TEXT))
