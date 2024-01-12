@@ -431,6 +431,29 @@ def remove_job(
                     message="Remove job successfully!!!",
                     data=None
             )
+
+
+@router.post("/admin/get-matching-result",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def get_matching_result(
+        cv_id: int,
+        job_id: int,
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    matching_result = service.Resume.get_matching_result(cv_id, job_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message="CV-JD matching completed.",
+                    data={
+                        "resume_id": cv_id,
+                        "job_id": job_id,
+                        "match data": matching_result
+                    }
+    )
     
     
 # ===========================================================
@@ -660,9 +683,56 @@ def resume_matching(
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    _ = service.Resume.cv_jd_matching(cv_id, db_session, current_user, background_task)
+    matching_result, saved_dir, cv_id = service.Resume.cv_jd_matching(cv_id, db_session, current_user, background_task)
     return schema.CustomResponse(
                     message="CV-JD matching completed.",
+                    data={
+                        "resume id": cv_id,
+                        "match data": {
+                            "job_title": {
+                                    "score": matching_result["job_title"]["score"],
+                                    "explanation": matching_result["job_title"]["explanation"]
+                                },
+                            "experience": {
+                                    "score": matching_result["experience"]["score"],
+                                    "explanation": matching_result["experience"]["explanation"]
+                                },
+                            "skill": {
+                                    "score": matching_result["skill"]["score"],
+                                    "explanation": matching_result["skill"]["explanation"]
+                                },
+                            "education": {
+                                    "score": matching_result["education"]["score"],
+                                    "explanation": matching_result["education"]["explanation"]
+                                },
+                            "orientation": {
+                                    "score": matching_result["orientation"]["score"],
+                                    "explanation": matching_result["orientation"]["explanation"]
+                                },
+                            "overall": {
+                                    "score": matching_result["overall"]["score"],
+                                    "explanation": matching_result["overall"]["explanation"]
+                                }
+                        }       
+                    }
+    )
+
+
+@router.get("/collaborator/get-candidate-reply/{status}",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def resume_matching(
+        cv_id: int,
+        status: str,
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    service.Resume.candidate_reply(cv_id, status, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Update candidate reply.",
                     data=None
     )
     
@@ -688,7 +758,11 @@ def get_detailed_resume(
 
 
 
-
+""" 
+1. Xeem thoong tin parsing
+2. Xem danh sach Job (trang dau)
+3. Xem danh sach Ung vien (Da gui/ Nhap)
+"""
 
 
 
@@ -733,6 +807,24 @@ def get_jd_file(
     _, current_user = get_current_active_user(db_session, credentials)
 
     jd_file = service.Job.get_jd_file(job_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message=None,
+                    data=jd_file
+            )
+    
+    
+@router.get("/general/get-cv-pdf/{cv_id}",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_cv_file(
+                cv_id: int,
+                db_session: Session = Depends(db.get_session),
+                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    jd_file = service.Resume.get_cv_file(cv_id, db_session, current_user)
     return schema.CustomResponse(
                     message=None,
                     data=jd_file

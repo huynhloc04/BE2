@@ -224,7 +224,7 @@ class ResumeProject(BaseModel):
 class ResumeUpdate(BaseModel):
     cv_id: int
     name: Union[str, None]
-    level: Union[str, None]
+    level: str
     current_job: Union[str, None]
     gender: Union[str, None]
     birthday: Union[str, None]  # => age
@@ -311,11 +311,11 @@ class ValuationDegree(str, Enum):
     ph_d = "Ph.D"  
     
 class ResumeValuation(BaseModel):
-    cv_id: int
-    level: Level
+    cv_id: Optional[int]
+    level: Optional[Level]
     current_salary: Optional[float]
-    degrees: List[ValuationDegree]
-    language_certificates: List[LanguageCertificate]
+    degrees: Optional[List[ValuationDegree]]
+    language_certificates: Optional[List[LanguageCertificate]]
     
     
     

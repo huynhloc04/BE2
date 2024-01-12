@@ -1,1 +1,26 @@
-{"job_title": {"score": "100", "explanation": "The job title in the resume matches the job title in the job description."}, "experience": {"score": "80", "explanation": "The candidate has 5-7 years of experience in training at big-sized companies, which meets the requirement in the job description. However, the resume does not provide specific details about the candidate's experience in performance management and learning framework."}, "skill": {"score": "90", "explanation": "The candidate has skills in programming (C++, Python), system management (Linux, ROS, Docker, Git), hardware (Raspberry Pi, Jetson Nano), and frameworks (Keras, Pytorch, Tensorflow), which are relevant to the job description. However, the resume does not mention specific skills related to performance management and learning framework."}, "education": {"score": "100", "explanation": "The candidate's education level is university/college, which meets the requirement in the job description."}, "orientation": {"score": "0", "explanation": "The candidate's orientation mentioned in the resume does not match the orientation description in the job description. The resume focuses on artificial intelligence and robotics, while the job description is for a learning and development role."}, "overall": {"score": "74", "explanation": "The overall score is calculated based on the scores of job title (100), experience (80), skill (90), education (100), and orientation (0). The candidate meets the requirements in terms of job title and education, but lacks specific experience and skills related to performance management and learning framework. Additionally, the candidate's orientation does not align with the job description."}}
+{
+  "job_title": {
+    "score": "100",
+    "explanation": "The job title in the resume matches the job title in the job description."
+  },
+  "experience": {
+    "score": "80",
+    "explanation": "The candidate has 5-7 years of experience in training at big-sized companies, which meets the requirement in the job description. However, the resume does not provide specific details about the candidate's experience in performance management and learning framework."
+  },
+  "skill": {
+    "score": "90",
+    "explanation": "The candidate has skills in programming (C++, Python), system management (Linux, ROS, Docker, Git), hardware (Raspberry Pi, Jetson Nano), and frameworks (Keras, Pytorch, Tensorflow), which are relevant to the job description. However, the resume does not mention specific skills related to performance management and learning framework."
+  },
+  "education": {
+    "score": "100",
+    "explanation": "The candidate's education level is university/college, which meets the requirement in the job description."
+  },
+  "orientation": {
+    "score": "0",
+    "explanation": "The candidate's orientation mentioned in the resume does not match the orientation description in the job description. The resume focuses on artificial intelligence and robotics, while the job description is for a learning and development role."
+  },
+  "overall": {
+    "score": "74",
+    "explanation": "The overall score is calculated based on the scores of job title (100), experience (80), skill (90), education (100), and orientation (0). The candidate meets the requirements in terms of job title and education, but lacks specific experience and skills related to performance management and learning framework. Additionally, the candidate's orientation does not align with the job description."
+  }
+}
