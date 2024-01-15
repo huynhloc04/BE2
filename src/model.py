@@ -279,7 +279,7 @@ class RecruitResumeJoin(SQLModel, table=True):
     
     
     
-class Cart(SQLModel, table=True):
+class UserResumeCart(SQLModel, table=True):
     
     __tablename__ = "carts"
     user_id: Optional[int] = Field(
