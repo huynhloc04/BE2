@@ -29,34 +29,6 @@ router = APIRouter(prefix="/auth", tags=["Account"])
 security_bearer = HTTPBearer()
 
 
-def get_current_active_user(
-                db_session: Session = Depends(db.get_session),
-                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    #   Get access token
-    token = credentials.credentials  
-    if service.OTPRepo.check_token(db_session, token):
-        return JSONResponse(status_code=401,
-                            content={
-                                "message": "Authentication is required!!!",
-                                "data": None,
-                                "errorCode": 1002,
-                                "errors": None})
-    #   Decode
-    payload = jwt.decode(token, os.environ.get("SECRET_KEY"), algorithms=os.environ.get("ALGORITHM"))
-    email = payload.get("sub")
-        
-    current_user = service.AuthRequestRepository.get_user_by_email(db_session, email)
-    if not current_user:
-        return JSONResponse(
-                            status_code=404,
-                            content={
-                                "message": "Account doesn't exist!!!",
-                                "data": None,
-                                "errorCode": None,
-                                "errors": None})
-    return token, current_user
-
-
 @router.post("/sign-up", 
             status_code=status.HTTP_201_CREATED, 
             response_model=schema.SignUpResponse)

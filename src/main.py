@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import db
 from auth.router import router as auth_router 
 from postjob.router import router as postjob_router 
+from money2point.router import router as money2point_router
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi_events.middleware import EventHandlerASGIMiddleware
@@ -32,6 +33,7 @@ def init_app():
    
     app.include_router(auth_router)
     app.include_router(postjob_router)
+    app.include_router(money2point_router)
     
     return app
 

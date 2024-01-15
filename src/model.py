@@ -278,7 +278,6 @@ class RecruitResumeJoin(SQLModel, table=True):
     is_rejected: bool = Field(default=False)      #   Recruiter rejects Resumes
     
     
-    
 class UserResumeCart(SQLModel, table=True):
     
     __tablename__ = "carts"
@@ -292,3 +291,26 @@ class UserResumeCart(SQLModel, table=True):
         foreign_key="resumes.id",
         primary_key=True,
     )
+    
+    
+class PointPackage(TableBase, table=True):
+    __tablename__ = 'point_packages'    
+    point: int = Field(default=None)
+    price: float = Field(default=None)
+    currency: str = Field(default=None)
+
+
+class UserPointCart(SQLModel, table=True):
+    
+    __tablename__ = "user_point_carts"
+    user_id: Optional[int] = Field(
+        default=None,
+        foreign_key="users.id",
+        primary_key=True,
+    )
+    point_id: Optional[int] = Field(
+        default=None,
+        foreign_key="point_packages.id",
+        primary_key=True,
+    )
+    quantity: int = Field(default=0)
