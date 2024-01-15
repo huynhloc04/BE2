@@ -130,7 +130,7 @@ class OTPRepo:
         return False
     
     @staticmethod
-    def disable_otp(db_session: Session, data_form: schema.VerifyOTP):
+    def disable_otp(db_session: Session, data_form):
         result = AuthRequestRepository.get_user_by_id(db_session, data_form.user_id)
         result.otp_token = None
         db.commit_rollback(db_session)

@@ -126,15 +126,14 @@ class Company:
                                 address=data.address, 
                                 city=data.city, 
                                 country=data.country, 
-                                logo=str(request.base_url) + data.logo.filename if data.logo else None,
-                                cover_image=str(request.base_url) + data.cover_image.filename if data.cover_image else None, 
-                                company_images=[str(request.base_url) + company_img.filename for company_img in data.company_images] if data.company_images else None,
-                                company_video=str(request.base_url) + data.company_video.filename if data.company_video else None,
+                                logo=os.path.join("static/company/logo", data.logo.filename),
                                 linkedin=data.linkedin,
                                 website=data.website,
                                 facebook=data.facebook,
                                 instagram=data.instagram)
         db_session.add(db_company)
+         #   Set as default image if there's no uploaded cover image
+        db_company.cover_image = os.path.join("static/company/logo", "default_cover_image.jpg")
         db.commit_rollback(db_session)
 
         #   Save file
@@ -146,17 +145,6 @@ class Company:
         if data.logo:
             with open(os.path.join(os.getenv("COMPANY_DIR"), "logo",  data.logo.filename), 'w+b') as file:
                 shutil.copyfileobj(data.logo.file, file)
-        if data.cover_image:
-            with open(os.path.join(os.getenv("COMPANY_DIR"), "cover_image",  data.cover_image.filename), 'w+b') as file:
-                shutil.copyfileobj(data.cover_image.file, file)
-                shutil.copyfileobj(data.logo.file, file)
-        if data.company_images:
-            for image in data.company_images:
-                with open(os.path.join(os.getenv("COMPANY_DIR"), "company_images",  image.filename), 'w+b') as file:
-                    shutil.copyfileobj(image.file, file)
-        if data.company_video:
-            with open(os.path.join(os.getenv("COMPANY_DIR"), "company_video",  data.company_video.filename), 'w+b') as file:
-                shutil.copyfileobj(data.company_video.file, file)
         return db_company
     
     
@@ -258,9 +246,11 @@ class Company:
     
     
     @staticmethod
-    def list_industry(db_session: Session):
-        results = db_session.execute(select(model.Industry.name)).scalars().all()
-        return results
+    def list_industry():
+        industries = [
+            "Education", "Construction", "Design", "Corporate Services", "Retail", "Energy & Mining", "Manufacturing", "Finance", "Recreation & Travel", "Arts", "Health Care", "Hardware & Networking", "Software & IT Services", "Real Estate", "Legal", "Agriculture", "Media & Communications", "Transportation & Logistics", "Entertainment", "Wellness & Fitness", "Public Safety", "Public Administration"
+        ]
+        return industries
     
     
 class General:    
@@ -447,32 +437,34 @@ class Recruiter:
             
         @staticmethod
         def list_job(is_draft, db_session, user):
-            job_query = select(model.JobDescription).where(model.JobDescription.user_id == user.id,
-                                                            model.JobDescription.is_draft == is_draft)
-            results = db_session.execute(job_query).scalars().all() 
+            # job_query = select(model.JobDescription).where(model.JobDescription.user_id == user.id,
+            #                                                 model.JobDescription.is_draft == is_draft)
+            # results = db_session.execute(job_query).scalars().all() 
+            job_query = select(model.JobDescription, func.count(model.Resume.id).label("resume_count"))     \
+                        .join(model.Resume, model.JobDescription.id == model.Resume.job_id)   \
+                        .group_by(model.JobDescription.id)  \
+                        .where(model.JobDescription.is_draft == is_draft)
+            results = db_session.execute(job_query).all() 
             if not results:
                 raise HTTPException(status_code=404, detail="Job doesn't exist!")
             
-            query = select(func.count(model.Resume.job_id)).where(model.Resume.job_id == model.JobDescription.id)
-            cv_count = db_session.execute(query).scalar()
-            
             if is_draft:
                 return [{
-                    "ID": result.id,
-                    "Tên vị trí": result.job_title,
-                    "Ngành nghề": result.industries,
-                    "Loại dịch vụ": result.job_service,
-                    "Ngày tạo": result.created_at
+                    "job_id": result.JobDescription.id,
+                    "job_title": result.JobDescription.job_title,
+                    "industry": result.JobDescription.industries,
+                    "job_service": result.JobDescription.job_service,
+                    "created_time": result.JobDescription.created_at
                 } for result in results]
                 
             else:
                 return [{
-                    "ID": result.id,
-                    "Tên vị trí": result.job_title,
-                    "Ngày đăng tuyển": result.created_at,
-                    "Loại dịch vụ": result.job_service,
-                    "Trạng thái": result.status,
-                    "CVs": cv_count
+                    "job_id": result.JobDescription.id,
+                    "job_title": result.JobDescription.job_title,
+                    "recruited_time": result.JobDescription.created_at,
+                    "job_service": result.JobDescription.job_service,
+                    "status": result.JobDescription.status,
+                    "num_cvs": result[1]
                 } for result in results]
             
             
@@ -1368,12 +1360,13 @@ class Collaborator:
                 "degree_point": degree_point,
                 "certs": certs,
                 "certs_point": certs_point,
+                "total_point": hard_point + degree_point + certs_point
             }
         
         @staticmethod
-        def confirm_resume_valuate(data: schema.ResumeValuateResult, db_session: Session, user):
+        def confirm_resume_valuate(cv_id: int, data: schema.ResumeValuateResult, db_session: Session, user):
             #   Retrieve resume' user
-            result = General.get_detail_resume_by_id(data.cv_id, db_session, user) 
+            result = General.get_detail_resume_by_id(cv_id, db_session, user) 
             if not result:
                 raise HTTPException(status_code=404, detail="Resume doesn't exist!")
             valuate_db = model.ValuationInfo(
