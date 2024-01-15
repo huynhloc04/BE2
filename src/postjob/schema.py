@@ -9,9 +9,6 @@ from pydantic import BaseModel
 class CustomResponse(BaseModel):
     message: str = None
     data: Any = None
-
-    def __str__(self):
-        return f"{self.value}"
     
     
 class CollaborateJobStatus(str, Enum):
@@ -155,7 +152,7 @@ class CompanyInfo(BaseModel):
     city: str
     country: str
     company_video: Optional[str]
-    company_images: Optional[List[UploadFile]]
+    company_images: Optional[List[str]]
     cover_image: Optional[str]
     linkedin: Optional[str]
     website: Optional[str]
@@ -176,9 +173,6 @@ class CompanyBase(BaseModel):
     city: str
     country: str
     logo: UploadFile
-    cover_image: Optional[Union[UploadFile, None]]
-    company_images: Optional[List[Union[UploadFile, None]]]
-    company_video: Optional[Union[UploadFile, None]]
     linkedin: Optional[str]
     website: Optional[str]
     facebook: Optional[str]
@@ -198,9 +192,6 @@ class CompanyBase(BaseModel):
                 city: str = Form(...),
                 country: str = Form(...),
                 logo: UploadFile = File(...),
-                cover_image: Optional[Union[UploadFile, None]] = File(None),
-                company_images: Optional[List[Union[UploadFile, None]]] = File(None),
-                company_video: Optional[Union[UploadFile, None]] = File(None),
                 linkedin: Optional[str] = Form(None),
                 website: Optional[str] = Form(None),
                 facebook: Optional[str] = Form(None),
@@ -219,9 +210,6 @@ class CompanyBase(BaseModel):
             city=city,
             country=country,
             logo=logo,
-            cover_image=cover_image,
-            company_images=company_images,
-            company_video=company_video,
             linkedin=linkedin,
             website=website,
             facebook=facebook,
@@ -400,8 +388,8 @@ class UpdateResumeValuation(BaseModel):
 class ResumeValuateResult(BaseModel):
     hard_item: str
     hard_point: float
-    degrees: str
+    degrees: List[str]
     degree_point: float
-    certificates: str
+    certificates: List[str]
     certificates_point: float
     total_point: float

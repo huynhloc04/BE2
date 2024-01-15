@@ -1,11 +1,13 @@
-import os
+import os, math
+import shutil
 from config import db
+from typing import List, Any
 from typing import Optional
 from sqlmodel import Session
-from fastapi import UploadFile, Form
+from fastapi import UploadFile, Form, File
 from starlette.requests import Request
 from postjob import schema, service
-from enum import Enum
+from authentication import get_current_active_user
 from fastapi import APIRouter, status, Depends, BackgroundTasks, Security, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from config import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES
@@ -14,30 +16,6 @@ from jose import jwt
 
 router = APIRouter(prefix="/postjob", tags=["Post Job"])
 security_bearer = HTTPBearer()
-
-
-def get_current_active_user(
-                db_session: Session = Depends(db.get_session),
-                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    #   Get access token
-    token = credentials.credentials  
-    if service.OTPRepo.check_token(db_session, token):
-        raise HTTPException(status_code=401, detail="Authentication is required!")
-    
-    #   Decode
-    payload = jwt.decode(token, os.environ.get("SECRET_KEY"), algorithms=os.environ.get("ALGORITHM"))
-    email = payload.get("sub")
-        
-    current_user = service.AuthRequestRepository.get_user_by_email(db_session, email)
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Unauthorized, could not validate credentials.",
-            headers={"WWW-Authenticate": "Bearer"}
-        )
-    
-    return token, current_user
-
 
 # ===========================================================
 #                           Company
@@ -65,10 +43,92 @@ def add_company_info(request: Request,
     )
 
 
+@router.put("/recruiter/upload-cover-image",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def upload_cover_image(request: Request,
+                     uploaded_file: UploadFile = File(...),
+                     db_session: Session = Depends(db.get_session),
+                     credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+    company_db = service.Company.get_company(db_session, current_user)
+    if not company_db:
+        raise HTTPException(status_code=404, detail="Company not found!")
+    #   Update cover images
+    if uploaded_file:
+        company_db.cover_image = os.path.join("static/company/cover_image/" + uploaded_file.filename)
+        with open(os.path.join(os.getenv("COMPANY_DIR"), "cover_image", uploaded_file.filename), 'w+b') as file:
+            shutil.copyfileobj(uploaded_file.file, file)
+    
+    db.commit_rollback(db_session)    
+    return schema.CustomResponse(
+                    message="Uploaded company cover image successfully",
+                    data=None
+    )
+
+
+@router.put("/recruiter/upload-company-images",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def upload_company_images(
+                    request: Request,
+                    uploaded_files: List[UploadFile] = File(...),
+                    db_session: Session = Depends(db.get_session),
+                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+    company_db = service.Company.get_company(db_session, current_user)
+    if not company_db:
+        raise HTTPException(status_code=404, detail="Company not found!")
+    #   Update cover images
+    if uploaded_files:
+        company_db.company_images = [os.path.join("static/company/cover_image", company_img.filename) for company_img in uploaded_files]
+        for image in uploaded_files:
+            with open(os.path.join(os.getenv("COMPANY_DIR"), "company_images",  image.filename), 'w+b') as file:
+                shutil.copyfileobj(image.file, file)
+    
+    db.commit_rollback(db_session)    
+    return schema.CustomResponse(
+                    message="Uploaded company images successfully",
+                    data=None
+    )
+
+
+@router.put("/recruiter/upload-company-video",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def upload_company_video(request: Request,
+                     uploaded_file: UploadFile = File(...),
+                     db_session: Session = Depends(db.get_session),
+                     credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+    company_db = service.Company.get_company(db_session, current_user)
+    if not company_db:
+        raise HTTPException(status_code=404, detail="Company not found!")
+    #   Update cover images
+    if uploaded_file:
+        company_db.company_video = os.path.join("static/company/company_video", uploaded_file.filename)
+        with open(os.path.join(os.getenv("COMPANY_DIR"), "company_video", uploaded_file.filename), 'w+b') as file:
+            shutil.copyfileobj(uploaded_file.file, file)
+    
+    db.commit_rollback(db_session)    
+    return schema.CustomResponse(
+                    message="Uploaded company video successfully",
+                    data=None
+    )
+
+
+
 @router.get("/recruiter/get-company-info",
              status_code=status.HTTP_200_OK, 
-             response_model=schema.CompanyInfo)
-def get_company_info(db_session: Session = Depends(db.get_session),
+             response_model=schema.CustomResponse)
+def get_company_info(request: Request,
+                     db_session: Session = Depends(db.get_session),
                      credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
     # Get curent active user
@@ -77,27 +137,32 @@ def get_company_info(db_session: Session = Depends(db.get_session),
     info = service.Company.get_company(db_session, current_user)
     if not info:
         raise HTTPException(status_code=404, detail="Company not found!")
-    return schema.CompanyInfo(
-                    company_name=info.company_name,
-                    logo=info.logo,
-                    description=info.description,
-                    cover_image=info.cover_image,
-                    company_images=info.company_images,
-                    company_video=info.company_video,
-                    industry=info.industry,
-                    phone=info.phone,
-                    email=info.email,
-                    founded_year=info.founded_year,
-                    company_size=info.company_size,
-                    tax_code=info.tax_code,
-                    address=info.address,
-                    city=info.city,
-                    country=info.country,
-                    linkedin=info.linkedin,
-                    website=info.website,
-                    facebook=info.facebook,
-                    instagram=info.instagram,
+    return schema.CustomResponse(
+                        message="Get company information successfully!",
+                        data={
+                            "company_id": info.id,
+                            "company_name": info.company_name,
+                            "logo": os.path.join(str(request.base_url), info.logo),
+                            "description": info.description,
+                            "cover_image": os.path.join(str(request.base_url) + info.cover_image),
+                            "company_images": [os.path.join(str(request.base_url) + company_image) for company_image in info.company_images] if info.company_images else None,
+                            "company_video": os.path.join(str(request.base_url)+ info.company_video) if info.company_video else None,
+                            "industry": info.industry,
+                            "phone": info.phone,
+                            "email": info.email,
+                            "founded_year": info.founded_year,
+                            "company_size": info.company_size,
+                            "tax_code": info.tax_code,
+                            "address": info.address,
+                            "city": info.city,
+                            "country": info.country,
+                            "linkedin": info.linkedin,
+                            "website": info.website,
+                            "facebook": info.facebook,
+                            "instagram": info.instagram,
+                        }
     )
+
 
 @router.put("/recruiter/update-company-info",
              status_code=status.HTTP_200_OK, 
@@ -165,9 +230,9 @@ def list_industry():
              response_model=schema.CustomResponse)
 def list_industry(db_session: Session = Depends(db.get_session)):
 
-    info = service.Company.list_industry(db_session)
+    info = service.Company.list_industry()
     return schema.CustomResponse(
-                    message=None,
+                    message="Get list industries successfully.",
                     data=[industry for industry in info]
             )
 
@@ -289,6 +354,8 @@ def update_job_draft(
              response_model=schema.CustomResponse)
 def list_created_job(
                 is_draft: bool,
+                page_index: int,
+                limit: int,
                 db_session: Session = Depends(db.get_session),
                 credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
@@ -296,9 +363,17 @@ def list_created_job(
     _, current_user = get_current_active_user(db_session, credentials)
 
     jobs = service.Recruiter.Job.list_job(is_draft, db_session, current_user)
+
+    total_items = len(jobs)
+    total_pages = math.ceil(total_items/limit)
+
     return schema.CustomResponse(
                     message=None,
-                    data=jobs
+                    data={
+                        "total_items": total_items,
+                        "total_pages": total_pages,
+                        "item_lst": jobs[(page_index-1)*limit: (page_index-1)*limit + limit]
+                    }
             )
     
     

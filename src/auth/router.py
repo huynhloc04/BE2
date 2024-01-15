@@ -5,7 +5,9 @@ from sqlmodel import Session
 from datetime import timedelta, datetime
 from starlette.requests import Request
 from fastapi_sso.sso.google import GoogleSSO
+from pydantic import EmailStr
 from auth import schema, service, security
+from authentication import get_current_active_user
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi import APIRouter, status, Depends, BackgroundTasks, Security, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm, HTTPBearer, HTTPAuthorizationCredentials
@@ -140,22 +142,11 @@ async def verify_otp(
                             db_session,
                             user_id=data_form.user_id,
                             otp=data_form.received_otp):
-        return JSONResponse(status_code=404,
-                            content={
-                                "mesage": "Bad request",
-                                "data": None,
-                                "errorCode": None,
-                                "errors": "Xac thuc OTP that bai",
-                                })
+        raise HTTPException(status_code=404, detail="OTP isn't match!")
     
     user = service.AuthRequestRepository.get_user_by_id(db_session, data_form.user_id)
     if not user:
-        return JSONResponse(status_code=404,
-                            content={
-                                "mesage": "Bad request",
-                                "data": None,
-                                "errorCode": None,
-                                "errors": "Khong ton tai nguoi dung"})
+        raise HTTPException(status_code=404, detail="User could not be found!")
     #   Update user status
     user.is_verify = True
     db.commit_rollback(db_session)
@@ -178,13 +169,7 @@ def login_for_access_token(
                 db_session: Session = Depends(db.get_session)):
     user = service.AuthRequestRepository.authenticate_user(db_session, data.username, data.password)
     if not user:
-        return JSONResponse(
-                    status_code=401,
-                    content={
-                        "message": "Access Denied",
-                        "data": None,
-                        "errorCode": 2001,
-                        "errors": None})
+        raise HTTPException(status_code=404, detail="User could not be found!")
    
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     refresh_token_expires = timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)
@@ -271,9 +256,106 @@ def logout(db_session: Session = Depends(db.get_session),
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"An unexpected error occurred. Report this message to support: {e}")
-    
 
-@router.put('/change-password')
+
+@router.post("/forgot-pasword", 
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def forgot_pasword(email: EmailStr, 
+                   background_tasks: BackgroundTasks, 
+                   db_session: Session = Depends(db.get_session)):
+    user = service.AuthRequestRepository.get_user_by_email(db_session, email)
+    if not user:
+        raise HTTPException(status_code=404, detail="Could not find user!")
+    try:
+        otp = security.random_otp(6)        
+        #   Send OTP to specified email
+        background_tasks.add_task(service.AuthRequestRepository.OTP_GOOGLE, otp=otp, input_email=user.email)
+        user.otp_token = otp
+        db.commit_rollback(db_session)        
+        return schema.CustomResponse(
+                        message="OTP code has been sent to your email.",
+                        data=otp
+        )
+    except Exception:
+        raise HTTPException(status_code=404, detail="An error occurred when retrieving OTP!")
+
+
+@router.post("/verify-otp-forgot-pasword", 
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def verify_otp_forgot_pasword(
+                        data_form: schema.VerifyOTP,
+                        db_session: Session = Depends(db.get_session)):
+
+    if not service.OTPRepo.check_otp(
+                            db_session,
+                            user_id=data_form.user_id,
+                            otp=data_form.received_otp):
+        raise HTTPException(status_code=404, detail="User could not be found!")
+    
+    user = service.AuthRequestRepository.get_user_by_id(db_session, data_form.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Job doesn't exist!")
+    #   Update user status
+    user.is_verify_forgot_password = True
+    db.commit_rollback(db_session)
+
+    return schema.CustomResponse(
+                            message="Authenticate successfully.",
+                            data=None
+    )
+
+
+@router.post('/reset-forgot-password',  
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def reset_forgot_password(data: schema.ForgotPassword,
+                          db_session: Session = Depends(db.get_session),
+                          credentials: HTTPAuthorizationCredentials = Security(security_bearer)):        
+    _, current_user = get_current_active_user(db_session, credentials)
+    if not current_user:
+        raise HTTPException(status_code=404, detail="User could not be found")
+        
+     # Xác nhận lại mật khẩu cũ (old_password)
+    if not service.AuthRequestRepository.authenticate_user(db_session=db_session,
+                                                           email=current_user.email,
+                                                           password=data.old_password):        
+        raise HTTPException(status_code=404, detail="Password uncorrect.")
+    
+    if not current_user.is_verify_forgot_password:
+        raise HTTPException(status_code=503, detail="Please authorize by verifying OTP (Sent to you by email)")
+    
+    #   Disable OTP token
+    current_user.otp_token = None
+    db.commit_rollback(db_session)
+    new_hashed_password = security.get_password_hash(data.new_password)
+    service.AuthRequestRepository.update_password(db_session, current_user, new_hashed_password)
+
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    refresh_token_expires = timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)
+    access_token = security.create_access_token(
+        data={"sub": current_user.email}, expires_delta=access_token_expires)
+    refresh_token = security.create_refresh_token(
+        data={"sub": current_user.email}, expires_delta=refresh_token_expires)
+    current_user.refresh_token = refresh_token
+    db.commit_rollback(db_session)
+
+    return schema.CustomResponse(
+                            message="Change password successfully.",
+                            data={
+                                "access_token": access_token,
+                                "refresh_token": refresh_token,
+                                "token_type": 'Bearer',
+                                "token_key": 'Authorization'
+                            }
+    )
+
+
+@router.put('/change-password',
+            status_code=status.HTTP_200_OK, 
+            response_model=schema.CustomResponse)
 def change_password(
                 data: schema.ChangePassword,
                 db_session: Session = Depends(db.get_session),
@@ -285,12 +367,8 @@ def change_password(
     # Xác nhận lại mật khẩu cũ (old_password)
     if not service.AuthRequestRepository.authenticate_user(db_session,
                                                            email=current_user.email,
-                                                           password=data.old_password):
-        return JSONResponse(status_code=401,
-                            content={"detail":"Current password is not correct.",
-                                     "data": None,
-                                     "metadata": None, 
-                                     "status_code": 401})
+                                                           password=data.old_password):       
+        raise HTTPException(status_code=401, detail="Current password is not correct.")
     
     # Cập nhật mật khẩu mới
     new_hashed_password = security.get_password_hash(data.new_password)
@@ -298,12 +376,10 @@ def change_password(
                                                   current_user,
                                                   hashed_password=new_hashed_password)
         
-    return JSONResponse(status_code=201,
-                        content={
-                            "message": "Change password successfully!",
-                            "data": None,
-                            "errorCode": None,
-                            "errors": None})
+    return schema.CustomResponse(
+                            message="Change password successfully!",
+                            data=None
+    )
     
     
 @router.get("/get-current-user-info", 
@@ -319,12 +395,7 @@ def get_current_user(
     _, current_user = get_current_active_user(db_session, credentials)
     
     if not current_user:
-        return JSONResponse(status_code=404,
-                            content={
-                                "message": "Acccount doesn't exist.",
-                                "data": None,
-                                "errorCode": None,
-                                "errors": None})
+        raise HTTPException(status_code=404, detail="User could not be found.")
         
     return schema.UserInfo(
                     fullname=current_user.fullname,
