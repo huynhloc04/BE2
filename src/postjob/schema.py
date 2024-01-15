@@ -3,25 +3,142 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any, Union
 from enum import Enum
 from fastapi import File, Form, UploadFile
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class CustomResponse(BaseModel):
     message: str = None
     data: Any = None
+
+    def __str__(self):
+        return f"{self.value}"
+    
+    
+class CollaborateJobStatus(str, Enum):
+    referred = "referred"
+    favorite = "favorite"
+    unreferred = "unreferred"
+
+    def __str__(self):
+        return f"{self.value}"
+    
+
+class CandidateMailReply(str, Enum):
+    accept = "accept"
+    decline = "decline"    
+
+    def __str__(self):
+        return f"{self.value}"
+    
+    
+class Language(str, Enum):
+    english = "English"
+    japan = "Japan"
+    korean = "Korean"
+    chinese = "Chinese"  
+
+    def __str__(self):
+        return f"{self.value}"
+    
+
+class Level(str, Enum):     
+    Executive = "Executive"
+    Senior = "Senior"
+    Engineer = "Engineer"
+    Developer = "Developer"
+    Leader = "Leader"
+    Supervisor = "Supervisor"
+    Senior_Leader = "Senior Leader"
+    Senior_Supervisor = "Senior Supervisor"
+    Assitant_Manager = "Assitant Manager"
+    Manager = "Manager"
+    Senior_Manager = "Senior Manager"
+    Assitant_Director = "Assitant Director"
+    Vice_Direcctor = "Vice Direcctor"
+    Deputy_Direcctor = "Deputy Direcctor"
+    Director = "Director"
+    Head = "Head"
+    Group = "Group"
+    COO = "Chief Operating Officer"
+    CEO = "Chief Executive Officer"
+    CPO = "Chief Product Officer"
+    CFO = "Chief Financial Officer"
+    General_Manager = "General Manager"
+    General_Director = "General Director"
+
+    def __str__(self):
+        return f"{self.value}"
+    
+class ValuationDegree(str, Enum):
+    bachelor = "Bachelor"
+    master = "Master"
+    ph_d = "Ph.D"  
+
+    def __str__(self):
+        return f"{self.value}"
     
 
 class GenderChoice(str, Enum):
     male = "male"
     female = "female"
     both = "both"
+
+    def __str__(self):
+        return f"{self.value}"
+    
+
+class ResumeStatus(str, Enum):
+    pricing_approved = "pricing_approved"
+    pricing_rejected = "pricing_rejected"
+    ai_matching_approved = "ai_matching_approved"
+    ai_matching_rejected = "ai_matching_rejected"
+    waiting_candidate_accept = "waiting_candidate_accept"
+    candidate_accepted = "candidate_accepted"
+    candidate_declined = "candidate_declined"
+    admin_matching_approved = "admin_matching_approved"
+    admin_matching_rejected = "admin_matching_rejected"
+    waiting_accept_interview = "waiting_accept_interview"
+    candidate_accepted_interview = "candidate_accepted_interview"
+    candidate_rejected_interview = "candidate_rejected_interview"
+
+    def __str__(self):
+        return f"{self.value}"
+    
+
+class AdminReviewMatching(str, Enum):
+    admin_matching_approved = "admin_matching_approved"
+    admin_matching_rejected = "admin_matching_rejected"
+
+    def __str__(self):
+        return f"{self.value}"
+    
+    
+class ResumePackage(str, Enum):
+    basic = "basic"
+    platinum = "platinum"
+
+    def __str__(self):
+        return f"{self.value}"
+    
+    
+class CandidateState(str, Enum):
+    all = "TẤT CẢ"
+    new_candidate = "ỨNG VIÊN MỚI"
+    choosen_candidate = "ỨNG VIÊN ĐÃ CHỌN"
+    inappro_candidate = "ỨNG VIÊN CHƯA PHÙ HỢP"
+
+    def __str__(self):
+        return f"{self.value}"
     
     
 class JobStatus(str, Enum):
-	pending = "pending"
-	browsing = "browsing"
-	recruiting = "recruiting"
-	paused = "paused"
+    pending = "pending"
+    browsing = "browsing"
+    recruiting = "recruiting"
+    paused = "paused"
+
+    def __str__(self):
+        return f"{self.value}"
     
 
 class CompanyInfo(BaseModel):
@@ -138,19 +255,6 @@ class JobEducation(BaseModel):
     degree: Union[str, None]
     major: Union[str, None]
     gpa: Union[str, None]
-
-
-class CollaborateJobStatus(str, Enum):
-    referred = "referred"
-    favorite = "favorite"
-    unreferred = "unreferred"
-    
-    
-class Language(str, Enum):
-    english = "English"
-    japan = "Japan"
-    korean = "Korean"
-    chinese = "Chinese"  
     
 class LanguageCertificate(BaseModel):
     certificate_language: Union[Language, None]
@@ -284,39 +388,8 @@ class UploadAvatar(BaseModel):
                 avatar=avatar,
                 )
     
-
-
-class Level(str, Enum):     
-    Executive = "Executive"
-    Senior = "Senior"
-    Engineer = "Engineer"
-    Developer = "Developer"
-    Leader = "Leader"
-    Supervisor = "Supervisor"
-    Senior_Leader = "Senior Leader"
-    Senior_Supervisor = "Senior Supervisor"
-    Assitant_Manager = "Assitant Manager"
-    Manager = "Manager"
-    Senior_Manager = "Senior Manager"
-    Assitant_Director = "Assitant Director"
-    Vice_Direcctor = "Vice Direcctor"
-    Deputy_Direcctor = "Deputy Direcctor"
-    Director = "Director"
-    Head = "Head"
-    Group = "Group"
-    COO = "Chief Operating Officer"
-    CEO = "Chief Executive Officer"
-    CPO = "Chief Product Officer"
-    CFO = "Chief Financial Officer"
-    General_Manager = "General Manager"
-    General_Director = "General Director"
     
-class ValuationDegree(str, Enum):
-    bachelor = "Bachelor"
-    master = "Master"
-    ph_d = "Ph.D"  
-    
-class ResumeValuation(BaseModel):
+class UpdateResumeValuation(BaseModel):
     cv_id: Optional[int]
     level: Optional[Level]
     current_salary: Optional[float]
@@ -324,4 +397,11 @@ class ResumeValuation(BaseModel):
     language_certificates: Optional[List[LanguageCertificate]]
     
     
-    
+class ResumeValuateResult(BaseModel):
+    hard_item: str
+    hard_point: float
+    degrees: str
+    degree_point: float
+    certificates: str
+    certificates_point: float
+    total_point: float

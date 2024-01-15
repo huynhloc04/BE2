@@ -148,7 +148,7 @@ class Resume(TableBase, table=True):
 class ValuationInfo(TableBase, table=True):
     __tablename__ = 'valuation_infos'
     cv_id: int = Field(default=None, foreign_key="resumes.id")
-    hard: str = Field(default=None)
+    hard_item: str = Field(default=None)
     hard_point: float = Field(default=None)
     degrees: List[str] = Field(default=None, sa_column=Column(TEXT))
     degree_point: float = Field(default=None)
@@ -185,7 +185,6 @@ class ResumeVersion(TableBase, table=True):
     facebook: Optional[str] = Field(default=None)
     instagram: Optional[str] = Field(default=None)
     status: str = Field(default="pending")
-    package: str = Field(default=None)
     objectives: str = Field(default=None)
     is_draft: bool = Field(default=False)
     matching_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
@@ -219,6 +218,7 @@ class ResumeAward(TableBase, table=True):
     time: str = Field(default=None)
     description: str = Field(default=None, sa_column=Column(TEXT))
 
+
 class ResumeProject(TableBase, table=True):
     __tablename__ = 'resume_projects'
     cv_id: int = Field(default=None, foreign_key="resume_versions.id")
@@ -227,12 +227,14 @@ class ResumeProject(TableBase, table=True):
     start_time: datetime = Field(default=None)
     end_time: datetime = Field(default=None)
     
+    
 class LanguageResumeCertificate(TableBase, table=True):
     __tablename__ = 'language_resume_certificates'    
     cv_id: int = Field(default=None, foreign_key="resumes.id")
     certificate_language: str = Field(default=None)
     certificate_name: str = Field(default=None)
     certificate_point_level: str = Field(default=None)
+    
     
 class OtherResumeCertificate(TableBase, table=True):
     __tablename__ = 'other_resume_certificates'    
@@ -257,3 +259,36 @@ class ResumeMatching(TableBase, table=True):
     orientation_explain: str = Field(default=None, sa_column=Column(TEXT))
     overall_score: int = Field(default=None)
     overall_explain: str = Field(default=None, sa_column=Column(TEXT))
+    
+
+class RecruitResumeJoin(SQLModel, table=True):
+    
+    __tablename__ = "recruit_resume_join"
+    user_id: Optional[int] = Field(
+        default=None,
+        foreign_key="users.id",
+        primary_key=True,
+    )
+    resume_id: Optional[int] = Field(
+        default=None,
+        foreign_key="resumes.id",
+        primary_key=True,
+    )
+    package: str = Field(default=None)                      #   Basic / Platinum
+    is_rejected: bool = Field(default=False)      #   Recruiter rejects Resumes
+    
+    
+    
+class Cart(SQLModel, table=True):
+    
+    __tablename__ = "carts"
+    user_id: Optional[int] = Field(
+        default=None,
+        foreign_key="users.id",
+        primary_key=True,
+    )
+    resume_id: Optional[int] = Field(
+        default=None,
+        foreign_key="resumes.id",
+        primary_key=True,
+    )

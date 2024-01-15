@@ -1,26 +1,57 @@
-class Company(TableBase, table=True):
-    __tablename__ = 'companies'
+from enum import Enum
+
+class PermissionType(str, Enum):
+    """
+    Enum for the different types of default
+    permissions that can be applied to a model.
+    """
+    CREATE = "CREATE"
+    READ = "READ"
+    UPDATE = "UPDATE"
+    DELETE = "DELETE"
+
+    def __str__(self):
+        return f"{self.value}"
     
-    user_id: int = Field(default=None, foreign_key="users.id")
-    company_name: str = Field(default=None)
-    industry: str = Field(default=None)
-    phone: str = Field(default=None)
-    email: str = Field(default=None)
+print(PermissionType.CREATE.value)
 
-class JobDescription(TableBase, table=True):
-    __tablename__ = 'job_descriptions'
 
-    user_id: int = Field(default=None, foreign_key="users.id")
-    company_id: int = Field(default=None, foreign_key="companies.id")
-    job_status: str = Field(default=None)
-    job_title: str = Field(default=None)
-    industries: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
-    is_favorite: bool = Field(default=True)
+
+
+
+class RecruitResumeJoin(SQLModel, table=True):
+    
+    __tablename__ = "recruit_resume_join"
+    user_id: Optional[int] = Field(
+        default=None,
+        foreign_key="users.id",
+        primary_key=True,
+    )
+    cv_id: Optional[int] = Field(
+        default=None,
+        foreign_key="resumes.id",
+        primary_key=True,
+    )
+    package: str = Field(default=None)          
+    is_rejected: bool = Field(default=False) 
+    
 
 class Resume(TableBase, table=True):
     __tablename__ = 'resumes'    
     user_id: int = Field(default=None, foreign_key="users.id")
-    job_id: int = Field(default=None, foreign_key="job_descriptions.id")
+    job_id: int = Field(default=None, foreign_key="job_descriptions.id")       
+    
+    
+class ResumeVersion(TableBase, table=True):
+    __tablename__ = 'resume_versions'
 
-Please write SQLModel query to get "company_name", "industry" from "Company" table and "job_status", "job_title", "industries" from "JobDescription" table
-but on the condition that is_favorite==True in JobDescription table
+    cv_id: int = Field(default=None, foreign_key="resumes.id")
+    filename: str = Field(default=None)
+    is_lastest: bool = Field(default=True)
+    cv_file: str = Field(default=None)
+    name: str = Field(default=None) 
+    
+    
+Write SQLModel queryy to get "filename", "name" from "ResumeVersion" table that 
+    
+    
