@@ -308,7 +308,7 @@ class UserPointCart(SQLModel, table=True):
         foreign_key="users.id",
         primary_key=True,
     )
-    point_id: Optional[int] = Field(
+    package_id: Optional[int] = Field(
         default=None,
         foreign_key="point_packages.id",
         primary_key=True,

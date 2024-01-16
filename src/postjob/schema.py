@@ -215,7 +215,6 @@ class CompanyBase(BaseModel):
             facebook=facebook,
             instagram=instagram
         )
-    
 
 
 class CompanyUpdate(BaseModel):
