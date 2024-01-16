@@ -43,10 +43,36 @@ def add_company_info(request: Request,
     )
 
 
+@router.put("/recruiter/upload-logo",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse,
+             summary="Update logo company.")
+def update_logo(
+            uploaded_file: UploadFile = File(...),
+            db_session: Session = Depends(db.get_session),
+            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get current active user
+    _, current_user = get_current_active_user(db_session, credentials)
+    company_db = service.Company.get_company(db_session, current_user)
+    if not company_db:
+        raise HTTPException(status_code=404, detail="Company not found!")
+    #   Update logo
+    if uploaded_file:
+        company_db.logo = os.path.join("static/company/logo/" + uploaded_file.filename)
+        with open(os.path.join(os.getenv("COMPANY_DIR"), "logo", uploaded_file.filename), 'w+b') as file:
+            shutil.copyfileobj(uploaded_file.file, file)
+    db.commit_rollback(db_session)    
+    return schema.CustomResponse(
+                    message="Uploaded company logo successfully",
+                    data=None
+    )
+
+
 @router.put("/recruiter/upload-cover-image",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
-def upload_cover_image(request: Request,
+def upload_cover_image(
                      uploaded_file: UploadFile = File(...),
                      db_session: Session = Depends(db.get_session),
                      credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
@@ -73,7 +99,6 @@ def upload_cover_image(request: Request,
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def upload_company_images(
-                    request: Request,
                     uploaded_files: List[UploadFile] = File(...),
                     db_session: Session = Depends(db.get_session),
                     credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
@@ -85,7 +110,7 @@ def upload_company_images(
         raise HTTPException(status_code=404, detail="Company not found!")
     #   Update cover images
     if uploaded_files:
-        company_db.company_images = [os.path.join("static/company/cover_image", company_img.filename) for company_img in uploaded_files]
+        company_db.company_images = [os.path.join("static/company/company_images", company_img.filename) for company_img in uploaded_files]
         for image in uploaded_files:
             with open(os.path.join(os.getenv("COMPANY_DIR"), "company_images",  image.filename), 'w+b') as file:
                 shutil.copyfileobj(image.file, file)
@@ -100,10 +125,10 @@ def upload_company_images(
 @router.put("/recruiter/upload-company-video",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
-def upload_company_video(request: Request,
-                     uploaded_file: UploadFile = File(...),
-                     db_session: Session = Depends(db.get_session),
-                     credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+def upload_company_video(
+                    uploaded_file: UploadFile = File(...),
+                    db_session: Session = Depends(db.get_session),
+                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
@@ -167,15 +192,15 @@ def get_company_info(request: Request,
 @router.put("/recruiter/update-company-info",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
-def update_company_info(request: Request,
-                     data_form: schema.CompanyUpdate,
-                     db_session: Session = Depends(db.get_session),
-                     credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+def update_company_info(
+                    data_form: schema.CompanyUpdate,
+                    db_session: Session = Depends(db.get_session),
+                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    info = service.Company.update_company(request, db_session, data_form, current_user)
+    info = service.Company.update_company(db_session, data_form, current_user)
     return schema.CustomResponse(
                     message="Update company information successfully",
                     data={
@@ -185,29 +210,11 @@ def update_company_info(request: Request,
                     }
     )
 
-#   =================== Abundant API ===================
-@router.post("/recruiter/add-industry",
-             status_code=status.HTTP_201_CREATED, 
-             response_model=schema.CustomResponse)
-def add_industry(
-            industry_name: str,
-            db_session: Session = Depends(db.get_session),
-            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
-
-    info = service.Company.add_industry(industry_name, db_session, current_user)
-    return schema.CustomResponse(
-                    message="Add industries information successfully",
-                    data={info.name}
-    )
-
 
 @router.get("/recruiter/list-city",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
-def list_industry():
+def list_city():
     info = service.Company.list_city()
     return schema.CustomResponse(
                     message=None,
@@ -217,7 +224,7 @@ def list_industry():
 @router.get("/recruiter/list-country",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
-def list_industry():
+def list_country():
     info = service.Company.list_country()
     return schema.CustomResponse(
                     message=None,
@@ -228,8 +235,7 @@ def list_industry():
 @router.get("/recruiter/list-industry",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
-def list_industry(db_session: Session = Depends(db.get_session)):
-
+def list_industry():
     info = service.Company.list_industry()
     return schema.CustomResponse(
                     message="Get list industries successfully.",
@@ -245,7 +251,6 @@ def list_industry(db_session: Session = Depends(db.get_session)):
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def upload_jd(
-        request: Request,
         uploaded_file: UploadFile,
         db_session: Session = Depends(db.get_session),
         credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
@@ -253,30 +258,29 @@ def upload_jd(
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    _ = service.Recruiter.Job.upload_jd(request,uploaded_file, db_session, current_user)
+    job_db = service.Recruiter.Job.upload_jd(uploaded_file, db_session, current_user)
     return schema.CustomResponse(
                     message="Uploaded JD successfully",
-                    data=None
+                    data={
+                        "job_id": job_db.id
+                    }
     )
 
 
 @router.put("/recruiter/upload-jd-again",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
-def upload_jd(
+def upload_jd_again(
         job_id: int,
-        request: Request,
         uploaded_file: UploadFile,
-        db_session: Session = Depends(db.get_session),
-        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
+        db_session: Session = Depends(db.get_session)):
 
-    _ = service.Recruiter.Job.upload_jd_again(job_id, request, uploaded_file, db_session, current_user)
+    result = service.Recruiter.Job.upload_jd_again(job_id, uploaded_file, db_session)
     return schema.CustomResponse(
                     message="Uploaded JD successfully",
-                    data=None
+                    data={
+                        "job_id": result.id
+                    }
     )
 
 
@@ -285,13 +289,9 @@ def upload_jd(
              response_model=schema.CustomResponse)
 def jd_parsing(
         job_id: int,
-        db_session: Session = Depends(db.get_session),
-        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
+        db_session: Session = Depends(db.get_session)):
 
-    extracted_result, saved_path = service.Recruiter.Job.jd_parsing(job_id, db_session, current_user)
+    extracted_result, saved_path = service.Recruiter.Job.jd_parsing(job_id, db_session)
     return schema.CustomResponse(
                     message="Extract JD successfully!",
                     data=extracted_result
@@ -337,13 +337,9 @@ def update_job_info(data: schema.JobUpdate,
 def update_job_draft(
                 job_id: int,
                 is_draft: bool,
-                db_session: Session = Depends(db.get_session),
-                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
+                db_session: Session = Depends(db.get_session)):
 
-    service.Recruiter.Job.create_draft(job_id, is_draft, db_session, current_user)
+    service.Recruiter.Job.create_draft(job_id, is_draft, db_session)
     return schema.CustomResponse(
                     message="Create job drate successfully",
                     data=None
@@ -362,7 +358,7 @@ def list_created_job(
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    jobs = service.Recruiter.Job.list_job(is_draft, db_session, current_user)
+    jobs = service.Recruiter.Job.list_created_job(is_draft, db_session, current_user)
 
     total_items = len(jobs)
     total_pages = math.ceil(total_items/limit)
@@ -377,7 +373,7 @@ def list_created_job(
             )
     
     
-@router.get("/recruiter/get-detailed-job",
+@router.get("/recruiter/get-detailed-job/{job_id}",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def get_detailed_job(
@@ -388,7 +384,7 @@ def get_detailed_job(
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    jobs = service.Recruiter.Job.get_job_status(job_id, db_session, current_user)
+    jobs = service.Recruiter.Job.get_detail_job(job_id, db_session, current_user)
     return schema.CustomResponse(
                     message=None,
                     data=jobs
@@ -500,6 +496,28 @@ def choose_resume(
                         "package": package  
                     }
                 )
+
+
+@router.post("/recruiter/cv-parsing",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def cv_parsing(
+        cv_id: int,
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    extracted_result, saved_path = service.Collaborator.Resume.cv_parsing(cv_id, db_session, current_user)
+
+    return schema.CustomResponse(
+                    message="Extract CV successfully!",
+                    data={
+                        "extracted_result": extracted_result,
+                        "json_saved_path": saved_path
+                    }
+    )
     
 # ===========================================================
 #                       Admin filters Job
@@ -523,7 +541,7 @@ def list_job_status(
             )
     
 
-@router.get("/admin/get-detailed-job",
+@router.get("/admin/get-detailed-job/{job_id}",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def get_detailed_job(
@@ -534,7 +552,7 @@ def get_detailed_job(
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    jobs = service.Admin.Job.get_job_status(job_id, db_session, current_user)
+    jobs = service.Admin.Job.get_detail_job_status(job_id, db_session, current_user)
     return schema.CustomResponse(
                     message=None,
                     data=jobs
@@ -653,6 +671,31 @@ def admin_review_matching(
 #                       CTV uploads Resumes
 # ===========================================================
     
+@router.get("/collaborator/list-job/{job_status}",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def list_job(
+        page_index: int,
+        limit: int,
+        job_status: schema.CollaborateJobStatus,
+        db_session: Session = Depends(db.get_session)):
+
+    results = service.Collaborator.Job.list_job(job_status, db_session)    
+
+    #   Pagination
+    total_items = len(results)
+    total_pages = math.ceil(total_items/limit)
+
+    return schema.CustomResponse(
+                        message="Get list job successfully!",
+                        data={
+                            "total_items": total_items,
+                            "total_pages": total_pages,
+                            "item_lst": results[(page_index-1)*limit: (page_index-1)*limit + limit]
+                        }
+    )
+
+
 @router.get("/collaborator/get-detail-job/{job_id}",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
@@ -687,10 +730,10 @@ def add_favorite(
                     data=jobs
             )
     
-@router.get("/collaborator/get-general-company-info/{job_id}",
+@router.get("/collaborator/get-general-info/{job_id}",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
-def get_general_company_info(
+def get_general_info(
                 job_id: int,
                 db_session: Session = Depends(db.get_session),
                 credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
@@ -698,33 +741,11 @@ def get_general_company_info(
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    jobs = service.Company.get_general_company_info(job_id, db_session, current_user)
+    jobs = service.Company.get_general_info(job_id, db_session, current_user)
     return schema.CustomResponse(
                     message=None,
                     data=jobs
             )
-
-
-@router.post("/recruiter/cv-parsing",
-             status_code=status.HTTP_200_OK, 
-             response_model=schema.CustomResponse)
-def cv_parsing(
-        cv_id: int,
-        db_session: Session = Depends(db.get_session),
-        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
-
-    extracted_result, saved_path = service.Collaborator.Resume.cv_parsing(cv_id, db_session, current_user)
-
-    return schema.CustomResponse(
-                    message="Extract CV successfully!",
-                    data={
-                        "extracted_result": extracted_result,
-                        "json_saved_path": saved_path
-                    }
-    )
 
 
 #   Add preliminary information to the table
@@ -732,7 +753,6 @@ def cv_parsing(
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def add_candidate(
-        request: Request,
         data_form: schema.AddCandidate = Depends(schema.AddCandidate.as_form),
         db_session: Session = Depends(db.get_session),
         credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
@@ -740,7 +760,7 @@ def add_candidate(
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    result = service.Collaborator.Resume.add_candidate(request, data_form, db_session, current_user)
+    result = service.Collaborator.Resume.add_candidate(data_form, db_session, current_user)
     return schema.CustomResponse(
                     message="Add candidate successfully",
                     data=result
@@ -751,15 +771,10 @@ def add_candidate(
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def upload_avatar(
-        request: Request,
         data: schema.UploadAvatar = Depends(schema.UploadAvatar.as_form),
-        db_session: Session = Depends(db.get_session),
-        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
+        db_session: Session = Depends(db.get_session)):
 
-    _ = service.Collaborator.Resume.upload_avatar(request, data, db_session, current_user)
+    _ = service.Collaborator.Resume.upload_avatar(data, db_session)
     return schema.CustomResponse(
                     message="Uploaded candidate avatar successfully",
                     data=None
@@ -771,14 +786,10 @@ def upload_avatar(
              status_code=status.HTTP_200_OK,
              response_model=schema.CustomResponse)
 def fill_extracted_resume(data: schema.ResumeUpdate,
-                    db_session: Session = Depends(db.get_session),
-                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+                    db_session: Session = Depends(db.get_session)):
+    service.Collaborator.Resume.fill_resume(data, db_session)
     
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
-    service.Collaborator.Resume.fill_resume(data, db_session, current_user)
-    
-    result = service.Collaborator.Resume.resume_valuate(data, db_session, current_user)
+    result = service.Collaborator.Resume.resume_valuate(data, db_session)
     return schema.CustomResponse(
                     message="Re-fill resume successfully",
                     data=result     #   Front-end will use this result to show temporarily to User 
@@ -800,15 +811,7 @@ def resume_valuate(
     result = service.Collaborator.Resume.resume_valuate(data, db_session, current_user)
     return schema.CustomResponse(
                     message="Resume valuated successfully",
-                    data={
-                        "level/salary": result.hard,
-                        "hard_point": result.hard_point,
-                        "degrees": result.degrees,
-                        "degree_point": result.degree_point,
-                        "certificates": result.certificates,
-                        "certificates_point": result.certificates_point,
-                        "total_point": result.total_point
-                    }
+                    data=result
                 )
     
 
@@ -817,17 +820,23 @@ def resume_valuate(
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def confirm_resume_valuate(
+                cv_id: int,
                 data: schema.ResumeValuateResult,
-                db_session: Session = Depends(db.get_session),
-                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
+                db_session: Session = Depends(db.get_session)):
 
-    result = service.Collaborator.Resume.confirm_resume_valuate(data, db_session, current_user)
+    result = service.Collaborator.Resume.confirm_resume_valuate(cv_id, data, db_session)
     return schema.CustomResponse(
                     message="Your resume has been sent!!!",
-                    data=None
+                    data={
+                        "resume_id": result.cv_id,
+                        "hard_item": result.hard_item,
+                        "hard_point": result.hard_point,
+                        "degrees": result.degrees,
+                        "degree_point": result.degree_point,
+                        "certs": result.certs,
+                        "certs_point": result.certs_point,
+                        "total_point": result.total_point
+            }
                 )
 
 
@@ -847,7 +856,7 @@ def get_resume_valuate(
                     message="Get resume valuation successfully",
                     data={
                         "cv_id": cv_id,
-                        "level/salary": result.hard,
+                        "hard_item": result.hard_item,
                         "hard_point": result.hard_point,
                         "degrees": result.degrees,
                         "degree_point": result.degree_point,
@@ -863,17 +872,14 @@ def get_resume_valuate(
              response_model=schema.CustomResponse)
 def update_resume_valuate(
                     data: schema.UpdateResumeValuation,
-                    db_session: Session = Depends(db.get_session),
-                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
+                    db_session: Session = Depends(db.get_session)):
 
-    result = service.Collaborator.Resume.update_valuate(data, db_session, current_user)
+    result = service.Collaborator.Resume.update_valuate(data, db_session)
     return schema.CustomResponse(
                     message="Resume re-valuated successfully",
                     data={
-                        "level/salary": result.hard,
+                        "resume_id": result.cv_id,
+                        "hard_item": result.hard,
                         "hard_point": result.hard_point,
                         "degrees": result.degrees,
                         "degree_point": result.degree_point,
@@ -986,23 +992,6 @@ def get_detailed_resume(
             )
 
 
-@router.get("/collaborator/list-job/{job_status}",
-             status_code=status.HTTP_200_OK, 
-             response_model=schema.CustomResponse)
-def ctv_list_job(
-            job_status: schema.CollaborateJobStatus,
-            db_session: Session = Depends(db.get_session)):
-
-    result, num_result = service.Collaborator.Job.list_job(job_status, db_session)    
-    return schema.CustomResponse(
-                        message="Get list job successfully!",
-                        data={
-                            "data_lst": result,
-                            "num_jobs": num_result
-                        }
-    )
-
-
 @router.get("/collaborator/get-matching-result",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
@@ -1071,15 +1060,11 @@ def list_draft_candidate(
 @router.get("/general/get-jd-pdf/{job_id}",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
-def get_jd_file(
+def get_jd_file(request: Request,
                 job_id: int,
-                db_session: Session = Depends(db.get_session),
-                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
+                db_session: Session = Depends(db.get_session)):
 
-    jd_file = service.General.get_jd_file(job_id, db_session, current_user)
+    jd_file = service.General.get_jd_file(request, job_id, db_session)
     return schema.CustomResponse(
                     message=None,
                     data=jd_file
@@ -1089,15 +1074,11 @@ def get_jd_file(
 @router.get("/general/get-cv-pdf/{cv_id}",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
-def get_cv_file(
+def get_cv_file(request: Request,
                 cv_id: int,
-                db_session: Session = Depends(db.get_session),
-                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
+                db_session: Session = Depends(db.get_session)):
 
-    jd_file = service.General.get_cv_file(cv_id, db_session, current_user)
+    jd_file = service.General.get_cv_file(request, cv_id, db_session)
     return schema.CustomResponse(
                     message=None,
                     data=jd_file
