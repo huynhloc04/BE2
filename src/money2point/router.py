@@ -100,6 +100,6 @@ def list_resume_cart(
 
     result = service.MoneyResume.list_resume_cart(db_session, current_user)
     return schema.CustomResponse(
-                    message="List point packages successfully",
+                    message="List resume carts successfully",
                     data=result
     )
