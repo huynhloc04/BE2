@@ -27,32 +27,32 @@ from config import (JD_SAVED_DIR,
 
 
 """ 
-Class_Structure
-     |_____ AuthRequestRepository
-     |
-     |_____ OTPRepo
-     |
-     |_____ Company
-     |
-     |_____ General
-     |
-     |_____ Recruiter
-     |          |
-     |          |_____ Resume
-     |          |
-     |          |_____ Job
-     |
-     |_____ Admin
-     |        |
-     |        |_____ Resume
-     |        |
-     |        |_____ Job
-     |
-     |_____ Collaborator
-                 |
-                 |_____ Resume
-                 |
-                 |_____ Job
+Class_Model_Structure
+        |___ AuthRequestRepository
+        |
+        |___ OTPRepo
+        |
+        |___ Company
+        |
+        |___ General
+        |
+        |___ Recruiter
+        |   |
+        |   |_____ Resume
+        |   |
+        |   |_____ Job
+        |
+        |___ Admin
+        |   |
+        |   |_____ Resume
+        |   |
+        |   |_____ Job
+        |
+        |___ Collaborator
+            |
+            |_____ Resume
+            |
+            |_____ Job
 
 """
 
@@ -133,7 +133,7 @@ class Company:
                                 instagram=data.instagram)
         db_session.add(db_company)
          #   Set as default image if there's no uploaded cover image
-        db_company.cover_image = os.path.join("static/company/logo", "default_cover_image.jpg")
+        db_company.cover_image = os.path.join("static/company/cover_image", "default_cover_image.jpg")
         db.commit_rollback(db_session)
 
         #   Save file
@@ -156,17 +156,14 @@ class Company:
     
 
     @staticmethod
-    def get_general_company_info(job_id, db_session, user):
+    def get_general_info(job_id, db_session, user):
         #   Company
         company_query = select(model.Company).where(model.Company.user_id == user.id)
         company_result = db_session.execute(company_query).scalars().first() 
         if not company_result:
             raise HTTPException(status_code=404, detail="Company doesn't exist!")
         #   Job
-        job_query = select(model.JobDescription).where(model.JobDescription.user_id == user.id,
-                                                       model.JobDescription.id == job_id,
-                                                       model.JobDescription.status == status)
-        job_result = db_session.execute(job_query).scalars().first() 
+        job_result = General.get_job_by_id(job_id, db_session)
         if not job_result:
             raise HTTPException(status_code=404, detail="Job doesn't exist!")
         
@@ -175,22 +172,21 @@ class Company:
             "logo": company_result.logo,
             "company_name": company_result.company_name,
             "industry": company_result.industry,
+            "company_size": company_result.company_size,
+            "founded_year": company_result.founded_year,
+            "tax_code": company_result.tax_code,
+            "address": company_result.address,
+            "city": company_result.city,
+            "country": company_result.country,
             #   Job
             "status": job_result.status,
             "job_service": job_result.job_service,
-            "job_title": job_result.job_title,
-            "company_size": job_result.company_size,
-            "founded_year": job_result.founded_year,
-            "tax_code": job_result.tax_code,
-            "address": job_result.address,
-            "city": job_result.city,
-            "country": job_result.country
+            "job_title": job_result.job_title
         }
     
 
     @staticmethod
     def update_company(
-                    request: Request,
                     db_session: Session,
                     data: schema.CompanyUpdate,
                     user):
@@ -201,32 +197,12 @@ class Company:
         if not result:
             raise HTTPException(status_code=404, detail="Company doesn't exist!")
 
-        #   Update whether product is a feature product?  
-        
+        #   Update whether product is a feature product?          
         for key, value in dict(data).items():
-            if value is not None and (key != "logo" or key != "cover_image" or key != "company_images" or key != "company_video"):
+            if value is not None:
                 setattr(result, key, value)
-        if data.logo:
-            result.logo = str(request.base_url) + data.logo.filename
-        if data.cover_image:
-            result.cover_image = str(request.base_url) + data.cover_image.filename
-        # if data.company_images:
-        #     result.company_images = [str(request.base_url) + company_img.filename for company_img in data.company_images]
-        if data.company_video:
-            result.company_video = str(request.base_url) + data.company_video.filename
-            
         db.commit_rollback(db_session)    
         return result
-    
-    @staticmethod
-    def add_industry(industry_names, db_session, user):
-        db_industry = model.Industry(
-                    user_id=user.id,
-                    name=industry_names
-        )
-        db_session.add(db_industry)
-        db.commit_rollback(db_session)
-        return db_industry
     
     
     @staticmethod
@@ -253,44 +229,57 @@ class Company:
         return industries
     
     
-class General:    
-            
-    def get_job_by_id(job_id: int, db_session: Session, current_user):
-        job_query = select(model.JobDescription).where(model.JobDescription.user_id == current_user.id,
+class General:   
+
+    def get_userjob_by_id(job_id: int, db_session: Session, current_user):
+        job_query = select(model.JobDescription).where(
+                                                    model.JobDescription.user_id == current_user.id,
                                                     model.JobDescription.id == job_id)
+        job_result = db_session.execute(job_query).scalars().first() 
+        return job_result 
+            
+    def get_job_by_id(job_id: int, db_session: Session):
+        job_query = select(model.JobDescription).where(model.JobDescription.id == job_id)
         job_result = db_session.execute(job_query).scalars().first() 
         return job_result
     
-    def get_detail_resume_by_id(cv_id: int, db_session: Session, current_user):
+    def get_detail_resumeuser_by_id(cv_id: int, db_session: Session, current_user):
         cv_query = select(model.Resume, model.ResumeVersion)    \
             .join(model.ResumeVersion, model.ResumeVersion.cv_id == cv_id) \
             .filter(model.Resume.user_id == current_user.id,
                    model.Resume.id == cv_id)
         cv_result = db_session.execute(cv_query).first() 
         return cv_result
+            
+    def get_detail_resume_by_id(cv_id: int, db_session: Session):
+        cv_query = select(model.Resume, model.ResumeVersion)    \
+            .join(model.ResumeVersion, model.ResumeVersion.cv_id == cv_id) \
+            .filter(model.Resume.id == cv_id)
+        cv_result = db_session.execute(cv_query).first() 
+        return cv_result
         
     @staticmethod
-    def get_jd_file(job_id, db_session, user):
-        result = General.get_job_by_id(job_id, db_session, user)    
+    def get_jd_file(request, job_id, db_session):
+        result = General.get_job_by_id(job_id, db_session)    
         if not result:
             raise HTTPException(status_code=404, detail="Job doesn't exist!")        
         #   Return link to JD PDF file 
-        return result.jd_file
+        return os.path.join(str(request.base_url), result.jd_file)
     
     @staticmethod
-    def get_cv_file(cv_id, db_session, user):
-        result = General.get_detail_resume_by_id(cv_id, db_session, user)    
+    def get_cv_file(request, cv_id, db_session):
+        result = General.get_resume_by_id(cv_id, db_session)    
         if not result:
             raise HTTPException(status_code=404, detail="Resume doesn't exist!")        
         #   Return link to JD PDF file 
-        return result.ResumeVersion.cv_file
+        return os.path.join(str(request.base_url), result.cv_file)
     
     
 class Recruiter:
     
     class Job:
         @staticmethod
-        def upload_jd(request: Request, 
+        def upload_jd(
                     uploaded_file: UploadFile, 
                     db_session: Session, 
                     user):
@@ -300,7 +289,7 @@ class Recruiter:
             cleaned_filename = DatabaseService.clean_filename(uploaded_file.filename)
             db_job = model.JobDescription(
                         user_id=user.id,
-                        jd_file=str(request.base_url) + cleaned_filename 
+                        jd_file=os.path.join("static/job/uploaded_jds", cleaned_filename)
             )
             db_session.add(db_job)
             db.commit_rollback(db_session)
@@ -308,36 +297,33 @@ class Recruiter:
             #   Save JD file
             with open(os.path.join(JD_SAVED_DIR,  cleaned_filename), 'w+b') as file:
                 shutil.copyfileobj(uploaded_file.file, file)
+            return db_job
         
 
         @staticmethod
         def upload_jd_again(job_id: int,
-                            request: Request, 
                             uploaded_file: UploadFile, 
-                            db_session: Session, 
-                            user):
+                            db_session: Session):
             if uploaded_file.content_type != 'application/pdf':
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Must be PDF file")
-            
-            query = select(model.JobDescription).where(model.JobDescription.user_id == user.id,
-                                                    model.JobDescription.id == job_id)
-            result = db_session.execute(query).scalars().first()
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file must be PDF file")
+            result = General.get_job_by_id(job_id, db_session)
             
             #   Update other JD file
-            cleaned_filename = Recruiter.Job.clean_filename(uploaded_file.filename)
-            result.jd_file = str(request.base_url) + cleaned_filename 
+            cleaned_filename = DatabaseService.clean_filename(uploaded_file.filename)
+            result.jd_file = os.path.join("static/job/uploaded_jds", cleaned_filename)
             db.commit_rollback(db_session)
 
             #   Save JD file
             with open(os.path.join(JD_SAVED_DIR,  cleaned_filename), 'w+b') as file:
                 shutil.copyfileobj(uploaded_file.file, file)
+            return result
 
 
         @staticmethod
-        def jd_parsing(job_id: int, db_session: Session, user):
-            result = Recruiter.Job.get_job_by_id(job_id, db_session, user)       
-            if not result.jd_file:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please upload at least 1 JD_PDF")
+        def jd_parsing(job_id: int, db_session: Session):
+            result = General.get_job_by_id(job_id, db_session)       
+            if not result:
+                raise HTTPException(status_code=404, detail="Job doesn't exist!")   
 
             filename = result.jd_file.split("/")[-1]
             #   Check duplicated filename
@@ -366,7 +352,7 @@ class Recruiter:
         def fill_job(data_form: schema.JobUpdate,
                     db_session: Session,
                     user):
-            result = Recruiter.Job.get_job_by_id(data_form.job_id, db_session, user) 
+            result = General.get_userjob_by_id(data_form.job_id, db_session, user) 
             if not result:
                 raise HTTPException(status_code=404, detail="Job doesn't exist!")   
             
@@ -425,8 +411,8 @@ class Recruiter:
             
             
         @staticmethod
-        def create_draft(job_id: int, is_draft: bool, db_session: Session, user):
-            result = Recruiter.Job.get_job_by_id(job_id, db_session, user)    
+        def create_draft(job_id: int, is_draft: bool, db_session: Session):
+            result = General.get_job_by_id(job_id, db_session)    
             if not result:
                 raise HTTPException(status_code=404, detail="Job doesn't exist!")
             
@@ -436,15 +422,16 @@ class Recruiter:
             
             
         @staticmethod
-        def list_job(is_draft, db_session, user):
-            # job_query = select(model.JobDescription).where(model.JobDescription.user_id == user.id,
-            #                                                 model.JobDescription.is_draft == is_draft)
-            # results = db_session.execute(job_query).scalars().all() 
+        def list_created_job(is_draft, db_session, user):
             job_query = select(model.JobDescription, func.count(model.Resume.id).label("resume_count"))     \
-                        .join(model.Resume, model.JobDescription.id == model.Resume.job_id)   \
-                        .group_by(model.JobDescription.id)  \
-                        .where(model.JobDescription.is_draft == is_draft)
+                                    .join(model.Resume, model.JobDescription.id == model.Resume.job_id)   \
+                                    .where(model.JobDescription.is_draft == is_draft,
+                                            model.JobDescription.user_id == user.id)    \
+                                    .group_by(model.JobDescription.id) 
             results = db_session.execute(job_query).all() 
+            print("===========================================")
+            print("===========================================")
+            print(results)
             if not results:
                 raise HTTPException(status_code=404, detail="Job doesn't exist!")
             
@@ -469,14 +456,14 @@ class Recruiter:
             
             
         @staticmethod
-        def get_job_status(job_id, db_session, user):
+        def get_detail_job(job_id, db_session, user):
             #   Company
             company_query = select(model.Company).where(model.Company.user_id == user.id)
             company_result = db_session.execute(company_query).scalars().first() 
             if not company_result:
                 raise HTTPException(status_code=404, detail="Company doesn't exist!")
             #   Get Job information
-            job_result = Recruiter.Job.get_job_by_id(job_id, db_session, user)
+            job_result = General.get_job_by_id(job_id, db_session)
             if not job_result:
                 raise HTTPException(status_code=404, detail="Job doesn't exist!")
 
@@ -820,7 +807,7 @@ class Admin:
             
             
         @staticmethod
-        def get_job_status(job_id, db_session, user):
+        def get_detail_job_status(job_id, db_session, user):
             #   Company
             company_query = select(model.Company).where(model.Company.user_id == user.id)
             company_result = db_session.execute(company_query).scalars().first() 
@@ -1065,7 +1052,7 @@ class Collaborator:
                 "language_certificate": [{
                     "language": lang_cert.certificate_language,
                     "certificate_name": lang_cert.certificate_name,
-                    "certificate_level": lang_cert.certificate_level,
+                    "certificate_level": lang_cert.certificate_point_level,
                 } for lang_cert in lang_certs],
                 "other_certificate": [{
                     "certificate_name": cert.certificate_name,
@@ -1126,7 +1113,7 @@ class Collaborator:
                 result_referred = db_session.execute(query_referred).all() 
                 if not result_referred:
                     raise HTTPException(status_code=404, detail="Could not find any referred jobs!")
-                return result_referred, len(result_referred)
+                return result_referred
             
             #  ======================= Favorite Jobs ======================= 
             
@@ -1149,7 +1136,7 @@ class Collaborator:
                 result_favorite = db_session.execute(query_favorite).all() 
                 if not result_favorite:
                     raise HTTPException(status_code=404, detail="Could not find any favorite jobs!")
-                return result_favorite, len(result_favorite)
+                return result_favorite
             
             #  ======================= Chưa giới thiệu =======================
             elif job_status == schema.CollaborateJobStatus.unreferred:
@@ -1183,7 +1170,7 @@ class Collaborator:
                 result_unreferred = db_session.execute(query_unreferred).all() 
                 if not result_unreferred:
                     raise HTTPException(status_code=404, detail="Could not find any unreferred jobs")
-                return result_unreferred, len(result_unreferred)
+                return result_unreferred
             else:
                 pass
     
@@ -1220,7 +1207,7 @@ class Collaborator:
     
 
         @staticmethod
-        def add_candidate(request, data, db_session, user):
+        def add_candidate(data, db_session, user):
             #   PDF uploaded file validation        
             if data.cv_pdf.content_type != 'application/pdf':
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Must be PDF file") 
@@ -1244,22 +1231,21 @@ class Collaborator:
             db_version = model.ResumeVersion(
                                 cv_id=db_resume.id,
                                 filename=cleaned_filename,
-                                cv_file=str(request.base_url) + cleaned_filename
+                                cv_file=os.path.join("static/resume/cv/uploaded_cvs", cleaned_filename)
                             )
             db_session.add(db_version)
             db.commit_rollback(db_session)
             return extracted_result
 
         @staticmethod
-        def upload_avatar(request: Request,
+        def upload_avatar(
                         data: schema.UploadAvatar, 
-                        db_session: Session,
-                        user):
+                        db_session: Session):
             
             cleaned_filename = DatabaseService.clean_filename(data.avatar.filename)
             
-            result = General.get_detail_resume_by_id(data.cv_id, db_session, user) 
-            result.ResumeVersion.avatar = str(request.base_url) + cleaned_filename
+            result = General.get_detail_resume_by_id(data.cv_id, db_session) 
+            result.ResumeVersion.avatar = os.path.join("static/resume/avatar", cleaned_filename)
             db.commit_rollback(db_session)
 
             #   Save logo image
@@ -1269,9 +1255,8 @@ class Collaborator:
         
         @staticmethod
         def fill_resume(data_form: schema.ResumeUpdate,
-                        db_session: Session,
-                        user):
-            result = General.get_detail_resume_by_id(data_form.cv_id, db_session, user) 
+                        db_session: Session):
+            result = General.get_detail_resume_by_id(data_form.cv_id, db_session) 
             if not result:
                 raise HTTPException(status_code=404, detail="Resume doesn't exist!")
 
@@ -1315,8 +1300,8 @@ class Collaborator:
         
 
         @staticmethod
-        def resume_valuate(data: schema.ResumeUpdate, db_session: Session, user):
-            result = General.get_detail_resume_by_id(data.cv_id, db_session, user) 
+        def resume_valuate(data: schema.ResumeUpdate, db_session: Session):
+            result = General.get_detail_resume_by_id(data.cv_id, db_session) 
             if not result:
                 raise HTTPException(status_code=404, detail="Resume doesn't exist!")
             
@@ -1364,9 +1349,9 @@ class Collaborator:
             }
         
         @staticmethod
-        def confirm_resume_valuate(cv_id: int, data: schema.ResumeValuateResult, db_session: Session, user):
+        def confirm_resume_valuate(cv_id: int, data: schema.ResumeValuateResult, db_session: Session):
             #   Retrieve resume' user
-            result = General.get_detail_resume_by_id(cv_id, db_session, user) 
+            result = General.get_detail_resume_by_id(cv_id, db_session) 
             if not result:
                 raise HTTPException(status_code=404, detail="Resume doesn't exist!")
             valuate_db = model.ValuationInfo(
@@ -1383,6 +1368,7 @@ class Collaborator:
             #   Update Resume valuation status
             result.ResumeVersion.status = schema.ResumeStatus.pricing_approved
             db.commit_rollback(db_session)
+            return valuate_db
         
         
         @staticmethod
@@ -1405,8 +1391,8 @@ class Collaborator:
         
 
         @staticmethod
-        def update_valuate(data: schema.UpdateResumeValuation, db_session: Session, user):
-            result = General.get_detail_resume_by_id(data.cv_id, db_session, user) 
+        def update_valuate(data: schema.UpdateResumeValuation, db_session: Session):
+            result = General.get_detail_resume_by_id(data.cv_id, db_session) 
             if not result:
                 raise HTTPException(status_code=404, detail="Resume doesn't exist!")
             valuation_query = select(model.ValuationInfo).where(model.ValuationInfo.cv_id == data.cv_id)

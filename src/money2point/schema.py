@@ -5,15 +5,24 @@ from fastapi import File, Form, UploadFile
 from pydantic import BaseModel
 
 
-# class CustomResponse(BaseModel):
-#     message: str = None
-#     data: Any = None
-    
-    
-# class CollaborateJobStatus(str, Enum):
-#     referred = "referred"
-#     favorite = "favorite"
-#     unreferred = "unreferred"
+class Currency(str, Enum):
+    vnd = "vnd"
+    usd = "usd"
 
-#     def __str__(self):
-#         return f"{self.value}"
+    def __str__(self):
+        return f"{self.value}"
+
+
+class CustomResponse(BaseModel):
+    message: str = None
+    data: Any = None
+    
+    
+class PointPackage(BaseModel):
+    point: int
+    price: float
+    currency: Currency
+
+class ChoosePackage(BaseModel):
+    package_id: int
+    quantity: int
