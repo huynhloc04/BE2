@@ -128,16 +128,18 @@ class MoneyResume:
     
     @staticmethod
     def get_package_from_resume(cv_id: int, db_session: Session, current_user):
-        query = select(model.RecruitResumeJoin).where(and_(model.RecruitResumeJoin.cv_id == cv_id,
+        query = select(model.RecruitResumeJoin).where(and_(model.RecruitResumeJoin.resume_id == cv_id,
                                                            model.RecruitResumeJoin.user_id == current_user.id))
         result = db_session.execute(query).scalars().first()
         return result
     
     @staticmethod
-    def get_valuation_from_resume(cv_id: int, db_session: Session, current_user):
-        query = select(model.ValuationInfo).where(model.ValuationInfo.cv_id == cv_id)
-        result = db_session.execute(query).scalars().first()
-        return result
+    def get_resume_valuate(cv_id, db_session):
+        valuation_query = select(model.ValuationInfo).where(model.ValuationInfo.cv_id == cv_id)
+        valuate_result = db_session.execute(valuation_query).scalars().first()
+        if not valuate_result:
+            raise HTTPException(status_code=404, detail="This resume has not been valuated!")
+        return valuate_result
 
     @staticmethod
     def list_resume_cart(db_session: Session, current_user):
@@ -145,12 +147,12 @@ class MoneyResume:
                                 .join(model.ResumeVersion, model.UserResumeCart.resume_id == model.ResumeVersion.cv_id)  \
                                 .filter(model.UserResumeCart.user_id == current_user.id)
         results = db_session.execute(cart_query).all()
-        print(results)
         return [{
             "package_id": result.UserResumeCart.resume_id,
-            "job_title": result.ResumeVersion.job_title,
+            "job_title": result.ResumeVersion.current_job,
             "industry": result.ResumeVersion.industry,
             "birthday": result.ResumeVersion.birthday,
             "job_service": MoneyResume.get_job_from_resume(result.ResumeVersion.cv_id, db_session).job_service,
-            "package": MoneyResume.get_package_from_resume(result.ResumeVersion.cv_id, db_session).package,
+            "package": MoneyResume.get_package_from_resume(result.ResumeVersion.cv_id, db_session, current_user).package,
+            "resume_point": MoneyResume.get_resume_valuate(result.ResumeVersion.cv_id, db_session).total_point,
         } for result in results]

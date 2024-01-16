@@ -777,9 +777,9 @@ class Recruiter:
         #   Collaborator adds resume to cart
         @staticmethod
         def add_cart(cv_id: int, db_session: Session, current_user):
-            rejected_db = model.Cart(
-                                user_id=current_user.id,    #   Current recruiter's account
-                                resume_id=cv_id,
+            rejected_db = model.UserResumeCart(
+                                        user_id=current_user.id,    #   Current recruiter's account
+                                        resume_id=cv_id,
             )           
             db_session.add(rejected_db)
             db.commit_rollback(db_session)
