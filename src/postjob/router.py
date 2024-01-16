@@ -43,112 +43,6 @@ def add_company_info(request: Request,
     )
 
 
-@router.put("/recruiter/upload-logo",
-             status_code=status.HTTP_201_CREATED, 
-             response_model=schema.CustomResponse,
-             summary="Update logo company.")
-def update_logo(
-            uploaded_file: UploadFile = File(...),
-            db_session: Session = Depends(db.get_session),
-            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get current active user
-    _, current_user = get_current_active_user(db_session, credentials)
-    company_db = service.Company.get_company(db_session, current_user)
-    if not company_db:
-        raise HTTPException(status_code=404, detail="Company not found!")
-    #   Update logo
-    if uploaded_file:
-        company_db.logo = os.path.join("static/company/logo/" + uploaded_file.filename)
-        with open(os.path.join(os.getenv("COMPANY_DIR"), "logo", uploaded_file.filename), 'w+b') as file:
-            shutil.copyfileobj(uploaded_file.file, file)
-    db.commit_rollback(db_session)    
-    return schema.CustomResponse(
-                    message="Uploaded company logo successfully",
-                    data=None
-    )
-
-
-@router.put("/recruiter/upload-cover-image",
-             status_code=status.HTTP_201_CREATED, 
-             response_model=schema.CustomResponse)
-def upload_cover_image(
-                     uploaded_file: UploadFile = File(...),
-                     db_session: Session = Depends(db.get_session),
-                     credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
-    company_db = service.Company.get_company(db_session, current_user)
-    if not company_db:
-        raise HTTPException(status_code=404, detail="Company not found!")
-    #   Update cover images
-    if uploaded_file:
-        company_db.cover_image = os.path.join("static/company/cover_image/" + uploaded_file.filename)
-        with open(os.path.join(os.getenv("COMPANY_DIR"), "cover_image", uploaded_file.filename), 'w+b') as file:
-            shutil.copyfileobj(uploaded_file.file, file)
-    
-    db.commit_rollback(db_session)    
-    return schema.CustomResponse(
-                    message="Uploaded company cover image successfully",
-                    data=None
-    )
-
-
-@router.put("/recruiter/upload-company-images",
-             status_code=status.HTTP_201_CREATED, 
-             response_model=schema.CustomResponse)
-def upload_company_images(
-                    uploaded_files: List[UploadFile] = File(...),
-                    db_session: Session = Depends(db.get_session),
-                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
-    company_db = service.Company.get_company(db_session, current_user)
-    if not company_db:
-        raise HTTPException(status_code=404, detail="Company not found!")
-    #   Update cover images
-    if uploaded_files:
-        company_db.company_images = [os.path.join("static/company/company_images", company_img.filename) for company_img in uploaded_files]
-        for image in uploaded_files:
-            with open(os.path.join(os.getenv("COMPANY_DIR"), "company_images",  image.filename), 'w+b') as file:
-                shutil.copyfileobj(image.file, file)
-    
-    db.commit_rollback(db_session)    
-    return schema.CustomResponse(
-                    message="Uploaded company images successfully",
-                    data=None
-    )
-
-
-@router.put("/recruiter/upload-company-video",
-             status_code=status.HTTP_201_CREATED, 
-             response_model=schema.CustomResponse)
-def upload_company_video(
-                    uploaded_file: UploadFile = File(...),
-                    db_session: Session = Depends(db.get_session),
-                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
-    company_db = service.Company.get_company(db_session, current_user)
-    if not company_db:
-        raise HTTPException(status_code=404, detail="Company not found!")
-    #   Update cover images
-    if uploaded_file:
-        company_db.company_video = os.path.join("static/company/company_video", uploaded_file.filename)
-        with open(os.path.join(os.getenv("COMPANY_DIR"), "company_video", uploaded_file.filename), 'w+b') as file:
-            shutil.copyfileobj(uploaded_file.file, file)
-    
-    db.commit_rollback(db_session)    
-    return schema.CustomResponse(
-                    message="Uploaded company video successfully",
-                    data=None
-    )
-
-
-
 @router.get("/recruiter/get-company-info",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
@@ -193,7 +87,7 @@ def get_company_info(request: Request,
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def update_company_info(
-                    data_form: schema.CompanyUpdate,
+                    data_form: schema.CompanyUpdate = Depends(schema.CompanyUpdate.as_form),
                     db_session: Session = Depends(db.get_session),
                     credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     

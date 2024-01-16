@@ -126,7 +126,10 @@ class Company:
                                 address=data.address, 
                                 city=data.city, 
                                 country=data.country, 
-                                logo=os.path.join("static/company/logo", data.logo.filename),
+                                logo=os.path.join("static/company/logo", data.logo.filename) if data.logo else None,
+                                cover_image=os.path.join("static/company/cover_image", data.cover_image.filename) if data.cover_image else os.path.join("static/company/cover_image", "default_cover_image.jpg"),
+                                company_video=os.path.join("static/company/company_video", data.company_video.filename) if data.company_video else None,
+                                company_images=[os.path.join("static/company/company_images", company_image.filename) for company_image in data.company_images] if data.company_images else None,
                                 linkedin=data.linkedin,
                                 website=data.website,
                                 facebook=data.facebook,
@@ -145,6 +148,16 @@ class Company:
         if data.logo:
             with open(os.path.join(os.getenv("COMPANY_DIR"), "logo",  data.logo.filename), 'w+b') as file:
                 shutil.copyfileobj(data.logo.file, file)
+        if data.cover_image:
+            with open(os.path.join(os.getenv("COMPANY_DIR"), "cover_image",  data.cover_image.filename), 'w+b') as file:
+                shutil.copyfileobj(data.cover_image.file, file)
+        if data.company_video:
+            with open(os.path.join(os.getenv("COMPANY_DIR"), "company_video",  data.company_video.filename), 'w+b') as file:
+                shutil.copyfileobj(data.company_video.file, file)
+        if data.company_images:
+            for company_image in data.company_images:
+                with open(os.path.join(os.getenv("COMPANY_DIR"), "company_images",  company_image.filename), 'w+b') as file:
+                    shutil.copyfileobj(company_image.file, file)
         return db_company
     
     
@@ -199,8 +212,33 @@ class Company:
 
         #   Update whether product is a feature product?          
         for key, value in dict(data).items():
-            if value is not None:
+            if value is not None and (key != "logo" or key != "company_video" or key != "company_images" or key != "cover_image"):
                 setattr(result, key, value)
+
+        #   Update images
+        result.logo = os.path.join("static/company/logo", data.logo.filename) if data.logo else None
+        if data.logo:
+            with open(os.path.join(os.getenv("COMPANY_DIR"), "logo",  data.logo.filename), 'w+b') as file:
+                shutil.copyfileobj(data.logo.file, file)
+
+        #   Company cover_image
+        result.cover_image = os.path.join("static/company/cover_image", data.cover_image.filename) if data.cover_image else None
+        if data.cover_image:
+            with open(os.path.join(os.getenv("COMPANY_DIR"), "cover_image",  data.cover_image.filename), 'w+b') as file:
+                shutil.copyfileobj(data.cover_image.file, file)
+
+        #   Company_video
+        result.company_video = os.path.join("static/company/company_video", data.company_video.filename) if data.company_video else None
+        if data.company_video:
+            with open(os.path.join(os.getenv("COMPANY_DIR"), "company_video",  data.company_video.filename), 'w+b') as file:
+
+        #   Company_image
+                shutil.copyfileobj(data.company_video.file, file)
+        result.company_images=[os.path.join("static/company/company_images", company_image.filename) for company_image in data.company_images] if data.company_images else None
+        if data.company_images:
+            for company_image in data.company_images:
+                with open(os.path.join(os.getenv("COMPANY_DIR"), "company_images",  company_image.filename), 'w+b') as file:
+                    shutil.copyfileobj(company_image.file, file)
         db.commit_rollback(db_session)    
         return result
     

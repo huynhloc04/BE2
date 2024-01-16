@@ -173,6 +173,10 @@ class CompanyBase(BaseModel):
     city: str
     country: str
     logo: UploadFile
+    cover_image: Optional[UploadFile]
+    company_video: Optional[UploadFile]
+    logo: Optional[UploadFile]
+    company_images: Optional[List[UploadFile]]
     linkedin: Optional[str]
     website: Optional[str]
     facebook: Optional[str]
@@ -192,6 +196,9 @@ class CompanyBase(BaseModel):
                 city: str = Form(...),
                 country: str = Form(...),
                 logo: UploadFile = File(...),
+                cover_image: Optional[UploadFile] = None,
+                company_video: Optional[UploadFile] = None,
+                company_images: Optional[List[UploadFile]] = None,
                 linkedin: Optional[str] = Form(None),
                 website: Optional[str] = Form(None),
                 facebook: Optional[str] = Form(None),
@@ -210,6 +217,9 @@ class CompanyBase(BaseModel):
             city=city,
             country=country,
             logo=logo,
+            cover_image=cover_image,
+            company_video=company_video,
+            company_images=company_images,
             linkedin=linkedin,
             website=website,
             facebook=facebook,
@@ -221,18 +231,68 @@ class CompanyUpdate(BaseModel):
     company_name: Optional[str]
     industry: Optional[str]
     description: Optional[str]
-    tax_code: Optional[str]
     phone: Optional[str]
     email: Optional[str]
     founded_year: Optional[int]
     company_size: Optional[str]
+    tax_code: Optional[str]
     address: Optional[str]
     city: Optional[str]
     country: Optional[str]
+    logo: Optional[UploadFile]
+    cover_image: Optional[UploadFile]
+    company_video: Optional[UploadFile]
+    logo: Optional[UploadFile]
+    company_images: Optional[List[UploadFile]]
     linkedin: Optional[str]
     website: Optional[str]
     facebook: Optional[str]
     instagram: Optional[str]
+
+    @classmethod
+    def as_form(cls, 
+                company_name: Optional[str] = None,
+                industry: Optional[str] = None,
+                description: Optional[str] = None,
+                phone: Optional[str] = None,
+                email: Optional[str] = None,
+                founded_year: Optional[int] = None,
+                company_size: Optional[str] = None,
+                tax_code: Optional[str] = None,
+                address: Optional[str] = None,
+                city: Optional[str] = None,
+                country: Optional[str] = None,
+                logo: Optional[UploadFile] = None,
+                cover_image: Optional[UploadFile] = None,
+                company_video: Optional[UploadFile] = None,
+                company_images: Optional[List[UploadFile]] = None,
+                linkedin: Optional[str] = None,
+                website: Optional[str] = None,
+                facebook: Optional[str] = None,
+                instagram: Optional[str] = None):
+        
+        return cls(
+            company_name=company_name,
+            industry=industry,
+            description=description,
+            phone=phone,
+            email=email,
+            founded_year=founded_year,
+            company_size=company_size,
+            tax_code=tax_code,
+            address=address,
+            city=city,
+            country=country,
+            logo=logo,
+            cover_image=cover_image,
+            company_video=company_video,
+            company_images=company_images,
+            linkedin=linkedin,
+            website=website,
+            facebook=facebook,
+            instagram=instagram
+        )
+    
         
 class JobEducation(BaseModel):
     degree: Union[str, None]
