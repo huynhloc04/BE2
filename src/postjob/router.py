@@ -788,7 +788,7 @@ def upload_avatar(
 def fill_extracted_resume(data: schema.ResumeUpdate,
                     db_session: Session = Depends(db.get_session)):
     service.Collaborator.Resume.fill_resume(data, db_session)
-    
+    #   Resume valuation
     result = service.Collaborator.Resume.resume_valuate(data, db_session)
     return schema.CustomResponse(
                     message="Re-fill resume successfully",
