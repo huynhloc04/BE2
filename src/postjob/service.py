@@ -417,9 +417,8 @@ class Recruiter:
             
         @staticmethod
         def update_job(data_form: schema.JobUpdate,
-                    db_session: Session,
-                    user):
-            result = Recruiter.Job.get_job_by_id(data_form.job_id, db_session, user)    
+                    db_session: Session):
+            result = General.get_job_by_id(data_form.job_id, db_session)    
             if not result:
                 raise HTTPException(status_code=404, detail="Job doesn't exist!")
             
@@ -467,9 +466,6 @@ class Recruiter:
                                             model.JobDescription.user_id == user.id)    \
                                     .group_by(model.JobDescription.id) 
             results = db_session.execute(job_query).all() 
-            print("===========================================")
-            print("===========================================")
-            print(results)
             if not results:
                 raise HTTPException(status_code=404, detail="Job doesn't exist!")
             
@@ -481,7 +477,6 @@ class Recruiter:
                     "job_service": result.JobDescription.job_service,
                     "created_time": result.JobDescription.created_at
                 } for result in results]
-                
             else:
                 return [{
                     "job_id": result.JobDescription.id,
@@ -1107,8 +1102,8 @@ class Collaborator:
             }
         
         @staticmethod
-        def add_favorite(job_id, db_session, user):
-            result = General.get_job_by_id(job_id, db_session, user)    
+        def add_favorite(job_id, db_session):
+            result = General.get_job_by_id(job_id, db_session)    
             if not result:
                 raise HTTPException(status_code=404, detail="Job doesn't exist!")        
 
@@ -1123,10 +1118,10 @@ class Collaborator:
             if job_status == schema.CollaborateJobStatus.referred:
                 query_referred = (
                             select(
-                                model.Company.id,
+                                model.Company.id.label("company_id"),
                                 model.Company.logo, 
                                 model.Company.company_name, 
-                                model.JobDescription.id,
+                                model.JobDescription.id.label("job_id"),
                                 model.JobDescription.job_title,
                                 model.JobDescription.industries,
                                 model.JobDescription.created_at,
@@ -1158,10 +1153,10 @@ class Collaborator:
             elif job_status == schema.CollaborateJobStatus.favorite:
                 query_favorite = (
                             select(
-                                model.Company.id,
+                                model.Company.id.label("company_id"),
                                 model.Company.logo,
                                 model.Company.company_name, 
-                                model.JobDescription.id,
+                                model.JobDescription.id.label("job_id"),
                                 model.JobDescription.job_title,
                                 model.JobDescription.industries,
                                 model.JobDescription.created_at,
@@ -1180,10 +1175,10 @@ class Collaborator:
             elif job_status == schema.CollaborateJobStatus.unreferred:
                 query_unreferred = (
                             select(
-                                model.Company.id,
+                                model.Company.id.label("company_id"),
                                 model.Company.logo, 
                                 model.Company.company_name, 
-                                model.JobDescription.id,
+                                model.JobDescription.id.label("job_id"),
                                 model.JobDescription.job_title,
                                 model.JobDescription.industries,
                                 model.JobDescription.created_at,
@@ -1348,13 +1343,6 @@ class Collaborator:
             for level, point in level_map.items():
                 if data.level in levels[int(level)]:
                     hard_point += point
-                    #   Save to Database
-                    db_valuate = model.ValuationInfo(
-                                                cv_id=data.cv_id,
-                                                hard=data.level,
-                                                hard_point=point)
-                    db_session.add(db_valuate)
-                    db.commit_rollback(db_session)
 
             #   ============================== Soft point ==============================
                 #   Degrees
@@ -1365,14 +1353,30 @@ class Collaborator:
             for cert in data.language_certificates:
                 if cert.certificate_language == "English":
                     if (cert.certificate_name == "TOEIC" and float(cert.certificate_point_level) > 700) or (cert.certificate_name == "IELTS" and float(cert.certificate_point_level) > 7.0):
-                        certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
+                        certs.append({
+                            "certificate_language": cert.certificate_language,
+                            "certificate_name": cert.certificate_name,
+                            "certificate_point_level": cert.certificate_point_level
+                        })
                 elif cert.certificate_language == "Japan" and cert.certificate_point_level in ["N1", "N2"]:
-                        certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
+                    certs.append({
+                            "certificate_language": cert.certificate_language,
+                            "certificate_name": cert.certificate_name,
+                            "certificate_point_level": cert.certificate_point_level
+                        })
                 elif cert.certificate_language == "Korean":
                     if cert.certificate_name == "Topik II" and cert.certificate_point_level in ["Level 5", "Level 6"]:
-                        certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
-                elif cert.certificate_language == "Chinese" and cert.certificate_point_level == ["HSK-5", "HSK6"]:
-                        certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
+                        certs.append({
+                            "certificate_language": cert.certificate_language,
+                            "certificate_name": cert.certificate_name,
+                            "certificate_point_level": cert.certificate_point_level
+                        })
+                elif cert.certificate_language == "Chinese" and cert.certificate_point_level == ["HSK-5", "HSK-6"]:
+                    certs.append({
+                            "certificate_language": cert.certificate_language,
+                            "certificate_name": cert.certificate_name,
+                            "certificate_point_level": cert.certificate_point_level
+                        })
             certs_point = 0.5 * len(certs)
             
             return {
@@ -1389,22 +1393,25 @@ class Collaborator:
         @staticmethod
         def confirm_resume_valuate(cv_id: int, data: schema.ResumeValuateResult, db_session: Session):
             #   Retrieve resume' user
-            result = General.get_detail_resume_by_id(cv_id, db_session) 
-            if not result:
-                raise HTTPException(status_code=404, detail="Resume doesn't exist!")
+            query = select(model.ValuationInfo).where(model.ValuationInfo.cv_id == cv_id)
+            result = db_session.execute(query).scalars().first()
+            if result:
+                raise HTTPException(status_code=409, detail="Resume already valuate!")
+                
             valuate_db = model.ValuationInfo(
-                                        cv_id=result.Resume.id,
+                                        cv_id=cv_id,
                                         hard_item=data.hard_item,
                                         hard_point=data.hard_point,
                                         degrees=data.degrees,
                                         degree_point=data.degree_point,
-                                        certificates=data.certificates,
+                                        certificates=[str(cert_dict) for cert_dict in data.certificates],
                                         certificates_point=data.certificates_point,
                                         total_point=data.total_point
             )
             db_session.add(valuate_db)
             #   Update Resume valuation status
-            result.ResumeVersion.status = schema.ResumeStatus.pricing_approved
+            resume = General.get_detail_resume_by_id(cv_id, db_session)
+            resume.ResumeVersion.status = schema.ResumeStatus.pricing_approved
             db.commit_rollback(db_session)
             return valuate_db
         
@@ -1443,10 +1450,10 @@ class Collaborator:
             if data.current_salary != 0:
                 percent, _ = Collaborator.Resume.percent_estimate(filename=result.ResumeVersion.filename)
                 hard_point = round(percent*data.current_salary / 100000, 1)   # Convert money to point: 100000 (vnđ) => 1đ
-                valuate_result.hard = data.current_salary
+                valuate_result.hard_item = data.current_salary
                 valuate_result.hard_point = hard_point
                 #   Commit to Database
-                result.ResumeVersion.status = "Pricing Approved"
+                result.ResumeVersion.status = schema.ResumeStatus.pricing_approved
                 db.commit_rollback(db_session)
             elif data.level:
                 for level, point in level_map.items():
@@ -1455,7 +1462,7 @@ class Collaborator:
                         valuate_result.hard = data.level
                         valuate_result.hard_point = hard_point
                         #   Commit to Database
-                        result.ResumeVersion.status = "Pricing Approved"
+                        result.ResumeVersion.status = schema.ResumeStatus.pricing_approved
                         db.commit_rollback(db_session)
                         break
             else:
@@ -1463,37 +1470,39 @@ class Collaborator:
 
             #   ================================== Soft point ==================================
             #   Degrees
+            degree_point = 0
             if data.degrees:
                 degrees = [degree for degree in data.degrees if degree in ["Bachelor", "Master", "Ph.D"]]
                 degree_point = 0.5 * len(degrees)
                 #   Add "soft_point" to Database
                 valuate_result.degrees = degrees
                 valuate_result.degree_point = degree_point
-                result.ResumeVersion.status = "Pricing Approved"
-                db.commit_rollback(db_session)
+                
             #   Certificates
+            certs_point = 0
             if data.language_certificates:
-                certs = []
+                certs = []                
                 for cert in data.language_certificates:
                     if cert.certificate_language == "English":
                         if (cert.certificate_name == "TOEIC" and float(cert.certificate_point_level) > 700) or (cert.certificate_name == "IELTS" and float(cert.certificate_point_level) > 7.0):
-                            certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
+                            certs.append(f"certificate_language='{cert.certificate_language}' certificate_name='{cert.certificate_name}' certificate_point_level='{cert.certificate_point_level}'")
                     elif cert.certificate_language == "Japan" and cert.certificate_point_level in ["N1", "N2"]:
-                            certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
+                            certs.append(f"certificate_language='{cert.certificate_language}' certificate_name='{cert.certificate_name}' certificate_point_level='{cert.certificate_point_level}'")
                     elif cert.certificate_language == "Korean":
-                        if cert.certificate_name == "Topik II" and cert.certificate_point_level in ["Level 5", "Level 6"]:
-                            certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
-                    elif cert.certificate_language == "Chinese" and cert.certificate_point_level == ["HSK-5", "HSK6"]:
-                            certs.append(cert.certificate_language + " - " + cert.certificate_name + " - " + cert.certificate_point_level)
-                cert_point = 0.5 * len(certs)
-                #   Add "soft_point" to Database
-                valuate_result.certificates = certs
-                valuate_result.certificates_point = cert_point
-                valuate_result.total_point = hard_point + degree_point + cert_point
-
-                #   Update Resume valuation status
-                result.ResumeVersion.status = schema.ResumeStatus.pricing_approved
-                db.commit_rollback(db_session)
+                        if cert.certificate_name == "Topik_II" and cert.certificate_point_level in ["Level_5", "Level_6"]:
+                            certs.append(f"certificate_language='{cert.certificate_language}' certificate_name='{cert.certificate_name}' certificate_point_level='{cert.certificate_point_level}'")
+                    elif cert.certificate_language == "Chinese" and cert.certificate_point_level == ["HSK-5", "HSK-6"]:
+                            certs.append(f"certificate_language='{cert.certificate_language}' certificate_name='{cert.certificate_name}' certificate_point_level='{cert.certificate_point_level}'")
+                    certs_point = 0.5 * len(certs)
+                    #   Add "soft_point" to Database
+                    valuate_result.certificates = [str(cert) for cert in certs]
+                    valuate_result.certificates_point = certs_point
+                    
+            #   Update total_point
+            valuate_result.total_point = hard_point + degree_point + certs_point
+            #   Update Resume valuation status
+            result.ResumeVersion.status = schema.ResumeStatus.pricing_approved
+            db.commit_rollback(db_session)
             return valuate_result
     
     
