@@ -731,6 +731,7 @@ def confirm_resume_valuate(
              response_model=schema.CustomResponse)
 def get_resume_valuate(
                     cv_id: int,
+                    request: Request,
                     db_session: Session = Depends(db.get_session)):
 
     result = service.Collaborator.Resume.get_resume_valuate(cv_id, db_session)
@@ -747,10 +748,14 @@ def get_resume_valuate(
             value = value.strip("'")
             certificate_dict[key] = value
         return certificate_dict
+    
+    #   Get resume pdf file
+    resume = service.General.get_detail_resume_by_id(cv_id, db_session)
     return schema.CustomResponse(
                     message="Get resume valuation successfully",
                     data={
                         "cv_id": cv_id,
+                        "cv_pdf": os.path.join(str(request.base_url), resume.ResumeVersion.cv_file),
                         "hard_item": result.hard_item,
                         "hard_point": result.hard_point,
                         "degrees": result.degrees,
