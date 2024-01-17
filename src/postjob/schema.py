@@ -300,9 +300,9 @@ class JobEducation(BaseModel):
     gpa: Union[str, None]
     
 class LanguageCertificate(BaseModel):
-    certificate_language: Union[Language, None]
-    certificate_name: Union[str, None]
-    certificate_point_level: Union[str, None]
+    certificate_language: Optional[str]
+    certificate_name: Optional[str]
+    certificate_point_level: Optional[str]
     
 class OtherCertificate(BaseModel):
     certificate_name: Union[str, None]
@@ -436,7 +436,7 @@ class UpdateResumeValuation(BaseModel):
     cv_id: Optional[int]
     level: Optional[Level]
     current_salary: Optional[float]
-    degrees: Optional[List[ValuationDegree]]
+    degrees: Optional[List[str]]
     language_certificates: Optional[List[LanguageCertificate]]
     
     
@@ -445,6 +445,6 @@ class ResumeValuateResult(BaseModel):
     hard_point: float
     degrees: List[str]
     degree_point: float
-    certificates: List[str]
+    certificates: List[LanguageCertificate]
     certificates_point: float
     total_point: float

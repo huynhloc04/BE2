@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import text, Column, TIMESTAMP
 from sqlmodel import Field, SQLModel, Relationship, JSON
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Dict
 from sqlalchemy.dialects.postgresql import TEXT
 from sqlalchemy.dialects import postgresql
 from enum import Enum
@@ -150,9 +150,9 @@ class ValuationInfo(TableBase, table=True):
     cv_id: int = Field(default=None, foreign_key="resumes.id")
     hard_item: str = Field(default=None)
     hard_point: float = Field(default=None)
-    degrees: List[str] = Field(default=None, sa_column=Column(TEXT))
+    degrees: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
     degree_point: float = Field(default=None)
-    certificates: List[str] = Field(default=None, sa_column=Column(TEXT))
+    certificates: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
     certificates_point: float = Field(default=None)
     total_point: float = Field(default=None)
 
@@ -261,9 +261,8 @@ class ResumeMatching(TableBase, table=True):
     overall_explain: str = Field(default=None, sa_column=Column(TEXT))
     
 
-class RecruitResumeJoin(SQLModel, table=True):
-    
-    __tablename__ = "recruit_resume_join"
+class RecruitResumeJoin(SQLModel, table=True):    
+    __tablename__ = "recruit_resume_joins"
     user_id: Optional[int] = Field(
         default=None,
         foreign_key="users.id",
@@ -278,9 +277,9 @@ class RecruitResumeJoin(SQLModel, table=True):
     is_rejected: bool = Field(default=False)      #   Recruiter rejects Resumes
     
     
-class UserResumeCart(SQLModel, table=True):
+class RecruitResumeCart(SQLModel, table=True):
     
-    __tablename__ = "carts"
+    __tablename__ = "recruit_resume_carts"
     user_id: Optional[int] = Field(
         default=None,
         foreign_key="users.id",
@@ -300,7 +299,7 @@ class PointPackage(TableBase, table=True):
     currency: str = Field(default=None)
 
 
-class UserPointCart(SQLModel, table=True):
+class RecruitPointCart(SQLModel, table=True):
     
     __tablename__ = "user_point_carts"
     user_id: Optional[int] = Field(

@@ -1,4 +1,4 @@
-import os, math
+import os, math, json
 import shutil
 from config import db
 from typing import List, Any
@@ -213,13 +213,9 @@ def fill_parsed_job(data: schema.JobUpdate,
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def update_job_info(data: schema.JobUpdate,
-                    db_session: Session = Depends(db.get_session),
-                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
+                    db_session: Session = Depends(db.get_session)):
 
-    service.Recruiter.Job.update_job(data, db_session, current_user)
+    service.Recruiter.Job.update_job(data, db_session)
     return schema.CustomResponse(
                     message="Update job information successfully",
                     data=None
@@ -612,13 +608,9 @@ def get_detail_job(
              response_model=schema.CustomResponse)
 def add_favorite(
             job_id: int,
-            db_session: Session = Depends(db.get_session),
-            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
+            db_session: Session = Depends(db.get_session)):
 
-    jobs = service.Collaborator.Job.add_favorite(job_id, db_session, current_user)
+    jobs = service.Collaborator.Job.add_favorite(job_id, db_session)
     return schema.CustomResponse(
                     message="Job has been added to your favorites list",
                     data=jobs
@@ -727,8 +719,8 @@ def confirm_resume_valuate(
                         "hard_point": result.hard_point,
                         "degrees": result.degrees,
                         "degree_point": result.degree_point,
-                        "certs": result.certs,
-                        "certs_point": result.certs_point,
+                        "certs": [str(cert) for cert in result.certificates],
+                        "certs_point": result.certificates_point,
                         "total_point": result.total_point
             }
                 )
@@ -739,13 +731,22 @@ def confirm_resume_valuate(
              response_model=schema.CustomResponse)
 def get_resume_valuate(
                     cv_id: int,
-                    db_session: Session = Depends(db.get_session),
-                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
+                    db_session: Session = Depends(db.get_session)):
 
     result = service.Collaborator.Resume.get_resume_valuate(cv_id, db_session)
+    
+    def parse_dict(data):
+        pairs = data.split()
+        # Initialize an empty dictionary to store the key-value pairs
+        certificate_dict = {}
+        for pair in pairs:
+            print(pair)
+            print(type(pair))
+            key, value = pair.split('=')
+            # Remove single quotes from the value
+            value = value.strip("'")
+            certificate_dict[key] = value
+        return certificate_dict
     return schema.CustomResponse(
                     message="Get resume valuation successfully",
                     data={
@@ -754,7 +755,7 @@ def get_resume_valuate(
                         "hard_point": result.hard_point,
                         "degrees": result.degrees,
                         "degree_point": result.degree_point,
-                        "certificates": result.certificates,
+                        "certificates": [parse_dict(cert_dict) for cert_dict in result.certificates],
                         "certificates_point": result.certificates_point,
                         "total_point": result.total_point
                     }
@@ -773,7 +774,7 @@ def update_resume_valuate(
                     message="Resume re-valuated successfully",
                     data={
                         "resume_id": result.cv_id,
-                        "hard_item": result.hard,
+                        "hard_item": result.hard_item,
                         "hard_point": result.hard_point,
                         "degrees": result.degrees,
                         "degree_point": result.degree_point,
