@@ -78,7 +78,7 @@ def get_company_info(request: Request,
                             "linkedin": info.linkedin,
                             "website": info.website,
                             "facebook": info.facebook,
-                            "instagram": info.instagram,
+                            "instagram": info.instagram
                         }
     )
 
@@ -497,13 +497,9 @@ def review_job(
              response_model=schema.CustomResponse)
 def remove_job(
         job_id: int,
-        db_session: Session = Depends(db.get_session),
-        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
+        db_session: Session = Depends(db.get_session)):
 
-    service.Admin.Job.remove_job(job_id, db_session, current_user)
+    service.Admin.Job.remove_job(job_id, db_session)
     return schema.CustomResponse(
                     message="Remove job successfully!!!",
                     data=None
@@ -608,12 +604,16 @@ def get_detail_job(
              response_model=schema.CustomResponse)
 def add_favorite(
             job_id: int,
-            db_session: Session = Depends(db.get_session)):
+            db_session: Session = Depends(db.get_session),
+            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
 
-    jobs = service.Collaborator.Job.add_favorite(job_id, db_session)
+    service.Collaborator.Job.add_favorite(job_id, db_session, current_user)
     return schema.CustomResponse(
                     message="Job has been added to your favorites list",
-                    data=jobs
+                    data=None
             )
     
 @router.get("/collaborator/get-general-info/{job_id}",

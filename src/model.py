@@ -112,7 +112,6 @@ class JobDescription(TableBase, table=True):
     point: float = Field(default=None)
     jd_file: str = Field(default=None)
     status: str = Field(default="pending")
-    is_favorite: bool = Field(default=False)
     is_draft: bool = Field(default=False)
     is_admin_approved: bool = Field(default=False)      # Admin filtered Job
     admin_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
@@ -261,6 +260,21 @@ class ResumeMatching(TableBase, table=True):
     overall_explain: str = Field(default=None, sa_column=Column(TEXT))
     
 
+class CollaboratorJobJoin(SQLModel, table=True):    
+    __tablename__ = "collab_job_joins"
+    user_id: Optional[int] = Field(
+        default=None,
+        foreign_key="users.id",
+        primary_key=True,
+    )
+    job_id: Optional[int] = Field(
+        default=None,
+        foreign_key="job_descriptions.id",
+        primary_key=True,
+    )
+    is_favorite: bool = Field(default=False)
+    
+
 class RecruitResumeJoin(SQLModel, table=True):    
     __tablename__ = "recruit_resume_joins"
     user_id: Optional[int] = Field(
@@ -313,3 +327,60 @@ class RecruitPointCart(SQLModel, table=True):
         primary_key=True,
     )
     quantity: int = Field(default=0)
+
+
+
+
+
+
+# class Company(TableBase, table=True):
+#     __tablename__ = 'companies'
+    
+#     user_id: int = Field(default=None, foreign_key="users.id")
+#     company_name: str = Field(default=None)
+#     industry: str = Field(default=None)
+#     phone: str = Field(default=None)
+#     email: str = Field(default=None)
+
+
+# class User(TableBase, table=True):
+#     __tablename__ = 'users'
+
+#     fullname: str = Field(default=None)
+#     email: str = Field(default=None)
+#     phone: str = Field(default=None)
+#     role: str = Field(default=None)
+#     point: float = Field(default=0)
+
+
+# class JobDescription(TableBase, table=True):
+#     __tablename__ = 'job_descriptions'
+
+#     user_id: int = Field(default=None, foreign_key="users.id")
+#     company_id: int = Field(default=None, foreign_key="companies.id")
+#     job_title: str = Field(default=None)
+#     job_service: str = Field(default=None)
+
+
+# class Resume(TableBase, table=True):
+#     __tablename__ = 'resumes'    
+#     user_id: int = Field(default=None, foreign_key="users.id")
+#     job_id: int = Field(default=None, foreign_key="job_descriptions.id")
+
+
+# class CollaboratorJobJoin(SQLModel, table=True):    
+#     __tablename__ = "collab_job_joins"
+#     user_id: Optional[int] = Field(
+#         default=None,
+#         foreign_key="users.id",
+#         primary_key=True,
+#     )
+#     job_id: Optional[int] = Field(
+#         default=None,
+#         foreign_key="job_descriptions.id",
+#         primary_key=True,
+#     )
+#     is_favorite: bool = Field(default=False)
+
+
+# Write SQLModel query to get "compay_name", "industry" from "Company" table, "job_service", "job_title" in "JobDescription"  with the condition of "is_favorite==False" in "CollaboratorJobJoin" table and the number of resume = 0 from "Resume" table

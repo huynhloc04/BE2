@@ -306,11 +306,11 @@ class General:
     
     @staticmethod
     def get_cv_file(request, cv_id, db_session):
-        result = General.get_resume_by_id(cv_id, db_session)    
+        result = General.get_detail_resume_by_id(cv_id, db_session)    
         if not result:
             raise HTTPException(status_code=404, detail="Resume doesn't exist!")        
         #   Return link to JD PDF file 
-        return os.path.join(str(request.base_url), result.cv_file)
+        return os.path.join(str(request.base_url), result.ResumeVersion.cv_file)
     
     
 class Recruiter:
@@ -976,8 +976,8 @@ class Admin:
         
     
         @staticmethod
-        def remove_job(job_id, db_session, user):
-            result = General.get_job_by_id(job_id, db_session, user)    
+        def remove_job(job_id, db_session):
+            result = General.get_job_by_id(job_id, db_session)    
             if not result:
                 raise HTTPException(status_code=404, detail="Job doesn't exist!")        
             #   Admin remove Job
@@ -1102,14 +1102,18 @@ class Collaborator:
             }
         
         @staticmethod
-        def add_favorite(job_id, db_session):
+        def add_favorite(job_id, db_session, user):
             result = General.get_job_by_id(job_id, db_session)    
             if not result:
                 raise HTTPException(status_code=404, detail="Job doesn't exist!")        
 
-            result.is_favorite = True
+            db_result = model.CollaboratorJobJoin(
+                                    user_id=user.id,
+                                    job_id=job_id,
+                                    is_favorite=True
+            )
+            db_session.add(db_result)
             db.commit_rollback(db_session) 
-            return result.jd_file
 
 
         @staticmethod
@@ -1150,7 +1154,7 @@ class Collaborator:
             
             #  ======================= Favorite Jobs ======================= 
             
-            elif job_status == schema.CollaborateJobStatus.favorite:
+            elif job_status == schema.CollaborateJobStatus.favorite:                
                 query_favorite = (
                             select(
                                 model.Company.id.label("company_id"),
@@ -1163,8 +1167,9 @@ class Collaborator:
                                 model.JobDescription.job_service, 
                                 model.JobDescription.status
                             )
-                            .join(model.JobDescription, model.JobDescription.user_id == model.Company.user_id)
-                            .filter(model.JobDescription.is_favorite == True)
+                            .join(model.Company, model.Company.user_id == model.JobDescription.user_id)
+                            .join(model.CollaboratorJobJoin, and_(model.CollaboratorJobJoin.user_id == model.JobDescription.user_id, model.CollaboratorJobJoin.job_id == model.JobDescription.id))
+                            .where(model.CollaboratorJobJoin.is_favorite == True)  # Assuming is_favorite is a boolean column
                         )
                 result_favorite = db_session.execute(query_favorite).all() 
                 if not result_favorite:
@@ -1173,6 +1178,34 @@ class Collaborator:
             
             #  ======================= Chưa giới thiệu =======================
             elif job_status == schema.CollaborateJobStatus.unreferred:
+                # query_unreferred = (
+                #             select(
+                                # model.Company.id.label("company_id"),
+                                # model.Company.logo, 
+                                # model.Company.company_name, 
+                                # model.JobDescription.id.label("job_id"),
+                                # model.JobDescription.job_title,
+                                # model.JobDescription.industries,
+                                # model.JobDescription.created_at,
+                                # model.JobDescription.job_service, 
+                                # model.JobDescription.status
+                #             )
+                #             .join(model.JobDescription, model.Company.user_id == model.JobDescription.user_id)
+                #             .outerjoin(model.Resume, model.JobDescription.id == model.Resume.job_id)
+                #             .group_by(
+                                # model.Company.id,
+                                # model.Company.logo, 
+                                # model.Company.company_name, 
+                                # model.JobDescription.id,
+                                # model.JobDescription.job_title,
+                                # model.JobDescription.industries,
+                                # model.JobDescription.created_at,
+                                # model.JobDescription.job_service, 
+                                # model.JobDescription.status)
+                #             .having(func.count(model.Resume.id) == 0)
+                #             .filter(model.JobDescription.is_favorite == False)
+                # )
+
                 query_unreferred = (
                             select(
                                 model.Company.id.label("company_id"),
@@ -1185,21 +1218,12 @@ class Collaborator:
                                 model.JobDescription.job_service, 
                                 model.JobDescription.status
                             )
-                            .join(model.JobDescription, model.Company.user_id == model.JobDescription.user_id)
-                            .outerjoin(model.Resume, model.JobDescription.id == model.Resume.job_id)
-                            .group_by(
-                                model.Company.id,
-                                model.Company.logo, 
-                                model.Company.company_name, 
-                                model.JobDescription.id,
-                                model.JobDescription.job_title,
-                                model.JobDescription.industries,
-                                model.JobDescription.created_at,
-                                model.JobDescription.job_service, 
-                                model.JobDescription.status)
-                            .having(func.count(model.Resume.id) == 0)
-                            .filter(model.JobDescription.is_favorite == False)
-                )
+                            # .join(model.Company, model.Company.user_id == model.JobDescription.user_id)
+                            .join(model.JobDescription, model.JobDescription.user_id == model.Company.user_id)
+                            .outerjoin(model.CollaboratorJobJoin, and_(model.CollaboratorJobJoin.user_id == model.JobDescription.user_id, model.CollaboratorJobJoin.job_id == model.JobDescription.id))
+                            .outerjoin(model.Resume, model.Resume.job_id == model.JobDescription.id)
+                            .having(and_(model.CollaboratorJobJoin.is_favorite == False, func.count(model.Resume.id) == 0))
+                        )
                 result_unreferred = db_session.execute(query_unreferred).all() 
                 if not result_unreferred:
                     raise HTTPException(status_code=404, detail="Could not find any unreferred jobs")
