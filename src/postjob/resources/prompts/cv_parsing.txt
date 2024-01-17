@@ -32,6 +32,7 @@ Please extract the above [Resume] exactly according to the corresponding keys an
     "end_time": ["string"],
     "detailed_descriptions": ["string"] (Do not omit any information)
   }],
+  "job_title": ["string"],
   "levels": ["string"] (Based on information provided in [Resume] and levels listed below, you must choose the exact curent working level that this candidate is:
     - Executive
     - Senior
@@ -111,15 +112,15 @@ Please extract the above [Resume] exactly according to the corresponding keys an
         }
     ). The certificate result must follows strictly as format below.
     {
-    "language_certificates": {
+    "language_certificates": [{
         "certificate_language": ["string"],
         "certificate_name": ["string"],
         "certificate_point/level": ["string"]
-    },
-    "other_certificates": {     (Certificates that is not relevant to language certificates)
+    }],
+    "other_certificates": [{     (Certificates that is not relevant to language certificates)
         "certificate_name": ["string"],
         "certificate_level": ["string"]
-    }
+    }]
   },
   "industry": ["string"] (Based on information provided in [Resume] and industries listed below, you must choose the working industry that the candidate is currently working on:
     - Education
@@ -163,7 +164,8 @@ Please extract the above [Resume] exactly according to the corresponding keys an
     "country": ["string"],
     "city": ["string"],
     "address": ["string"]
-  }
+  },
+  "orientation": ["string"]
 }
 
 Important:

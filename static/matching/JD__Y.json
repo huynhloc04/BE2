@@ -1,0 +1,42 @@
+{
+  "job_title": {
+    "score": [
+      "0"
+    ],
+    "explanation": [
+      "The job title in the resume does not match the job title in the job description."
+    ]
+  },
+  "experience": {
+    "score": [
+      "50"
+    ],
+    "explanation": [
+      "The resume includes experience in Java development, which matches the required experience in the job description. However, the resume does not mention any leadership experience, which is a requirement in the job description."
+    ]
+  },
+  "skill": {
+    "score": [
+      "80"
+    ],
+    "explanation": [
+      "The resume includes skills such as Java, Spring, and REST APIs, which match the required skills in the job description. However, some skills mentioned in the job description, such as Spring Boot and databases, are not explicitly mentioned in the resume."
+    ]
+  },
+  "education": {
+    "score": [
+      "20"
+    ],
+    "explanation": [
+      "The resume does not provide detailed information about the candidate's education. It only mentions two institutions without specifying the degree or major."
+    ]
+  },
+  "overall": {
+    "score": [
+      "38"
+    ],
+    "explanation": [
+      "Based on the evaluation of job title, experience, skill, and education, the overall similarity score between the resume and job description is 38. The resume partially matches the required experience and skills, but lacks information about education and does not have the same job title as the job description."
+    ]
+  }
+}

@@ -1,13 +1,13 @@
 [Requirements]
 
-Given the two above context sections: "Job Description" and "Resume". Please compare and score strictly the similarity of the "Resume" to "Job Description" on a scale of 100.
+Given the two above context sections: "Job Description" and "Resume". Please compare and score strictly the similarity of the "Resume" to "Job Description" on a scale of 100 based on keywords for each field: "job_title, "experiece", "skill", "education" and "orientation"
 The answer must be in JSON format as follow: 
 {
   "job_title": {
       "score": ["string"],
       "explanation": ["string"]
   },
-  "experience":{
+  "experience":{     (Please strictly evaluate and score this experience field. Experience score is high when most of the experience keywords in "Job Description" must appear in "Resume")
       "score": ["string"]
       "explanation": ["string"]
   }, 

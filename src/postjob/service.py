@@ -109,10 +109,14 @@ level_map = {"0": 2, "1": 3, "2": 4, "3": 5, "4": 8, "5": 15, "6": 20, "7": 25, 
 class Company:
 
     @staticmethod
-    def add_company(request: Request,
-                    db_session: Session,
-                    data: schema.CompanyBase,
-                    current_user):
+    def add_company(
+                db_session: Session,
+                data: schema.CompanyBase,
+                current_user):
+        current_company = db_session.execute(select(model.Company).where(model.Company.user_id == current_user.id)).scalars().first()
+        if current_company:
+            raise HTTPException(status_code=409, detail="You have registered company information!")
+
         db_company = model.Company(
                                 user_id=current_user.id,
                                 company_name=data.company_name, 
@@ -975,14 +979,16 @@ class Admin:
             return result
         
     
-        @staticmethod
-        def remove_job(job_id, db_session):
-            result = General.get_job_by_id(job_id, db_session)    
-            if not result:
-                raise HTTPException(status_code=404, detail="Job doesn't exist!")        
-            #   Admin remove Job
-            db_session.delete(result)
-            db.commit_rollback(db_session)
+        # @staticmethod
+        # def remove_job(job_id, db_session):
+        #     result = General.get_job_by_id(job_id, db_session)    
+        #     if not result:
+        #         raise HTTPException(status_code=404, detail="Job doesn't exist!")     
+        #     # favorite = db_session.execute(select(model.RecruitResumeJoin).where(model.RecruitResumeJoin.job_id == job_id)).scalars().all()  
+        #     #   Admin remove all favorite job from collaborator 
+        #     model.CollaboratorJobJoin.__table__.delete().where(model.CollaboratorJobJoin.job_id == job_id)
+        #     db_session.delete(result)
+        #     db.commit_rollback(db_session)
         
             
     class Resume:
@@ -1117,7 +1123,7 @@ class Collaborator:
 
 
         @staticmethod
-        def list_job(job_status, db_session):
+        def list_job(job_status, db_session, current_user):
             #   ======================= Đã giới thiệu =======================
             if job_status == schema.CollaborateJobStatus.referred:
                 query_referred = (
@@ -1178,34 +1184,6 @@ class Collaborator:
             
             #  ======================= Chưa giới thiệu =======================
             elif job_status == schema.CollaborateJobStatus.unreferred:
-                # query_unreferred = (
-                #             select(
-                                # model.Company.id.label("company_id"),
-                                # model.Company.logo, 
-                                # model.Company.company_name, 
-                                # model.JobDescription.id.label("job_id"),
-                                # model.JobDescription.job_title,
-                                # model.JobDescription.industries,
-                                # model.JobDescription.created_at,
-                                # model.JobDescription.job_service, 
-                                # model.JobDescription.status
-                #             )
-                #             .join(model.JobDescription, model.Company.user_id == model.JobDescription.user_id)
-                #             .outerjoin(model.Resume, model.JobDescription.id == model.Resume.job_id)
-                #             .group_by(
-                                # model.Company.id,
-                                # model.Company.logo, 
-                                # model.Company.company_name, 
-                                # model.JobDescription.id,
-                                # model.JobDescription.job_title,
-                                # model.JobDescription.industries,
-                                # model.JobDescription.created_at,
-                                # model.JobDescription.job_service, 
-                                # model.JobDescription.status)
-                #             .having(func.count(model.Resume.id) == 0)
-                #             .filter(model.JobDescription.is_favorite == False)
-                # )
-
                 query_unreferred = (
                             select(
                                 model.Company.id.label("company_id"),
@@ -1218,12 +1196,42 @@ class Collaborator:
                                 model.JobDescription.job_service, 
                                 model.JobDescription.status
                             )
-                            # .join(model.Company, model.Company.user_id == model.JobDescription.user_id)
-                            .join(model.JobDescription, model.JobDescription.user_id == model.Company.user_id)
-                            .outerjoin(model.CollaboratorJobJoin, and_(model.CollaboratorJobJoin.user_id == model.JobDescription.user_id, model.CollaboratorJobJoin.job_id == model.JobDescription.id))
-                            .outerjoin(model.Resume, model.Resume.job_id == model.JobDescription.id)
-                            .having(and_(model.CollaboratorJobJoin.is_favorite == False, func.count(model.Resume.id) == 0))
-                        )
+                            .join(model.JobDescription, model.Company.user_id == model.JobDescription.user_id)
+                            .outerjoin(model.Resume, model.JobDescription.id == model.Resume.job_id)
+                            # .outerjoin(model.CollaboratorJobJoin, and_(model.CollaboratorJobJoin.user_id == current_user.id, 
+                            #                                            model.CollaboratorJobJoin.job_id == model.JobDescription.id))
+                            .group_by(
+                                model.Company.id,
+                                model.Company.logo, 
+                                model.Company.company_name, 
+                                model.JobDescription.id,
+                                model.JobDescription.job_title,
+                                model.JobDescription.industries,
+                                model.JobDescription.created_at,
+                                model.JobDescription.job_service, 
+                                model.JobDescription.status)
+                            .having(func.count(model.Resume.id) == 0)
+                            # .filter(and_(model.CollaboratorJobJoin.is_favorite == False)
+                )
+
+                # query_unreferred = (
+                #             select(
+                #                 model.Company.id.label("company_id"),
+                #                 model.Company.logo, 
+                #                 model.Company.company_name, 
+                #                 model.JobDescription.id.label("job_id"),
+                #                 model.JobDescription.job_title,
+                #                 model.JobDescription.industries,
+                #                 model.JobDescription.created_at,
+                #                 model.JobDescription.job_service, 
+                #                 model.JobDescription.status
+                #             )
+                #             # .join(model.Company, model.Company.user_id == model.JobDescription.user_id)
+                #             .join(model.JobDescription, model.JobDescription.user_id == model.Company.user_id)
+                #             .outerjoin(model.CollaboratorJobJoin, and_(model.CollaboratorJobJoin.user_id == model.JobDescription.user_id, model.CollaboratorJobJoin.job_id == model.JobDescription.id))
+                #             .outerjoin(model.Resume, model.Resume.job_id == model.JobDescription.id)
+                #             .having(and_(model.CollaboratorJobJoin.is_favorite == False, func.count(model.Resume.id) == 0))
+                #         )
                 result_unreferred = db_session.execute(query_unreferred).all() 
                 if not result_unreferred:
                     raise HTTPException(status_code=404, detail="Could not find any unreferred jobs")
@@ -1277,7 +1285,7 @@ class Collaborator:
             extracted_result, _ = Collaborator.Resume.parse_base(cleaned_filename, check_dup=True)
             #   Check duplicated CVs
             DatabaseService.check_db_duplicate(extracted_result["contact_information"], cleaned_filename, db_session)
-            #   Save Resume's basic info to DB
+            #   Save Resume's basic information to DB
             shutil.move(os.path.join(SAVED_TEMP, cleaned_filename), os.path.join(CV_SAVED_DIR, cleaned_filename))
             db_resume = model.Resume(
                                 user_id=user.id,
@@ -1566,9 +1574,8 @@ class Collaborator:
         def send_email_request(cv_id: int, 
                             content: str,
                             db_session: Session,
-                            current_user,
                             background_tasks: BackgroundTasks):
-            resume_data = General.get_detail_resume_by_id(cv_id, db_session, current_user)
+            resume_data = General.get_detail_resume_by_id(cv_id, db_session)
             try:
                 background_tasks.add_task(
                                     GoogleService.CONTENT_GOOGLE,
@@ -1580,25 +1587,23 @@ class Collaborator:
 
         @staticmethod
         def cv_jd_matching(cv_id: int, db_session: Session, user, background_task: BackgroundTasks):
-            resume_result = General.get_detail_resume_by_id(cv_id, db_session, user)       
+            resume_result = General.get_detail_resume_by_id(cv_id, db_session)       
             if not resume_result:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Resume does not exist")
             
             #   Get Job by cv_id
-            job_result = General.get_job_by_id(resume_result.Resume.job_id,
-                                        db_session,
-                                        user)
+            job_result = General.get_job_by_id(resume_result.Resume.job_id, db_session)
 
             matching_result, saved_dir = Collaborator.Resume.matching_base(cv_filename=resume_result.ResumeVersion.filename, 
                                                             jd_filename=job_result.jd_file.split("/")[-1])
             
-            overall_score = int(matching_result["overall"]["score"])
+            overall_score = int(matching_result["overall"]["score"][0])
             if overall_score >= 50:
                 mail_content = f"""
                 <html>
                     <body>
                         <p> Dear {resume_result.ResumeVersion.name}, <br>
-                            Warm greetings from sharecv.vn ! 
+                            Warm greetings from sharecv.vn !
                             Your profile has been recommended on sharecv.vn. However, please be aware that only when we have your permission, the profile will be sent to the employer to review and evaluate. <br>
                             Hence, please CLICK to below: <br>
                             - <a href="https://sharecv.vn/?page=accept&id={user.id}&token=&act=accept">"Accept"</a> Job referral acceptance letter. <br>
@@ -1616,7 +1621,7 @@ class Collaborator:
                 </html>
                 """
                 #  Send mail
-                Collaborator.Resume.send_email_request(cv_id, mail_content, db_session, user, background_task)
+                Collaborator.Resume.send_email_request(cv_id, mail_content, db_session, background_task)
                 #   Update resume status 
                 resume_result.ResumeVersion.status = schema.ResumeStatus.waiting_candidate_accept
                 #   Write matching result to Database

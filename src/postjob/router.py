@@ -24,15 +24,15 @@ security_bearer = HTTPBearer()
 @router.post("/recruiter/add-company-info",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
-def add_company_info(request: Request,
-                     data_form: schema.CompanyBase = Depends(schema.CompanyBase.as_form),
-                     db_session: Session = Depends(db.get_session),
-                     credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+def add_company_info(
+                data_form: schema.CompanyBase = Depends(schema.CompanyBase.as_form),
+                db_session: Session = Depends(db.get_session),
+                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    info = service.Company.add_company(request, db_session, data_form, current_user)
+    info = service.Company.add_company(db_session, data_form, current_user)
     return schema.CustomResponse(
                     message="Add company information successfully",
                     data={
@@ -492,18 +492,18 @@ def review_job(
     
     
 #   Admin remove Job
-@router.delete("/admin/remove-job",
-             status_code=status.HTTP_200_OK, 
-             response_model=schema.CustomResponse)
-def remove_job(
-        job_id: int,
-        db_session: Session = Depends(db.get_session)):
+# @router.delete("/admin/remove-job",
+#              status_code=status.HTTP_200_OK, 
+#              response_model=schema.CustomResponse)
+# def remove_job(
+#         job_id: int,
+#         db_session: Session = Depends(db.get_session)):
 
-    service.Admin.Job.remove_job(job_id, db_session)
-    return schema.CustomResponse(
-                    message="Remove job successfully!!!",
-                    data=None
-            )
+#     service.Admin.Job.remove_job(job_id, db_session)
+#     return schema.CustomResponse(
+#                     message="Remove job successfully!!!",
+#                     data=None
+#             )
 
 
 @router.get("/admin/get-matching-result",
@@ -564,9 +564,13 @@ def list_job(
         page_index: int,
         limit: int,
         job_status: schema.CollaborateJobStatus,
-        db_session: Session = Depends(db.get_session)):
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
 
-    results = service.Collaborator.Job.list_job(job_status, db_session)    
+    results = service.Collaborator.Job.list_job(job_status, db_session, current_user)    
 
     #   Pagination
     total_items = len(results)
@@ -842,10 +846,6 @@ def resume_matching(
                             "education": {
                                     "score": matching_result["education"]["score"],
                                     "explanation": matching_result["education"]["explanation"]
-                                },
-                            "orientation": {
-                                    "score": matching_result["orientation"]["score"],
-                                    "explanation": matching_result["orientation"]["explanation"]
                                 },
                             "overall": {
                                     "score": matching_result["overall"]["score"],

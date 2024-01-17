@@ -2,6 +2,7 @@ Please extract the above [Job Description] exactly according to the correspondin
 {
     "job_title": ["string],
     "industry": ["string],
+    "orientation": ["string"]
     "sex": ["string],     (Please choose "male" or "female")
     "job_type": ["string],     (Please choose "part_time" or "full_time")
     "received_job_time": ["string],    (The time the candidate starts working)
@@ -38,20 +39,20 @@ Please extract the above [Job Description] exactly according to the correspondin
     "roles": ["string],   (Job position of candidate required for this Job)
     "number_year_experience": ["string],   (Number of years of experience required for this job)
     "number_candidate": ["string],  (Number of candidate to be recruited)
-    "education": {   (Education information required for this job)
+    "education": [{   (Education information required for this job)
         "degree": ["string],
         "major": ["string],
         "gpa": ["string],
-    },
-    "language_certificates": {
+    }],
+    "language_certificates": [{
         "language_name": ["string],
         "certificate_name": ["string],
         "certificate_level": ["string]
-    },
-    "other_certificates": {
+    }],
+    "other_certificates": [{
         "certificate_name": : ["string]
         "certificate_level": ["string]
-    },
+    }],
     "salary": {
         "min_salary": ["string],
         "max_salary": ["string],

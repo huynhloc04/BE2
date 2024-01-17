@@ -113,6 +113,7 @@ class JobDescription(TableBase, table=True):
     jd_file: str = Field(default=None)
     status: str = Field(default="pending")
     is_draft: bool = Field(default=False)
+    # is_active: bool = Field(default=True)
     is_admin_approved: bool = Field(default=False)      # Admin filtered Job
     admin_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
     company_decline_reason: str = Field(default=None, sa_column=Column(TEXT))

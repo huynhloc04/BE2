@@ -76,10 +76,7 @@ class DatabaseService:
     
     @staticmethod
     def check_file_duplicate(file: str, path: str):
-        try:
-            filename, _  = os.path.splitext(file)
-            filenames = [os.path.splitext(file)[0] for file in os.listdir(path)]
-            return filename in filenames
-
-        except Exception:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Cannot check duplicate {filename} - {path}")
+        filename, _  = os.path.splitext(file)
+        filenames = [os.path.splitext(file)[0] for file in os.listdir(path)]
+        if filename in filenames:
+            raise HTTPException(status_code=409, detail="This resume already exists in system. Please upload the other!") 
