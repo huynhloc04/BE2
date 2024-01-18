@@ -408,6 +408,41 @@ def cv_parsing(
                         "json_saved_path": saved_path
                     }
     )
+
+
+@router.post("/recruiter/choose-interview",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def choose_interview(
+        data: schema.InterviewForm,
+        background_task: BackgroundTasks,
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    service.Recruiter.Resume.choose_interview(data, db_session, background_task, current_user)
+
+    return schema.CustomResponse(
+                    message="Sent mail to candidate!",
+                    data=None
+    )
+
+
+@router.get("/recruiter/get-candidate-reply-interview/{status}",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def get_candidate_reply_interview(
+            cv_id: int,
+            status: schema.CandidateMailReply,
+            db_session: Session = Depends(db.get_session)):
+
+    service.Recruiter.Resume.get_candidate_reply_interview(cv_id, status, db_session)
+    return schema.CustomResponse(
+                    message="Update candidate reply.",
+                    data=None
+    )
     
 # ===========================================================
 #                       Admin filters Job
@@ -858,16 +893,12 @@ def resume_matching(
 @router.get("/collaborator/get-candidate-reply/{status}",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
-def resume_matching(
+def get_candidate_reply(
             cv_id: int,
             status: schema.CandidateMailReply,
-            db_session: Session = Depends(db.get_session),
-            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
+            db_session: Session = Depends(db.get_session)):
 
-    service.Collaborator.Resume.candidate_reply(cv_id, status, db_session, current_user)
+    service.Collaborator.Resume.get_candidate_reply(cv_id, status, db_session)
     return schema.CustomResponse(
                     message="Update candidate reply.",
                     data=None
@@ -947,10 +978,6 @@ def list_draft_candidate(
                     message="Get list candidate successfully.",
                     data=result
     )
-
-
-
-
     
     
 # ===========================================================

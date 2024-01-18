@@ -290,7 +290,7 @@ class RecruitResumeJoin(SQLModel, table=True):
     )
     package: str = Field(default=None)                      #   Basic / Platinum
     is_rejected: bool = Field(default=False)      #   Recruiter rejects Resumes
-    
+    interview_form : str = Field(default=None)
     
 class RecruitResumeCart(SQLModel, table=True):
     

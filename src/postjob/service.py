@@ -805,7 +805,65 @@ class Recruiter:
             current_user.point -=  valuation_result.total_point
             db.commit_rollback(db_session)
             
-    
+            
+        #   Collaborator chooses package
+        @staticmethod
+        def choose_interview(data: schema.InterviewForm, db_session: Session, background_task: BackgroundTasks, current_user):
+            recruit_db = db_session.execute(select(model.RecruitResumeJoin).where(model.RecruitResumeJoin.user_id == current_user.id,
+                                                                                  model.RecruitResumeJoin.resume_id == data.cv_id)).scalars().all()
+            resume_result = General.get_detail_resume_by_id(data.cv_id, db_session)
+            if not recruit_db:
+                raise HTTPException(status_code=404, detail="Please choose package before choose interview form.")
+            
+            #   Update interview format
+            recruit_db.interview_form = data.interview_form
+            db.commit_rollback(db_session)
+            
+            #   Send mail according to InterviewForm
+            if data.interview_form.directly == schema.InterviewEnum.directly:
+                mail_content = f"""
+                <html>
+                    <body>
+                        <p> Dear {resume_result.ResumeVersion.name}, <br>
+                            Warm greetings from sharecv.vn !
+                            Your profile has been recommended on sharecv.vn. However, please be aware that only when we have your permission, the profile will be sent to the employer to review and evaluate. <br>
+                            Hence, please CLICK to below: <br>
+                            - <a href="https://sharecv.vn/?page=accept&id={user.id}&token=&act=accept">"Accept"</a> Job referral acceptance letter. <br>
+                            - <a href="https://sharecv.vn/?page=decline&id={user.id}&token=&act=decline">"Decline"</a> Job referral refusal letter. <br>
+                            Thank you for your cooperation. Should you need any further information or assistance, please do not hesitate to contact us. <br>
+
+                            Thanks and best regards, <br>
+                            Team ShareCV Customer Support <br>
+                            Hotline: 0888818006 – 0914171381 <br>
+                            Email: info@sharecv.vn <br>
+
+                            THANK YOU
+                        </p>
+                    </body>
+                </html>
+                """
+                #  Send mail
+                Collaborator.Resume.send_email_request(data.cv_id, mail_content, db_session, background_task)
+            elif data.interview_form.phone == schema.InterviewEnum.phone:
+                pass
+            else:
+                pass          
+            #   Update resume status 
+            resume_result.ResumeVersion.status = schema.ResumeStatus.waiting_accept_interview
+            db.commit_rollback(db_session)  
+            
+
+        @staticmethod
+        def get_candidate_reply_interview(cv_id: int, reply_status: schema.CandidateMailReply, db_session: Session):
+            resume_result = General.get_detail_resume_by_id(cv_id, db_session)       
+            if not resume_result.ResumeVersion.filename:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not find Resume")            
+            #   Update resume status 
+            if reply_status == schema.CandidateMailReply.accept:
+                resume_result.ResumeVersion.status = schema.ResumeStatus.candidate_accepted_interview
+            else:
+                resume_result.ResumeVersion.status = schema.ResumeStatus.candidate_rejected_interview                
+            db.commit_rollback(db_session)
     
     
 class Admin:
@@ -1571,7 +1629,8 @@ class Collaborator:
         
         
         @staticmethod
-        def send_email_request(cv_id: int, 
+        def send_email_request(
+                            cv_id: int, 
                             content: str,
                             db_session: Session,
                             background_tasks: BackgroundTasks):
@@ -1650,18 +1709,17 @@ class Collaborator:
 
 
         @staticmethod
-        def candidate_reply(cv_id: int, reply_status: schema.CandidateMailReply, db_session: Session, user):
-            resume_result = General.get_detail_resume_by_id(cv_id, db_session, user)       
+        def get_candidate_reply(cv_id: int, reply_status: schema.CandidateMailReply, db_session: Session):
+            resume_result = General.get_detail_resume_by_id(cv_id, db_session)       
             if not resume_result.ResumeVersion.filename:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not find Resume")
-            
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not find Resume")            
             #   Update resume status 
             if reply_status == schema.CandidateMailReply.accept:
                 resume_result.ResumeVersion.status = schema.ResumeStatus.candidate_accepted_interview
             else:
-                resume_result.ResumeVersion.status = schema.ResumeStatus.candidate_rejected_interview
-                
+                resume_result.ResumeVersion.status = schema.ResumeStatus.candidate_rejected_interview                
             db.commit_rollback(db_session)
+            
 
         @staticmethod
         def get_detail_resume(cv_id, db_session, user):
@@ -1780,16 +1838,24 @@ class Collaborator:
 
     
         @staticmethod
-        def list_candidate(db_session: Session, current_user): 
+        def list_candidate(is_draft: bool, db_session: Session, current_user): 
             
-            resume_query = select(model.Resume, model.ResumeVersion)    \
+            query = select(model.Resume, model.ResumeVersion)    \
                         .join(model.ResumeVersion, model.ResumeVersion.cv_id == model.Resume.id) \
                         .filter(model.Resume.user_id == current_user.id,
-                                model.ResumeVersion.is_draft == False)
-            resume_result = db_session.execute(resume_query).all()
-
-            return {
-                "data_lst": [{
+                                model.ResumeVersion.is_draft == is_draft)
+            results = db_session.execute(query).all()
+            
+            if is_draft:
+                return [{
+                    "id": result.ResumeVersion.cv_id,
+                    "fullname": result.ResumeVersion.name,
+                    "job_title": result.ResumeVersion.current_job,
+                    "industry": result.ResumeVersion.industry,
+                    "drafted_time": result.ResumeVersion.created_at
+                    } for result in results]
+            else:
+                return [{
                     "id": result.ResumeVersion.cv_id,
                     "fullname": result.ResumeVersion.name,
                     "email": result.ResumeVersion.email,
@@ -1799,9 +1865,7 @@ class Collaborator:
                     "job_service": General.get_job_by_id(result.Resume.job_id, db_session, current_user).job_service,
                     "status": result.ResumeVersion.status,
                     "referred_time": result.ResumeVersion.created_at
-                } for result in resume_result],
-                "data_len": len(resume_result)
-            }
+                    } for result in results]
 
 
         @staticmethod
@@ -1812,13 +1876,10 @@ class Collaborator:
             if not resume_result:
                 raise HTTPException(status_code=404, detail="Could not find any drafted resume")
 
-            return {
-                "data_lst": [{
-                    "id": result.cv_id,
-                    "fullname": result.name,
-                    "job_title": result.current_job,
-                    "industry": result.industry,
-                    "drafted_time": result.created_at
-                } for result in resume_result],
-                "data_len": len(resume_result)
-            }
+            return [{
+                "id": result.cv_id,
+                "fullname": result.name,
+                "job_title": result.current_job,
+                "industry": result.industry,
+                "drafted_time": result.created_at
+                } for result in results]
