@@ -1,0 +1,143 @@
+{
+  "education": [
+    {
+      "institution_name": "Hanoi University of Science And Technology",
+      "degree": "Bachelor’s degree",
+      "major": "Electronics and Telecomunications",
+      "gpa": "N/A",
+      "start_time": "2009",
+      "end_time": "2014"
+    }
+  ],
+  "work_experience": [
+    {
+      "company_name": "SOFTROAD VIETNAM",
+      "position": "Technical Expert/Team leader",
+      "working_industry": "Software & IT Services",
+      "start_time": "09/2022",
+      "end_time": "07/2023"
+    },
+    {
+      "company_name": "MEDRING VIETNAM (freelancer)",
+      "position": "Java developer/Solution Architecture",
+      "working_industry": "Software & IT Services",
+      "start_time": "04/2022",
+      "end_time": "12/2022"
+    },
+    {
+      "company_name": "ZYYX VIETNAM",
+      "position": "Team Leader/Solution Architecture",
+      "working_industry": "Software & IT Services",
+      "start_time": "04/2021",
+      "end_time": "04/2022"
+    },
+    {
+      "company_name": "SVMC - SAMSUNG VIETNAM MOBILE R&D CENTER",
+      "position": "Backend Developer/Technical Leader",
+      "working_industry": "Software & IT Services",
+      "start_time": "07/2015",
+      "end_time": "02/2021"
+    }
+  ],
+  "skills": {
+    "spoken_language": [
+      "N/A"
+    ],
+    "programming_language": [
+      "Java",
+      "Spring",
+      "Laravel",
+      "Python",
+      "Scala"
+    ],
+    "soft_skill": [
+      "N/A"
+    ],
+    "hard_skill": [
+      "AWS",
+      "Jenkins",
+      "Gitlab",
+      "Docker",
+      "MySQL",
+      "PostgreSQL"
+    ]
+  },
+  "achievements_and_honors": "N/A",
+  "project": [
+    {
+      "project_name": "Hino",
+      "start_time": "2022",
+      "end_time": "Present",
+      "detailed_descriptions": "System Reform project, developed new tools for low-code system and converted old source code to new one"
+    },
+    {
+      "project_name": "Madi/Medi",
+      "start_time": "04/2022",
+      "end_time": "12/2022",
+      "detailed_descriptions": "Created a website and server for clinics and hospitals in Vietnam, implemented HL7 standard"
+    },
+    {
+      "project_name": "Nurshare",
+      "start_time": "04/2021",
+      "end_time": "04/2022",
+      "detailed_descriptions": "Developed a website for doctors and nurses to share information"
+    },
+    {
+      "project_name": "Tokaimura",
+      "start_time": "04/2021",
+      "end_time": "12/2022",
+      "detailed_descriptions": "Built a system to alert disaster in Japan, crawled data from various sources"
+    },
+    {
+      "project_name": "ABFinder",
+      "start_time": "04/2021",
+      "end_time": "04/2022",
+      "detailed_descriptions": "Developed a website for managing company products and customer orders"
+    },
+    {
+      "project_name": "Dashboard",
+      "start_time": "2019",
+      "end_time": "2020",
+      "detailed_descriptions": "Created a system for analyzing employee performance and generating reports"
+    },
+    {
+      "project_name": "Galaxy gift",
+      "start_time": "2018",
+      "end_time": "2019",
+      "detailed_descriptions": "Developed an application for Samsung mobiles in Vietnam, provided free vouchers and social networking features"
+    },
+    {
+      "project_name": "Samsung Positioning (Indoor)",
+      "start_time": "2015",
+      "end_time": "2019",
+      "detailed_descriptions": "Helped Samsung devices determine their position without GPS"
+    }
+  ],
+  "job_title": "Developer",
+  "levels": "Developer",
+  "certificates": {
+    "language_certificates": [],
+    "other_certificates": []
+  },
+  "industry": "Software & IT Services",
+  "objectives": "N/A",
+  "personal_information": {
+    "name": "DINH DOAN PHU",
+    "current_job_position": "Developer",
+    "gender": "Male",
+    "linkedin": "N/A",
+    "website": "N/A",
+    "facebook": "N/A",
+    "instagram": "N/A",
+    "earliest_university_year": "2009",
+    "birthday": "1991"
+  },
+  "contact_information": {
+    "phone": "N/A",
+    "email": "N/A",
+    "country": "N/A",
+    "city": "N/A",
+    "address": "N/A"
+  },
+  "orientation": "N/A"
+}

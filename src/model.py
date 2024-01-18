@@ -113,7 +113,7 @@ class JobDescription(TableBase, table=True):
     jd_file: str = Field(default=None)
     status: str = Field(default="pending")
     is_draft: bool = Field(default=False)
-    # is_active: bool = Field(default=True)
+    is_active: bool = Field(default=True)
     is_admin_approved: bool = Field(default=False)      # Admin filtered Job
     admin_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
     company_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
@@ -143,6 +143,7 @@ class Resume(TableBase, table=True):
     __tablename__ = 'resumes'    
     user_id: int = Field(default=None, foreign_key="users.id")
     job_id: int = Field(default=None, foreign_key="job_descriptions.id")
+    is_active: bool = Field(default=True)
 
 
 class ValuationInfo(TableBase, table=True):
@@ -169,9 +170,8 @@ class ResumeVersion(TableBase, table=True):
     level: str = Field(default=None) 
     gender: str = Field(default=None)
     current_job: str = Field(default=None)
-    industry: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
+    industry: str = Field(default=None)
     skills: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
-    current_job_industry: str = Field(default=None)
     email: str = Field(default=None)
     phone: str = Field(default=None)  
     address: str = Field(default=None, sa_column=Column(TEXT))

@@ -1655,8 +1655,9 @@ class Collaborator:
 
             matching_result, saved_dir = Collaborator.Resume.matching_base(cv_filename=resume_result.ResumeVersion.filename, 
                                                             jd_filename=job_result.jd_file.split("/")[-1])
-            
-            overall_score = int(matching_result["overall"]["score"][0])
+            print("========================================")
+            print(matching_result["overall"]["score"])
+            overall_score = int(matching_result["overall"]["score"])
             if overall_score >= 50:
                 mail_content = f"""
                 <html>
@@ -1868,18 +1869,18 @@ class Collaborator:
                     } for result in results]
 
 
-        @staticmethod
-        def list_draft_candidate(db_session: Session, current_user):
-            resume_query = select(model.ResumeVersion).where(model.ResumeVersion.cv_id == current_user.id,
-                                                            model.ResumeVersion.is_draft == True)
-            resume_result = db_session.execute(resume_query).scalars().all() 
-            if not resume_result:
-                raise HTTPException(status_code=404, detail="Could not find any drafted resume")
+        # @staticmethod
+        # def list_draft_candidate(db_session: Session, current_user):
+        #     resume_query = select(model.ResumeVersion).where(model.ResumeVersion.cv_id == current_user.id,
+        #                                                     model.ResumeVersion.is_draft == True)
+        #     resume_result = db_session.execute(resume_query).scalars().all() 
+        #     if not resume_result:
+        #         raise HTTPException(status_code=404, detail="Could not find any drafted resume")
 
-            return [{
-                "id": result.cv_id,
-                "fullname": result.name,
-                "job_title": result.current_job,
-                "industry": result.industry,
-                "drafted_time": result.created_at
-                } for result in results]
+        #     return [{
+        #         "id": result.cv_id,
+        #         "fullname": result.name,
+        #         "job_title": result.current_job,
+        #         "industry": result.industry,
+        #         "drafted_time": result.created_at
+        #         } for result in results]

@@ -882,6 +882,10 @@ def resume_matching(
                                     "score": matching_result["education"]["score"],
                                     "explanation": matching_result["education"]["explanation"]
                                 },
+                            "orientation": {
+                                    "score": matching_result["orientation"]["score"],
+                                    "explanation": matching_result["orientation"]["explanation"]
+                                },
                             "overall": {
                                     "score": matching_result["overall"]["score"],
                                     "explanation": matching_result["overall"]["explanation"]
@@ -944,10 +948,11 @@ def get_matching_result(
     )
 
 
-@router.get("/collaborator/get-list-candidate",
+@router.get("/collaborator/get-list-candidate/{is_draft}",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def list_candidate(
+            is_draft: bool,
             db_session: Session = Depends(db.get_session),
             credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
@@ -955,29 +960,29 @@ def list_candidate(
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    result = service.Collaborator.Resume.list_candidate(db_session, current_user)
+    result = service.Collaborator.Resume.list_candidate(is_draft, db_session, current_user)
     return schema.CustomResponse(
                     message="Get list candidate successfully.",
                     data=result
     )
 
 
-@router.get("/collaborator/list-draft-candidate",
-             status_code=status.HTTP_201_CREATED, 
-             response_model=schema.CustomResponse)
-def list_draft_candidate(
-            db_session: Session = Depends(db.get_session),
-            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+# @router.get("/collaborator/list-draft-candidate",
+#              status_code=status.HTTP_201_CREATED, 
+#              response_model=schema.CustomResponse)
+# def list_draft_candidate(
+#             db_session: Session = Depends(db.get_session),
+#             credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
     
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
+#     # Get curent active user
+#     _, current_user = get_current_active_user(db_session, credentials)
 
-    result = service.Collaborator.Resume.list_draft_candidate(db_session, current_user)
-    return schema.CustomResponse(
-                    message="Get list candidate successfully.",
-                    data=result
-    )
+#     result = service.Collaborator.Resume.list_draft_candidate(db_session, current_user)
+#     return schema.CustomResponse(
+#                     message="Get list candidate successfully.",
+#                     data=result
+#     )
     
     
 # ===========================================================

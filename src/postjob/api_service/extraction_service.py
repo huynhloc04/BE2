@@ -81,6 +81,9 @@ class Extraction:
         
         job_template = f"""
         [JOB DESCRIPTION]
+          [Original Job Description]
+            {jd_text}
+          [Extracted Job Description]
             1. Job Title: {jd_data['job_title'][0]}
 
             2. Experience
@@ -100,6 +103,9 @@ class Extraction:
 
         resume_template = f"""
         [RESUME]
+          [Original Resume]
+            {cv_text}
+          [Extracted Resume]
             1. Job Title: {cv_data['job_title'][0]}
 
             2. Experience:
