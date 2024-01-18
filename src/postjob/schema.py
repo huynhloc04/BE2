@@ -19,6 +19,15 @@ class CollaborateJobStatus(str, Enum):
     def __str__(self):
         return f"{self.value}"
     
+    
+class InterviewEnum(str, Enum):
+    directly = "Phỏng vân trực tiếp"
+    phone = "Phỏng vân điện thoại"
+    other = "Hình thức khác"
+
+    def __str__(self):
+        return f"{self.value}"
+    
 
 class CandidateMailReply(str, Enum):
     accept = "accept"
@@ -136,6 +145,26 @@ class JobStatus(str, Enum):
 
     def __str__(self):
         return f"{self.value}"
+    
+
+class InterviewForm(BaseModel):
+    cv_id: int
+    interview_form: InterviewEnum
+    
+class DirectlyInterviewMail(BaseModel):
+    time: datetime
+    location: str
+    start_time: datetime
+    end_time: datetime
+    detail: str
+    
+class PhoneInterviewMail(BaseModel):
+    time: datetime
+    start_time: datetime
+    end_time: datetime
+    
+class OtherInterviewMail(BaseModel):
+    content: str
     
 
 class CompanyInfo(BaseModel):
