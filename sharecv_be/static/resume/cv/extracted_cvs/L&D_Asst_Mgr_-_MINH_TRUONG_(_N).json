@@ -1,0 +1,141 @@
+{
+  "education": [
+    {
+      "institution_name": "Glints Vietnam",
+      "degree": "N/A",
+      "major": "N/A",
+      "gpa": "N/A",
+      "start_time": "09/2021",
+      "end_time": "Present"
+    },
+    {
+      "institution_name": "DUY KHANG Ltd.",
+      "degree": "N/A",
+      "major": "N/A",
+      "gpa": "N/A",
+      "start_time": "05/2017",
+      "end_time": "12/2020"
+    },
+    {
+      "institution_name": "SGH ASIA",
+      "degree": "N/A",
+      "major": "N/A",
+      "gpa": "N/A",
+      "start_time": "07/2016",
+      "end_time": "05/2017"
+    },
+    {
+      "institution_name": "NIDEC VIETNAM CORPORATION",
+      "degree": "N/A",
+      "major": "N/A",
+      "gpa": "N/A",
+      "start_time": "06/2015",
+      "end_time": "06/2016"
+    },
+    {
+      "institution_name": "POSCO VIETNAM Ltd.",
+      "degree": "N/A",
+      "major": "N/A",
+      "gpa": "N/A",
+      "start_time": "06/2014",
+      "end_time": "06/2015"
+    }
+  ],
+  "work_experience": [
+    {
+      "company_name": "Glints Vietnam",
+      "position": "Training and Development Manager",
+      "working_industry": "N/A",
+      "start_time": "09/2021",
+      "end_time": "Present"
+    },
+    {
+      "company_name": "DUY KHANG Ltd.",
+      "position": "General Training Manager",
+      "working_industry": "N/A",
+      "start_time": "05/2017",
+      "end_time": "12/2020"
+    },
+    {
+      "company_name": "SGH ASIA",
+      "position": "Training Manager",
+      "working_industry": "N/A",
+      "start_time": "07/2016",
+      "end_time": "05/2017"
+    },
+    {
+      "company_name": "NIDEC VIETNAM CORPORATION",
+      "position": "Team Leader",
+      "working_industry": "N/A",
+      "start_time": "06/2015",
+      "end_time": "06/2016"
+    },
+    {
+      "company_name": "POSCO VIETNAM Ltd.",
+      "position": "Marketing Team Leader",
+      "working_industry": "N/A",
+      "start_time": "06/2014",
+      "end_time": "06/2015"
+    }
+  ],
+  "skills": {
+    "spoken_language": "N/A",
+    "programming_language": "N/A",
+    "soft_skill": "Ultimate Middle Management, Effective communication, Planning skill, Staff training and development, Motivation skill, Problem solving",
+    "hard_skill": "Time management, Customer service, Sales B2C / B2B, Presentation skills"
+  },
+  "achievements_and_honors": "N/A",
+  "project": [
+    {
+      "project_name": "Building and Improving NewHire Onboarding Orientation",
+      "start_time": "N/A",
+      "end_time": "N/A",
+      "detailed_descriptions": "Achieved 90% completion rate, set as the standard for other 6 BUs"
+    },
+    {
+      "project_name": "Training Materials and delivering Training programs",
+      "start_time": "N/A",
+      "end_time": "N/A",
+      "detailed_descriptions": "Increased capacity for Sales Team & Recruitment Team monthly"
+    },
+    {
+      "project_name": "Designing Training Projects",
+      "start_time": "N/A",
+      "end_time": "N/A",
+      "detailed_descriptions": "Onboarding & Orientation, Products Training, Train The Trainer, Soft Skill Training for Recruiters, Soft Skill Training for BDs, Soft Skill Training for AMs, and Soft Skill Training for Leaders"
+    },
+    {
+      "project_name": "Designing Training Career Roadmap",
+      "start_time": "N/A",
+      "end_time": "N/A",
+      "detailed_descriptions": "The Succession Planning"
+    }
+  ],
+  "job_title": "Training and Development Manager",
+  "levels": "Senior Manager",
+  "certificates": {
+    "language_certificates": [],
+    "other_certificates": []
+  },
+  "industry": "N/A",
+  "objectives": "N/A",
+  "personal_information": {
+    "name": "NGUYEN HUU MINH TRUONG",
+    "current_job_position": "Training and Development Manager",
+    "gender": "N/A",
+    "linkedin": "https://www.linkedin.com/in/truong-nguyen-6a852362/",
+    "website": "N/A",
+    "facebook": "http://www.facebook.com/truong.nguyenhuuminh?",
+    "instagram": "N/A",
+    "earliest_university_year": "N/A",
+    "birthday": "N/A"
+  },
+  "contact_information": {
+    "phone": "0906.857.831",
+    "email": "truong.nguyenhuuminh@gmail.com",
+    "country": "N/A",
+    "city": "N/A",
+    "address": "N/A"
+  },
+  "orientation": "N/A"
+}

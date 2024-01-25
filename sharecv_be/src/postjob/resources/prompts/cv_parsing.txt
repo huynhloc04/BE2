@@ -1,0 +1,174 @@
+Please extract the above [Resume] exactly according to the corresponding keys and values as the following headers in JSON format. 
+(Inside each header below are smaller headers, you must follow strictly that format and do not omit any that small headers even if you cannot find any information about it.)
+{
+  "education": ["list"] (Do not combine school and university together)
+  [{
+    "institution_name": ["string"],
+    "degree": ["string"],
+    "major": ["string"],
+    "gpa": ["string"],
+    "start_time": ["string"],
+    "end_time": ["string"]
+  }],
+  "work_experience": (Do not combine companies together, please keep them separately)
+  [{
+    "company_name": ["string"],
+    "position": ["string"],
+    "working_industry: ["string"], 
+    "start_time": ["string"],
+    "end_time": ["string"]
+  }],
+  "skills": {
+    "spoken_language": ["string"],
+    "programming_language": ["string"],
+    "soft_skill": ["string"],
+    "hard_skill": ["string"]
+  },
+  "achievements_and_honors": ["string"],
+  "project": (Do not combine projects together, please keep them separately)
+  [{
+    "project_name": ["string"],
+    "start_time": ["string"],
+    "end_time": ["string"],
+    "detailed_descriptions": ["string"] (Do not omit any information)
+  }],
+  "job_title": ["string"],
+  "levels": ["string"] (Based on information provided in [Resume] and levels listed below, you must choose the exact curent working level that this candidate is:
+    - Executive
+    - Senior
+    - Engineer
+    - Developer
+    - Leader
+    - Supervisor
+    - Senior Leader
+    - Senior Supervisor
+    - Assitant Manager
+    - Manager
+    - Senior Manager
+    - Assitant Director
+    - Vice Direcctor
+    - Deputy Direcctor
+    - Director
+    - Head
+    - Group (All levels that relevant to word: 'Group')
+    - Chief Operating Officer (COO)
+    - Chief Executive Officer (CEO)
+    - Chief Product Officer (CPO)
+    - Chief Financial Officer (CFO)
+    - General Manager
+    - General Director
+  ),
+  "certificates":    (Based on "certificate_format" defined as below, please choose "certificate_language", "certificate_name", "certificate_point_level" exactly with certificate information provided in Resume
+        "certificate_format": {
+            "certificate_language": {
+                "English": {
+                    "certificate_name": {
+                        "TOEIC": {
+                            "certificate_point/level": [0 - 990]   (Choose TOEIC point from 0 to 990)
+                        },
+                        "IELTS": {
+                            "certificate_point/level": [0 - 9.0]   (Choose IELTS point from 0 to 9.0)
+                        }
+                    }
+                },
+                "Japan": {
+                    "certificate_point/level": {
+                        "N1",
+                        "N2",
+                        "N3",
+                        "N4",
+                        "N5"
+                    }
+                },
+                "Korean": {
+                    "certificate_name": {
+                        "Topik I": {
+                            "certificate_point/level": {
+                                "Level 1",
+                                "Level 2"
+                            }
+                        },
+                        "Topik II": {
+                            "certificate_point/level": {
+                                "Level 3",
+                                "Level 4",
+                                "Level 5",
+                                "Level 6"
+                            }
+                        }
+                    }
+                },
+                "Chinese": {
+                    "certificate_point/level": {
+                        "HSK-1",
+                        "HSK-2",
+                        "HSK-3",
+                        "HSK-4",
+                        "HSK-5",
+                        "HSK-6"
+                    }
+                }
+            }
+        }
+    ). The certificate result must follows strictly as format below.
+    {
+    "language_certificates": [{
+        "certificate_language": ["string"],
+        "certificate_name": ["string"],
+        "certificate_point/level": ["string"]
+    }],
+    "other_certificates": [{     (Certificates that is not relevant to language certificates)
+        "certificate_name": ["string"],
+        "certificate_level": ["string"]
+    }]
+  },
+  "industry": ["string"] (Based on information provided in [Resume] and industries listed below, you must choose the working industry that the candidate is currently working on:
+    - Education
+    - Construction
+    - Design
+    - Corporate Services
+    - Retail
+    - Energy & Mining
+    - Manufacturing
+    - Finance
+    - Recreation & Travel
+    - Arts
+    - Health Care
+    - Hardware & Networking
+    - Software & IT Services
+    - Real Estate
+    - Legal
+    - Agriculture
+    - Media & Communications
+    - Transportation & Logistics
+    - Entertainment
+    - Wellness & Fitness
+    - Public Safety
+    - Public Administration
+    ),
+  "objectives": ["string"],
+  "personal_information": {
+    "name": ["string"], 
+    "current_job_position": ["string"],
+    "gender": ["string"],
+    "linkedin": ["string"],
+    "website": ["string"],
+    "facebook": ["string"],
+    "instagram": ["string"],
+    "earliest_university_year": ["string"],
+    "birthday": ["string"], (if the birthday is not available, calculate exactly "year of birth" based on the earliest education year if birthday information is not provided in resume. The earliest education when candidate is 18 years old, so "year of birth" equal "Earliest university year" minus 18.)
+  },
+  "contact_information": {
+    "phone": ["string"],
+    "email": ["string"],
+    "country": ["string"],
+    "city": ["string"],
+    "address": ["string"]
+  },
+  "orientation": ["string"]
+}
+
+Important:
+  - ["string"] mean a list of string, even if there is only one item, put it in a list of one string item.
+  - Any information is not found, please note it as "N/A".
+  - All the key has to be all lower form and each word must connect by underscore "_"

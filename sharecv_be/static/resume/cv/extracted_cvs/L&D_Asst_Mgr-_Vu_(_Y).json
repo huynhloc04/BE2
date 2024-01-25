@@ -1,0 +1,224 @@
+{
+  "education": [
+    {
+      "institution_name": [
+        "Houston Community College"
+      ],
+      "degree": [
+        "Business Administration"
+      ],
+      "major": [
+        "N/A"
+      ],
+      "gpa": [
+        "N/A"
+      ],
+      "start_time": [
+        "2007"
+      ],
+      "end_time": [
+        "2011"
+      ]
+    }
+  ],
+  "work_experience": [
+    {
+      "company_name": [
+        "Ninjavan"
+      ],
+      "position": [
+        "Training Manager/ L&D Manager"
+      ],
+      "working_industry": [
+        "Logistic"
+      ],
+      "start_time": [
+        "01/2022"
+      ],
+      "end_time": [
+        "07/2023"
+      ]
+    },
+    {
+      "company_name": [
+        "Kohnan Shoji"
+      ],
+      "position": [
+        "Training Manager"
+      ],
+      "working_industry": [
+        "Home Center & supermarket"
+      ],
+      "start_time": [
+        "05/2021"
+      ],
+      "end_time": [
+        "12/2021"
+      ]
+    },
+    {
+      "company_name": [
+        "TARA JSC"
+      ],
+      "position": [
+        "Training Manager"
+      ],
+      "working_industry": [
+        "Electric Appliances"
+      ],
+      "start_time": [
+        "02/2019"
+      ],
+      "end_time": [
+        "05/2021"
+      ]
+    },
+    {
+      "company_name": [
+        "VMG"
+      ],
+      "position": [
+        "Training & Development Manager"
+      ],
+      "working_industry": [
+        "Luxury Fashion"
+      ],
+      "start_time": [
+        "02/2017"
+      ],
+      "end_time": [
+        "02/2019"
+      ]
+    },
+    {
+      "company_name": [
+        "Q-mobile"
+      ],
+      "position": [
+        "Training & Development Specialist"
+      ],
+      "working_industry": [
+        "Mobile phone"
+      ],
+      "start_time": [
+        "07/2012"
+      ],
+      "end_time": [
+        "02/2017"
+      ]
+    }
+  ],
+  "skills": {
+    "spoken_language": [
+      "English"
+    ],
+    "programming_language": [
+      "N/A"
+    ],
+    "soft_skill": [
+      "Coaching",
+      "Public Speaking",
+      "Management",
+      "Teamwork"
+    ],
+    "hard_skill": [
+      "N/A"
+    ]
+  },
+  "achievements_and_honors": [
+    "N/A"
+  ],
+  "project": [
+    {
+      "project_name": [
+        "N/A"
+      ],
+      "start_time": [
+        "N/A"
+      ],
+      "end_time": [
+        "N/A"
+      ],
+      "detailed_descriptions": [
+        "N/A"
+      ]
+    }
+  ],
+  "job_title": [
+    "Training Manager/ L&D Manager"
+  ],
+  "levels": [
+    "Manager"
+  ],
+  "certificates": {
+    "language_certificates": [
+      {
+        "certificate_language": [
+          "English"
+        ],
+        "certificate_name": [
+          "TOEIC"
+        ],
+        "certificate_point/level": [
+          "N/A"
+        ]
+      }
+    ],
+    "other_certificates": []
+  },
+  "industry": [
+    "Logistic"
+  ],
+  "objectives": [
+    "N/A"
+  ],
+  "personal_information": {
+    "name": [
+      "Mr. Pham Hoang Vu"
+    ],
+    "current_job_position": [
+      "Training Manager/ L&D Manager"
+    ],
+    "gender": [
+      "N/A"
+    ],
+    "linkedin": [
+      "N/A"
+    ],
+    "website": [
+      "N/A"
+    ],
+    "facebook": [
+      "N/A"
+    ],
+    "instagram": [
+      "N/A"
+    ],
+    "earliest_university_year": [
+      "2007"
+    ],
+    "birthday": [
+      "N/A"
+    ]
+  },
+  "contact_information": {
+    "phone": [
+      "0772 482 487"
+    ],
+    "email": [
+      "vuph.network@gmail.com"
+    ],
+    "country": [
+      "N/A"
+    ],
+    "city": [
+      "Dist. 2, HCMC"
+    ],
+    "address": [
+      "N/A"
+    ]
+  },
+  "orientation": [
+    "N/A"
+  ]
+}

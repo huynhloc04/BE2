@@ -1,0 +1,52 @@
+{
+  "error": 0,
+  "message": "success",
+  "data": {
+    "page": 1,
+    "pageSize": 10,
+    "nextPage": 1,
+    "prevPage": 1,
+    "totalPages": 1,
+    "totalRecords": 2,
+    "records": [
+      {
+        "id": 5480660,
+        "tid": "FT24018051147037\\BNK",
+        "description": "CUSTOMER IBFT HUYNH TAN LOC chuyen tien   Ma  giao dich  Trace178863 Trace 17886",
+        "amount": 20000,
+        "cusumBalance": 20000,
+        "when": "2024-01-18T15:02:00",
+        "bookingDate": null,
+        "bankSubAccId": "0377081411",
+        "paymentChannel": "",
+        "virtualAccount": "",
+        "virtualAccountName": "",
+        "corresponsiveName": "",
+        "corresponsiveAccount": "",
+        "corresponsiveBankId": "",
+        "corresponsiveBankName": "",
+        "accountId": 6905,
+        "bankCodeName": "mbbank"
+      },
+      {
+        "id": 5480813,
+        "tid": "FT24018994673004",
+        "description": "CUSTOMER HUYNH TAN LOC chuyen khoan - Ma gia o dich/ Trace 079933",
+        "amount": -20000,
+        "cusumBalance": 0,
+        "when": "2024-01-18T15:15:00",
+        "bookingDate": null,
+        "bankSubAccId": "0377081411",
+        "paymentChannel": "",
+        "virtualAccount": "",
+        "virtualAccountName": "",
+        "corresponsiveName": "HUYNH TAN LOC",
+        "corresponsiveAccount": "040105912619",
+        "corresponsiveBankId": "",
+        "corresponsiveBankName": "STB Ngan hang TMCP Sai Gon Thuong Tin",
+        "accountId": 6905,
+        "bankCodeName": "mbbank"
+      }
+    ]
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "education": [
+    {
+      "institution_name": "Viet Nam National University - HCMC",
+      "degree": "IT Software",
+      "major": "N/A",
+      "gpa": "N/A",
+      "start_time": "Oct, 2005",
+      "end_time": "2010"
+    },
+    {
+      "institution_name": "Lotus College",
+      "degree": "Graphic Art Design",
+      "major": "N/A",
+      "gpa": "N/A",
+      "start_time": "Sep, 2005",
+      "end_time": "Feb, 2006"
+    },
+    {
+      "institution_name": "University of Economics HCMC",
+      "degree": "Business Administration",
+      "major": "N/A",
+      "gpa": "N/A",
+      "start_time": "Jul, 2010",
+      "end_time": "Feb, 2011"
+    },
+    {
+      "institution_name": "Dong Nai Labour and Social Welfare Service",
+      "degree": "Soft skills in management",
+      "major": "N/A",
+      "gpa": "N/A",
+      "start_time": "2010",
+      "end_time": "N/A"
+    },
+    {
+      "institution_name": "Institute of Human Resource Development - University of Economics HCMC",
+      "degree": "HR Management & CPO",
+      "major": "N/A",
+      "gpa": "N/A",
+      "start_time": "Oct, 2011",
+      "end_time": "N/A"
+    }
+  ],
+  "work_experience": [
+    {
+      "company_name": "Enercon Vietnam Co., Ltd",
+      "position": "HR Specialist",
+      "working_industry": "N/A",
+      "start_time": "Jan 2021",
+      "end_time": "Present"
+    },
+    {
+      "company_name": "ON Semiconductor Vietnam Co., Ltd",
+      "position": "ER Section Head",
+      "working_industry": "N/A",
+      "start_time": "Jul 2019",
+      "end_time": "2020"
+    },
+    {
+      "company_name": "INTERFLOUR Vietnam Limited",
+      "position": "HR Supervisor",
+      "working_industry": "N/A",
+      "start_time": "Jan 2016",
+      "end_time": "Jul 2019"
+    },
+    {
+      "company_name": "AMWAY Viet Nam Company Limited",
+      "position": "HR Specialist",
+      "working_industry": "N/A",
+      "start_time": "Nov 2013",
+      "end_time": "Dec 2015"
+    },
+    {
+      "company_name": "INTERFLOUR Viet Nam Limited",
+      "position": "HR Assistant",
+      "working_industry": "N/A",
+      "start_time": "May 2012",
+      "end_time": "Oct 2013"
+    },
+    {
+      "company_name": "LLG VINA Limited Liability Company",
+      "position": "HR Assistant Manager",
+      "working_industry": "N/A",
+      "start_time": "Feb 2011",
+      "end_time": "May 2012"
+    },
+    {
+      "company_name": "SANYO DI SOLUTIONS VIET NAM Cooperation Company",
+      "position": "HR Supervisor",
+      "working_industry": "N/A",
+      "start_time": "Feb 2007",
+      "end_time": "Feb 2011"
+    }
+  ],
+  "skills": {
+    "spoken_language": [
+      "English"
+    ],
+    "programming_language": [
+      "N/A"
+    ],
+    "soft_skill": [
+      "problem solving",
+      "collaboration",
+      "time management"
+    ],
+    "hard_skill": [
+      "N/A"
+    ]
+  },
+  "achievements_and_honors": "N/A",
+  "project": [
+    {
+      "project_name": "N/A",
+      "start_time": "N/A",
+      "end_time": "N/A",
+      "detailed_descriptions": [
+        "N/A"
+      ]
+    }
+  ],
+  "job_title": "HR Specialist",
+  "levels": [
+    "Senior"
+  ],
+  "certificates": {
+    "language_certificates": [
+      {
+        "certificate_language": "English",
+        "certificate_name": "TOEIC",
+        "certificate_point/level": "N/A"
+      }
+    ],
+    "other_certificates": []
+  },
+  "industry": [
+    "N/A"
+  ],
+  "objectives": "N/A",
+  "personal_information": {
+    "name": "DUONG NHUT UYEN",
+    "current_job_position": "HR Specialist",
+    "gender": "Female",
+    "linkedin": "N/A",
+    "website": "N/A",
+    "facebook": "N/A",
+    "instagram": "N/A",
+    "earliest_university_year": "2005",
+    "birthday": "March 23, 1983"
+  },
+  "contact_information": {
+    "phone": "093-855-7728",
+    "email": "duongnhutuyen@gmail.com",
+    "country": "N/A",
+    "city": "Bien Hoa City",
+    "address": "1615/40/8, Group 3, Thong Nhat Ward, Bien Hoa City, Dong Nai Province"
+  },
+  "orientation": "N/A"
+}
