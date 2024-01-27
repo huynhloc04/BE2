@@ -2,6 +2,7 @@ import model
 import os, shutil, json
 import pandas as pd
 import pyarrow as pa
+import subprocess
 import pyarrow.parquet as pq
 from config import db
 from money2point import schema
@@ -69,52 +70,60 @@ class MoneyPoint:
         db_session.add(package_db)
         db.commit_rollback(db_session)
 
-    @staticmethod
-    def add_point_cart(
-                    data: schema.ChoosePackage,
-                    db_session: Session,
-                    current_user):
-        #   Update if cart already exist
-        cart_db = db_session.execute(select(model.UserPointCart).where(and_(model.UserPointCart.user_id == current_user.id,
-                                                                            model.UserPointCart.package_id == data.package_id))).scalars().first()
-        if cart_db:
-            cart_db.quantity += data.quantity
-        else:
-            cart_db = model.UserPointCart(
-                                    user_id=current_user.id,
-                                    package_id=data.package_id,
-                                    quantity=data.quantity
-            )
-            db_session.add(cart_db)
-        db.commit_rollback(db_session)
-        return cart_db
-
 
     @staticmethod
-    def list_point_cart(db_session: Session, current_user):
-        cart_query = select(model.UserPointCart, model.PointPackage)    \
-                                .join(model.PointPackage, model.UserPointCart.package_id == model.PointPackage.id)  \
-                                .filter(model.UserPointCart.user_id == current_user.id)
-        results = db_session.execute(cart_query).all()
-        print(results)
+    def list_point_package(db_session: Session):
+        package_db = db_session.execute(select(model.PointPackage)).scalars().all()
+        return package_db
+    
+
+    @staticmethod
+    def purchase_point(
+            data: schema.PurchasePoint,
+            curl_command_str: str,
+            db_session: Session,
+            current_user):
+
+        result = subprocess.run(
+                        curl_command_str,
+                        shell=True,
+                        capture_output=True,
+                        text=True
+        )
+        #   Check if banked money == required money
+        if result.returncode["data"]["records"][0]["amount"] == data.total_price:
+            point_package = db_session.execute(select(model.PointPackage).where(model.PointPackage.id == data.package_id)).scalars().first()
+            current_user.point += data.quantity * point_package.point
+            #   Add to purchase history
+            purchase_db = model.TransactionHistory(
+                                            user_id=current_user.id,
+                                            point=point_package.point,
+                                            price=point_package.price,
+                                            quantity=data.quantity,
+                                            total_price=data.total_price,
+                                            transaction_form=data.transaction_form
+            ) 
+            db_session.add(purchase_db)
+            db.commit_rollback(db_session)
+
+        return {
+            "return_code": result.returncode["data"]["records"][0],
+            "response_content": result.stdout
+        }
+
+    @staticmethod
+    def list_history_purchase(db_session: Session, current_user):
+        query = select(model.TransactionHistory).where(model.TransactionHistory.user_id == current_user.id)
+        results = db_session.execute(query).scalars().all()
         return [{
-            "package_id": result.UserPointCart.package_id,
-            "package_name": result.PointPackage.point,
-            "price": result.PointPackage.price,
-            "quantity": result.UserPointCart.quantity,
-            "total": result.UserPointCart.quantity * result.PointPackage.price
+            "id": result.id,
+            "point": result.point,
+            "price": result.price,
+            "quantity": result.quantity,
+            "total_price": result.total_price,
+            "transaction_form": result.transaction_form,
+            "transaction_date": result.created_at,
         } for result in results]
-
-
-    @staticmethod
-    def delete_point_package(package_id: int, db_session: Session, current_user):
-        
-        cart_db = db_session.execute(select(model.UserPointCart).where(and_(model.UserPointCart.user_id == current_user.id,
-                                                                            model.UserPointCart.package_id == package_id))).scalars().first()
-        if not cart_db:
-            raise HTTPException(status_code=404, detail="Package not found!")
-        db_session.delete(cart_db)
-        db.commit_rollback(db_session)
 
 
 
