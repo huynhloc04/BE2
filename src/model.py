@@ -305,8 +305,7 @@ class RecruitResumeJoin(SQLModel, table=True):
     decline_reason: str = Field(default=None, sa_column=Column(TEXT))
     interview_form : str = Field(default=None)
     
-class RecruitResumeCart(SQLModel, table=True):
-    
+class RecruitResumeCart(SQLModel, table=True):    
     __tablename__ = "recruit_resume_carts"
     user_id: Optional[int] = Field(
         default=None,
@@ -320,51 +319,22 @@ class RecruitResumeCart(SQLModel, table=True):
     )
     
     
+#   ==============================================================
+#                           Payment
+#   ==============================================================
+
 class PointPackage(TableBase, table=True):
     __tablename__ = 'point_packages'    
     point: int = Field(default=None)
     price: float = Field(default=None)
     currency: str = Field(default=None)
 
-
-class RecruitPointCart(SQLModel, table=True):
     
-    __tablename__ = "user_point_carts"
-    user_id: Optional[int] = Field(
-        default=None,
-        foreign_key="users.id",
-        primary_key=True,
-    )
-    package_id: Optional[int] = Field(
-        default=None,
-        foreign_key="point_packages.id",
-        primary_key=True,
-    )
+class TransactionHistory(TableBase, table=True):    
+    __tablename__ = "transaction_histories"
+    user_id: int = Field(default=None, foreign_key="users.id")
+    point: int =  Field(default=None)   #   package_name
+    price: float = Field(default=0)
     quantity: int = Field(default=0)
-
-
-
-
-
-
-
-# class JobDescription(TableBase, table=True):
-#     __tablename__ = 'job_descriptions'
-
-#     user_id: int = Field(default=None, foreign_key="users.id")
-#     company_id: int = Field(default=None, foreign_key="companies.id")
-#     status: str = Field(default=None)
-#     job_service: str = Field(default=None)
-#     job_title: str = Field(default=None)
-#     industries: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
-#     gender: Optional[str] = Field(default=None)
-
-
-# class Resume(TableBase, table=True):
-#     __tablename__ = 'resumes'    
-#     user_id: int = Field(default=None, foreign_key="users.id")
-#     job_id: int = Field(default=None, foreign_key="job_descriptions.id")
-#     is_active: bool = Field(default=True)
-
-
-# Write SQLModel query to get all attributes of jobs in JobDescription table and count the number of resumes of the relevant Jobs, count=0 when job does not have any resume
+    total_price: float = Field(default=0)
+    transaction_form: str =  Field(default='banking')

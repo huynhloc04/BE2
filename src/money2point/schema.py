@@ -13,16 +13,26 @@ class Currency(str, Enum):
         return f"{self.value}"
 
 
+class TransactionForm(str, Enum):
+    banking = "banking"
+    e_wallet = "e_wallet"
+    credit_card = "credit_card"
+
+    def __str__(self):
+        return f"{self.value}"
+
+
 class CustomResponse(BaseModel):
     message: str = None
     data: Any = None
-    
     
 class PointPackage(BaseModel):
     point: int
     price: float
     currency: Currency
 
-class ChoosePackage(BaseModel):
+class PurchasePoint(BaseModel):
     package_id: int
     quantity: int
+    total_price: float
+    transaction_form: TransactionForm
