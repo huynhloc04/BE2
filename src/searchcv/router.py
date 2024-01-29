@@ -202,11 +202,40 @@ def upload_cv(
     #   JD parsing
     resume_db, version_db = service.Collaborator.Resume.cv_parsing(data_form, cleaned_filename, db_session, current_user)
     #   Resume valuation
-    # valuate_result = service.Collaborator.Resume.resume_valuate(resume_db, db_session)   #   cv_id, session
-    # return schema.CustomResponse(
-    #                 message="Uploaded resume successfully",
-    #                 data={
-    #                     "cv_id": resume_db.id,
-    #                     "valuate_result": valuate_result
-    #                 }     #   Front-end will use this result to show valuation temporarily to User 
-    #             )
+    valuate_result = service.Collaborator.Resume.resume_valuate(version_db, db_session)   #   cv_id, session
+    return schema.CustomResponse(
+                    message="Uploaded resume successfully",
+                    data={
+                        "cv_id": resume_db.id,
+                        "valuate_result": valuate_result
+                    }     #   Front-end will use this result to show valuation temporarily to User 
+                )
+
+
+
+@router.get("/general/get-jd-pdf/{job_id}",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_jd_file(request: Request,
+                job_id: int,
+                db_session: Session = Depends(db.get_session)):
+
+    jd_file = service.General.get_jd_file(request, job_id, db_session)
+    return schema.CustomResponse(
+                    message=None,
+                    data=jd_file
+            )
+    
+    
+@router.get("/general/get-cv-pdf/{cv_id}",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_cv_file(request: Request,
+                cv_id: int,
+                db_session: Session = Depends(db.get_session)):
+
+    jd_file = service.General.get_cv_file(request, cv_id, db_session)
+    return schema.CustomResponse(
+                    message=None,
+                    data=jd_file
+            )

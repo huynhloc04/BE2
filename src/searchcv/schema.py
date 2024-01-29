@@ -103,3 +103,21 @@ class UploadResume(BaseModel):
                 industry=industry,
                 avatar=avatar,
             )
+    
+
+class ResumeStatus(str, Enum):
+    pricing_approved = "pricing_approved"
+    pricing_rejected = "pricing_rejected"
+    ai_matching_approved = "ai_matching_approved"
+    ai_matching_rejected = "ai_matching_rejected"
+    waiting_candidate_accept = "waiting_candidate_accept"
+    candidate_accepted = "candidate_accepted"
+    candidate_declined = "candidate_declined"
+    admin_matching_approved = "admin_matching_approved"
+    admin_matching_rejected = "admin_matching_rejected"
+    waiting_accept_interview = "waiting_accept_interview"
+    candidate_accepted_interview = "candidate_accepted_interview"
+    candidate_rejected_interview = "candidate_rejected_interview"
+
+    def __str__(self):
+        return f"{self.value}"
