@@ -79,4 +79,6 @@ class DatabaseService:
         filename, _  = os.path.splitext(file)
         filenames = [os.path.splitext(file)[0] for file in os.listdir(path)]
         if filename in filenames:
-            raise HTTPException(status_code=409, detail="This resume already exists in system. Please upload the other!") 
+            print("This resume already exists in system. Please upload the other!") 
+            return True
+ 

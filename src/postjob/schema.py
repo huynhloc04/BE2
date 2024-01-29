@@ -662,21 +662,6 @@ class AddCandidate(BaseModel):
                 cv_pdf=cv_pdf,
                 )
     
-
-class UploadAvatar(BaseModel):
-    cv_id: int
-    avatar: UploadFile
-
-    @classmethod
-    def as_form(cls, 
-                cv_id: str = Form(...),
-                avatar: UploadFile = File(...)):
-        
-        return cls(
-                cv_id=cv_id,
-                avatar=avatar,
-                )
-    
     
 class UpdateResumeValuation(BaseModel):
     cv_id: Optional[int]

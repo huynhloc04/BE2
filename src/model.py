@@ -140,7 +140,7 @@ class OtherJobCertificate(TableBase, table=True):
     __tablename__ = 'other_job_certificates'    
     job_id: int = Field(default=None, foreign_key="job_descriptions.id")
     certificate_name: str = Field(default=None)
-    certificate_level: str = Field(default=None)
+    certificate_point_level: str = Field(default=None)
     start_time: datetime = Field(default=None)
     end_time: datetime = Field(default=None)
 
@@ -250,7 +250,7 @@ class OtherResumeCertificate(TableBase, table=True):
     __tablename__ = 'other_resume_certificates'    
     cv_id: int = Field(default=None, foreign_key="resumes.id")
     certificate_name: str = Field(default=None)
-    certificate_level: str = Field(default=None)
+    certificate_point_level: str = Field(default=None)
     start_time: datetime = Field(default=None)
     end_time: datetime = Field(default=None)
     

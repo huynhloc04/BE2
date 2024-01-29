@@ -23,8 +23,8 @@ EDITED_JOB = "static/job/edited_jobs"
 CANDIDATE_AVATAR_DIR = "static/resume/avatar"
 SAVED_TEMP = "static/resume/cv/temp"
 MATCHING_DIR = "static/matching"
-JD_SAVED_TEMP_DIR = "sattic/job/temp"
-CV_SAVED_TEMP_DIR = "sattic/resume/cv/temp"
+JD_SAVED_TEMP_DIR = "static/job/temp"
+CV_SAVED_TEMP_DIR = "static/resume/cv/temp"
 
 load_dotenv()
 DATABASE_URL = os.environ.get("DATABASE_URL")
