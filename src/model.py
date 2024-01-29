@@ -1,3 +1,5 @@
+import os
+from fastapi import Request 
 from datetime import datetime
 from sqlalchemy import text, Column, TIMESTAMP
 from sqlmodel import Field, SQLModel, Relationship, JSON
@@ -172,12 +174,11 @@ class ResumeVersion(TableBase, table=True):
     is_lastest: bool = Field(default=True)
     cv_file: str = Field(default=None)
     name: str = Field(default=None) 
-    avatar: str = Field(default=None) 
+    avatar: str = Field(default=os.path.join(str(Request.base_url), 'static/resume/avatar/default_avatar.png')) 
     level: str = Field(default=None) 
     gender: str = Field(default=None)
     industry: str = Field(default=None)
     current_job: str = Field(default=None)
-    industry: str = Field(default=None)
     skills: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
     email: str = Field(default=None)
     phone: str = Field(default=None)  

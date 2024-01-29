@@ -34,12 +34,9 @@ class Extraction:
     
     
     @staticmethod
-    def cv_parsing_template(filename: str, check_dup: bool):
+    def cv_parsing_template(store_path: str, filename: str):
         try:
-            if check_dup:
-                text = Extraction.text_extract(os.path.join(CV_SAVED_TEMP_DIR, filename))
-            else:
-                text = Extraction.text_extract(os.path.join(CV_SAVED_DIR, filename))
+            text = Extraction.text_extract(os.path.join(store_path, filename))
             prompt_template = f"""
             [Resume]
             {text}
@@ -73,8 +70,8 @@ class Extraction:
     @staticmethod
     def matching_template(cv_file: str, jd_file: str):
         #   Get text file
-        # cv_text = Extraction.text_extract(os.path.join(CV_SAVED_DIR, cv_file))
-        # jd_text = Extraction.text_extract(os.path.join(JD_SAVED_DIR, jd_file))
+        cv_text = Extraction.text_extract(os.path.join(CV_SAVED_DIR, cv_file))
+        jd_text = Extraction.text_extract(os.path.join(JD_SAVED_DIR, jd_file))
         #   Extracted JSON 
         with open(os.path.join(os.path.join(JD_EXTRACTION_PATH, jd_file.split(".")[0] + ".json")), "r") as jd:
             jd_data = json.load(jd)

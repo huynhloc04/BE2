@@ -60,3 +60,46 @@ class ResumePackage(str, Enum):
 class ChooseResume(BaseModel):
     cv_id: int
     package: ResumePackage
+       
+    
+class Industry(str, Enum):
+    education = "Education", 
+    construction = "Construction", 
+    design = "Design", 
+    corporate_services = "Corporate Services", 
+    retail = "Retail", 
+    energy_mining = "Energy & Mining", 
+    manufacturing = "Manufacturing", 
+    finance = "Finance", 
+    recreation_travel = "Recreation & Travel", 
+    arts = "Arts", 
+    health_care = "Health Care", 
+    hardware_networking = "Hardware & Networking", 
+    software_itservices = "Software & IT Services", 
+    real_estate = "Real Estate", 
+    legal = "Legal", 
+    agriculture = "Agriculture", 
+    media_communications = "Media & Communications", 
+    transportation_logistics = "Transportation & Logistics", 
+    entertainment = "Entertainment", 
+    wellness_fitness = "Wellness & Fitness", 
+    public_safety = "Public Safety", 
+    public_administration = "Public Administration"
+
+    def __str__(self):
+        return f"{self.value}"
+
+
+class UploadResume(BaseModel):
+    industry: Industry
+    cv_file: UploadFile
+
+    @classmethod
+    def as_form(cls, 
+                industry: Industry = Form(...),
+                avatar: UploadFile = File(...)):
+        
+        return cls(
+                industry=industry,
+                avatar=avatar,
+            )
