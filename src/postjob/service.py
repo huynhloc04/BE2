@@ -18,6 +18,7 @@ from config import (
                 JD_EXTRACTION_PATH, 
                 JD_SAVED_TEMP_DIR,
                 JD_SAVED_DIR,
+                CV_SAVED_DIR,
                 CANDIDATE_AVATAR_DIR,
                 CV_SAVED_TEMP_DIR,
                 EDITED_JOB,
@@ -1039,15 +1040,15 @@ class Admin:
             
         @staticmethod
         def get_detail_job_status(job_id, db_session, user):
-            #   Company
-            company_query = select(model.Company).where(model.Company.user_id == user.id)
-            company_result = db_session.execute(company_query).scalars().first() 
-            if not company_result:
-                raise HTTPException(status_code=404, detail="Company doesn't exist!")
             #   Get Job information
             job_result = General.get_job_by_id(job_id, db_session)
             if not job_result:
                 raise HTTPException(status_code=404, detail="Job doesn't exist!")
+            #   Company
+            company_query = select(model.Company).where(model.Company.id == job_result.company_id)
+            company_result = db_session.execute(company_query).scalars().first() 
+            if not company_result:
+                raise HTTPException(status_code=404, detail="Company doesn't exist!")
 
             job_edus = db_session.execute(select(model.JobEducation).where(model.JobEducation.job_id == job_id)).scalars().all()
             lang_certs = db_session.execute(select(model.LanguageJobCertificate).where(model.LanguageJobCertificate.job_id == job_id)).scalars().all()
@@ -1556,10 +1557,10 @@ class Collaborator:
     
     class Resume:    
         @staticmethod
-        def parse_base(filename: str, check_dup: bool = False):
+        def parse_base(store_path: str, filename: str):
             #   Check duplicated filename
             if not DatabaseService.check_file_duplicate(filename, CV_EXTRACTION_PATH):
-                prompt_template = Extraction.cv_parsing_template(filename, check_dup)
+                prompt_template = Extraction.cv_parsing_template(store_path=store_path, filename=filename)
 
                 #   Read parsing requirements
                 with open(CV_PARSE_PROMPT, "r") as file:
@@ -1581,7 +1582,7 @@ class Collaborator:
             result = General.get_detail_resume_by_id(cv_id, db_session, user)       
             if not result.ResumeVersion.filename:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please upload at least 1 CV_PDF")
-            return Collaborator.Resume.parse_base(result.ResumeVersion.filename)
+            return Collaborator.Resume.parse_base(CV_SAVED_DIR, result.ResumeVersion.filename)
     
 
         @staticmethod
@@ -1595,9 +1596,9 @@ class Collaborator:
             with open(os.path.join(CV_SAVED_TEMP_DIR, cleaned_filename), 'w+b') as file:
                 shutil.copyfileobj(data.cv_pdf.file, file)
             
-            background_tasks.add_task(Collaborator.Resume.parse_base, cleaned_filename, check_dup=True)
+            background_tasks.add_task(Collaborator.Resume.parse_base, CV_SAVED_TEMP_DIR, cleaned_filename)
             # extracted_result = background_task_results['extracted_result']
-            extracted_result, _ = Collaborator.Resume.parse_base(cleaned_filename, check_dup=True)
+            extracted_result, _ = Collaborator.Resume.parse_base(CV_SAVED_TEMP_DIR, cleaned_filename)
             #   Check duplicated CVs
             DatabaseService.check_db_duplicate(extracted_result["contact_information"], cleaned_filename, db_session)
             #   Save Resume's basic information to DB
@@ -1608,24 +1609,26 @@ class Collaborator:
         @staticmethod
         def fill_resume(data_form: schema.FillResume,
                         db_session: Session,
-                        user):         
-            print(50*"=")
-            print(data_form.cv_file.filename)
+                        user):      
+            print("________________________________")
+            print(data_form.skills)
+            print("________________________________")
             #   Save UploadedFile first
             cleaned_filename = DatabaseService.clean_filename(data_form.cv_file.filename)
-            db_resume = model.Resume(
+            resume_db = model.Resume(
                                 user_id=user.id,
                                 job_id=data_form.job_id,
                             )       
-            db_session.add(db_resume)
+            db_session.add(resume_db)
             db.commit_rollback(db_session)
-            db_version = model.ResumeVersion(
-                                cv_id=db_resume.id,
+            version_db = model.ResumeVersion(
+                                cv_id=resume_db.id,
                                 filename=cleaned_filename,
+                                skills=[skill[1:-1] for skill in data_form.skills[0][1:-1].split(",")],
                                 avatar=os.path.join("static/resume/avatar", data_form.avatar.filename),
                                 cv_file=os.path.join("static/resume/cv/uploaded_cvs", cleaned_filename)
             )
-            db_session.add(db_version)
+            db_session.add(version_db)
             db.commit_rollback(db_session)
             #   Save CV file
             with open(os.path.join(CV_SAVED_TEMP_DIR,  cleaned_filename), 'w+b') as file:
@@ -1634,7 +1637,7 @@ class Collaborator:
             with open(os.path.join("static/resume/avatar",  data_form.avatar.filename), 'w+b') as file:
                 shutil.copyfileobj(data_form.avatar.file, file) 
                 
-            result = General.get_detail_resume_by_id(db_resume.id, db_session) 
+            result = General.get_detail_resume_by_id(resume_db.id, db_session) 
             if not result:
                 raise HTTPException(status_code=404, detail="Resume doesn't exist!")
 
@@ -1647,43 +1650,36 @@ class Collaborator:
                                                 "education",
                                                 "work_experiences",
                                                 "awards",
+                                                "skills",
                                                 "projects",
                                                 "language_certificates",
                                                 "other_certificates"]:
                     setattr(result.ResumeVersion, key, value) 
             if data_form.education:
-                edus = [model.ResumeEducation(cv_id=db_resume.id, **education) for education in General.json_parse(data_form.education[0])]
+                edus = [model.ResumeEducation(cv_id=resume_db.id, **education) for education in General.json_parse(data_form.education[0])]
                 db_session.add_all(edus)
             if data_form.work_experiences:
-                print("=========================================")
-                print(data_form.work_experiences)
-                expers = [model.ResumeExperience(cv_id=db_resume.id, **exper) for exper in General.json_parse(data_form.work_experiences[0])]
+                expers = [model.ResumeExperience(cv_id=resume_db.id, **exper) for exper in General.json_parse(data_form.work_experiences[0])]
                 db_session.add_all(expers)
             if data_form.awards:
-                print("=========================================")
-                print(data_form.awards)
-                awards = [model.ResumeAward(cv_id=db_resume.id, **award) for award in General.json_parse(data_form.awards[0])]
+                awards = [model.ResumeAward(cv_id=resume_db.id, **award) for award in General.json_parse(data_form.awards[0])]
                 db_session.add_all(awards)
             if data_form.projects:
-                print("=========================================")
-                print(data_form.projects)
-                projects = [model.ResumeProject(cv_id=db_resume.id, **project) for project in General.json_parse(data_form.projects[0])]
+                projects = [model.ResumeProject(cv_id=resume_db.id, **project) for project in General.json_parse(data_form.projects[0])]
                 db_session.add_all(projects)
             if data_form.language_certificates:
-                lang_certs = [model.LanguageResumeCertificate(cv_id=db_resume.id, **lang_cert) for lang_cert in General.json_parse(data_form.language_certificates[0])]
+                lang_certs = [model.LanguageResumeCertificate(cv_id=resume_db.id, **lang_cert) for lang_cert in General.json_parse(data_form.language_certificates[0])]
                 db_session.add_all(lang_certs)
             if data_form.other_certificates:
-                print("=========================================")
-                print(data_form.other_certificates)
-                other_certs = [model.OtherResumeCertificate(cv_id=db_resume.id, **other_cert) for other_cert in General.json_parse(data_form.other_certificates[0])]
+                other_certs = [model.OtherResumeCertificate(cv_id=resume_db.id, **other_cert) for other_cert in General.json_parse(data_form.other_certificates[0])]
                 db_session.add_all(other_certs)
                 
             db.commit_rollback(db_session) 
-            return db_resume, db_version
+            return resume_db, version_db
         
 
         @staticmethod
-        def resume_valuate(data: schema.FillResume, db_resume: model.Resume, db_session: Session):
+        def resume_valuate(data: schema.FillResume, resume_db: model.Resume, db_session: Session):
             #   Add "hard_point" initialization
             hard_point = 0
             for level, point in level_map.items():
@@ -1734,7 +1730,7 @@ class Collaborator:
 
             #   Save valuation result to Db
             valuate_db = model.ValuationInfo(
-                                    cv_id=db_resume.id,
+                                    cv_id=resume_db.id,
                                     hard_item=data.level,
                                     hard_point=hard_point,
                                     degrees=degrees,
@@ -1745,20 +1741,10 @@ class Collaborator:
             )
             db_session.add(valuate_db)
             #   Update Resume valuation status
-            resume = General.get_detail_resume_by_id(db_resume.id, db_session)
+            resume = General.get_detail_resume_by_id(resume_db.id, db_session)
             resume.ResumeVersion.status = schema.ResumeStatus.pricing_approved
             db.commit_rollback(db_session)
-            
-            # return {
-            #     "resume_id": db_resume.id,
-            #     "hard_item": data.level,
-            #     "hard_point": hard_point,
-            #     "degrees": degrees,
-            #     "degree_point": degree_point,
-            #     "certs": cert_lst,
-            #     "certs_point": certs_point,
-            #     "total_point": hard_point + degree_point + certs_point
-            # }
+            return valuate_db
         
         # @staticmethod
         # def confirm_resume_valuate(cv_id: int, data: schema.ResumeValuateResult, db_session: Session):

@@ -676,12 +676,15 @@ def fill_extracted_resume(
     
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
-    db_resume, db_version = service.Collaborator.Resume.fill_resume(data_form, db_session, current_user)
+    resume_db, version_db = service.Collaborator.Resume.fill_resume(data_form, db_session, current_user)
     #   Resume valuation
-    valuate_result = service.Collaborator.Resume.resume_valuate(data_form, db_resume, db_session)
+    valuate_result = service.Collaborator.Resume.resume_valuate(data_form, resume_db, db_session)
     return schema.CustomResponse(
                     message="Re-fill resume successfully",
-                    data=valuate_result     #   Front-end will use this result to show valuation temporarily to User 
+                    data={
+                        "cv_id": resume_db.id,
+                        "valuate_result": valuate_result
+                    }     #   Front-end will use this result to show valuation temporarily to User 
                 )
 
 

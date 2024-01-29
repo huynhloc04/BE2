@@ -17,10 +17,8 @@ from config import (
                 CV_EXTRACTION_PATH,
                 JD_EXTRACTION_PATH, 
                 JD_SAVED_TEMP_DIR,
-                CANDIDATE_AVATAR_DIR,
                 CV_SAVED_DIR,
                 JD_SAVED_DIR,
-                EDITED_JOB,
                 MATCHING_PROMPT,
                 MATCHING_DIR)
 
@@ -412,3 +410,199 @@ class Recruiter:
                     } for result in results]
             else:
                 pass
+
+
+class Collaborator:
+
+    class Job:
+        pass
+
+    class Resume:
+
+        @staticmethod
+        def save_cv_parsed_result(extracted_result, industry, db_session, current_user):
+            resume_db = model.Resume(user_id=current_user.id)
+            db_session.add(resume_db)
+            db.commit_rollback(db_session)
+
+            version_db = model.ResumeVersion(
+                                        cv_id=resume_db.id,
+                                        filename=extracted_result["cv_file"].split('/')[-1],
+                                        name=extracted_result['personal_information']['name'],
+                                        level=extracted_result['levels'],
+                                        gender=extracted_result['personal_information']['gender'],
+                                        industry=industry if industry else extracted_result['industry'],
+                                        current_job=extracted_result['job_title'],
+                                        skills=extracted_result['skills'],
+                                        email=extracted_result['contact_information']['email'],
+                                        phone=extracted_result['contact_information']['phone'],
+                                        address=extracted_result['contact_information']['address'],
+                                        city=extracted_result['contact_information']['city/province'],
+                                        country=extracted_result['contact_information']['country'],
+                                        birthday=extracted_result['personal_information']['birthday'],
+                                        linkedin=extracted_result['personal_information']['linkedin'],
+                                        website=extracted_result['personal_information']['website'],
+                                        facebook=extracted_result['personal_information']['facebook'],
+                                        instagram=extracted_result['personal_information']['instagram'],
+                                        objectives=extracted_result['objectives']
+            )
+            db_session.add(version_db)
+
+            education_db = [model.ResumeEducation(
+                                        cv_id=resume_db.id,
+                                        institute_name=result['institution_name'],
+                                        major=result['major'],
+                                        degree=result['degree'],
+                                        gpa=result['gpa'],
+                                        start_time=result['start_time'],
+                                        end_time=result['end_time']
+            ) for result in extracted_result['education']]
+            db_session.add(education_db)
+
+            experience_db = [model.ResumeExperience(
+                                        cv_id=resume_db.id,
+                                        company_name=result['company_name'],
+                                        job_title=result['position'],
+                                        role=result['role'],
+                                        level=result['level'],
+                                        working_industry=result['working_industry'],
+                                        start_time=result['start_time'],
+                                        end_time=result['end_time']
+            ) for result in extracted_result['work_experience']]
+            db_session.add(experience_db)
+
+            award_db = [model.ResumeAward(
+                                        cv_id=resume_db.id,
+                                        name=result['name'],
+                                        time=result['time'],
+                                        description=result['description']
+            ) for result in extracted_result['awards']]
+            db_session.add(award_db)
+
+            project_db = [model.ResumeProject(
+                                        cv_id=resume_db.id,
+                                        project_name=result['project_name'],
+                                        descriptions=result['detailed_descriptions'],
+                                        start_time=result['start_time'],
+                                        end_time=result['end_time']
+            ) for result in extracted_result['projects']]
+            db_session.add(project_db)
+
+            lang_cert_db = [model.LanguageResumeCertificate(
+                                        cv_id=resume_db.id,
+                                        certificate_language=result['certificate_language'],
+                                        certificate_name=result['certificate_name'],
+                                        certificate_point_level=result['certificate_point_level'],
+                                        start_time=result['start_time'],
+                                        end_time=result['end_time']
+            ) for result in extracted_result['certificates']['language_certificates']]
+            db_session.add(lang_cert_db)
+
+            other_cert_db = [model.OtherResumeCertificate(
+                                        cv_id=resume_db.id,
+                                        certificate_name=result['certificate_name'],
+                                        certificate_point_level=result['certificate_point_level'],
+                                        start_time=result['start_time'],
+                                        end_time=result['end_time']
+            ) for result in extracted_result['certificates']['other_certificates']]
+            db_session.add(other_cert_db)
+            db.commit_rollback(db_session)
+            return resume_db, version_db
+
+
+        @staticmethod
+        def cv_parsing(data: schema.UploadResume, 
+                       cleaned_filename: str, 
+                       db_session: Session, 
+                       current_user):
+            #   Check duplicated filename
+            if not DatabaseService.check_file_duplicate(cleaned_filename, CV_EXTRACTION_PATH):
+                prompt_template = Extraction.cv_parsing_template(store_path=CV_SAVED_DIR, filename=cleaned_filename)
+                #   Read parsing requirements
+                with open(CV_PARSE_PROMPT, "r") as file:
+                    require = file.read()
+                prompt_template += require                 
+                #   Start parsing
+                extracted_result = OpenAIService.gpt_api(prompt_template)
+                extracted_result["cv_file"] = os.path.join("static/resume/cv/uploaded_cvs", cleaned_filename)     
+                #   Save extracted result
+                saved_path = DatabaseService.store_cv_extraction(extracted_json=extracted_result, cv_file=cleaned_filename)
+                #   Save to database
+                resume_db = Collaborator.Resume.save_cv_parsed_result(extracted_result, data.industry, db_session, current_user)
+            else:
+                #   Read available extracted result
+                saved_path = os.path.join(CV_EXTRACTION_PATH, cleaned_filename.split(".")[0] + ".json")
+                with open(saved_path) as file:
+                    extracted_result = file.read()
+                #   Get existing database
+                resume_db = db_session.execute(select(model.ResumeVersion).where(model.ResumeVersion.cv_file == os.path.join("static/resume/cv/uploaded_cvs", cleaned_filename)))
+            return extracted_result, resume_db
+        
+
+        @staticmethod
+        def resume_valuate(resume_db: model.ResumeVersion, db_session: Session):
+            #   Add "hard_point" initialization
+            hard_point = 0
+            for level, point in level_map.items():
+                if data.level in levels[int(level)]:
+                    hard_point += point
+
+            #   ============================== Soft point ==============================
+            #   Degrees
+            degree_point = 0
+            degrees = []
+            if data.education:
+                for education in General.json_parse(data.education[0]):
+                    if education["degree"] in ["Bachelor", "Master", "Ph.D"]:
+                        degrees.append(education["degree"])
+                degree_point = 0.5 * len(degrees)
+            #   Certificates
+            certs_point = 0
+            cert_lst = []
+            if data.language_certificates:
+                for cert in General.json_parse(data.language_certificates[0]):
+                    if cert['certificate_language'] == "English":
+                        if (cert['certificate_name'] == "TOEIC" and float(cert['certificate_point_level']) > 700) or (cert['certificate_name'] == "IELTS" and float(cert['certificate_point_level']) > 7.0):
+                            cert_lst.append({
+                                "certificate_language": cert['certificate_language'],
+                                "certificate_name": cert['certificate_name'],
+                                "certificate_point_level": cert['certificate_point_level']
+                            })
+                    elif cert['certificate_language'] == "Japan" and cert['certificate_point_level'] in ["N1", "N2"]:
+                        cert_lst.append({
+                                "certificate_language": cert['certificate_language'],
+                                "certificate_name": cert['certificate_name'],
+                                "certificate_point_level": cert['certificate_point_level']
+                            })
+                    elif cert['certificate_language'] == "Korean":
+                        if cert['certificate_name'] == "Topik II" and cert['certificate_point_level'] in ["Level 5", "Level 6"]:
+                            cert_lst.append({
+                                "certificate_language": cert['certificate_language'],
+                                "certificate_name": cert['certificate_name'],
+                                "certificate_point_level": cert['certificate_point_level']
+                            })
+                    elif cert['certificate_language'] == "Chinese" and cert['certificate_point_level'] == ["HSK-5", "HSK-6"]:
+                        cert_lst.append({
+                                "certificate_language": cert['certificate_language'],
+                                "certificate_name": cert['certificate_name'],
+                                "certificate_point_level": cert['certificate_point_level']
+                            })
+                certs_point = 0.5 * len(cert_lst)
+
+            #   Save valuation result to Db
+            valuate_db = model.ValuationInfo(
+                                    cv_id=resume_db.id,
+                                    hard_item=data.level,
+                                    hard_point=hard_point,
+                                    degrees=degrees,
+                                    degree_point=degree_point,
+                                    certificates=[str(cert_dict) for cert_dict in cert_lst],
+                                    certificates_point=certs_point,
+                                    total_point=hard_point + degree_point + certs_point
+            )
+            db_session.add(valuate_db)
+            #   Update Resume valuation status
+            resume = General.get_detail_resume_by_id(resume_db.id, db_session)
+            resume.ResumeVersion.status = schema.ResumeStatus.pricing_approved
+            db.commit_rollback(db_session)
+            return valuate_db

@@ -1,34 +1,6 @@
 Please extract the above [Resume] exactly according to the corresponding keys and values as the following headers in JSON format. 
 (Inside each header below are smaller headers, you must follow strictly that format and do not omit any that small headers even if you cannot find any information about it.)
 {
-  "education": ["list"] (Please list all keys even when they have no values (value will be "N/A" in this case).)
-  [{
-    "institution_name": ["string"],
-    "degree": ["string"],
-    "major": ["string"],
-    "gpa": ["string"],
-    "start_time": ["string"],
-    "end_time": ["string"]
-  }],
-  "work_experience": (Please list all keys even when they have no values (value will be "N/A" in this case). Do not combine companies together, please keep them separately)
-  [{
-    "company_name": ["string"],
-    "position": ["string"],
-    "working_industry: ["string"], 
-    "detailed_working_description": ["string"]  (List of detailed working descriptions at the company that the candidate has worked for),
-    "start_time": ["string"],
-    "end_time": ["string"]
-  }],
-  "skills": ["string"]  (List of candidate's skills. Note as "N/A" if no skill available),
-  "awards": ["string"]  (List of candidate's achivements and awards. Note as "N/A" if no awards available),
-  "projects": (Please list all keys even when they have no values (value will be "N/A" in this case))
-  [{
-    "project_name": ["string"],
-    "start_time": ["string"],
-    "end_time": ["string"],
-    "detailed_descriptions": ["string"] (Do not omit any information)
-  }],
-  "job_title": ["string"],    (The lastest job title or job position of candidate is currently working on)
   "levels": ["string"] (Based on information provided in [Resume] and levels listed below, you must choose the exactly one current working level that this candidate is:
     - Executive
     - Senior
@@ -54,6 +26,36 @@ Please extract the above [Resume] exactly according to the corresponding keys an
     - General Manager
     - General Director
   ),
+  "education": ["list"] (Please list all keys even when they have no values (value will be "N/A" in this case).)
+  [{
+    "institution_name": ["string"],
+    "degree": ["string"],
+    "major": ["string"],
+    "gpa": ["string"],
+    "start_time": ["string"],
+    "end_time": ["string"]
+  }],
+  "work_experience": (Please list all keys even when they have no values (value will be "N/A" in this case). Do not combine companies together, please keep them separately)
+  [{
+    "company_name": ["string"],
+    "position": ["string"],
+    "role": ["string"],
+    "level": ["string"],
+    "working_industry: ["string"], 
+    "detailed_working_description": ["string"]  (List of detailed working descriptions at the company that the candidate has worked for),
+    "start_time": ["string"],
+    "end_time": ["string"]
+  }],
+  "skills": ["string"]  (List of candidate's skills. Note as "N/A" if no skill available),
+  "awards": ["string"]  (List of candidate's achivements and awards. Note as "N/A" if no awards available),
+  "projects": (Please list all keys even when they have no values (value will be "N/A" in this case))
+  [{
+    "project_name": ["string"],
+    "start_time": ["string"],
+    "end_time": ["string"],
+    "detailed_descriptions": ["string"] (Do not omit any information)
+  }],
+  "job_title": ["string"],    (The lastest job title or job position of candidate is currently working on),
   "certificates": {   (Please find exactly certificate information exactly mentioned in Resume. A certificate contains three main fields: "certificate_language", "certificate_name" and "certificate_point_level"
       "certificate_language": ["English", "Japan", "Korean" or "Chinese"]   
       "certificate_name": 
@@ -68,11 +70,15 @@ Please extract the above [Resume] exactly according to the corresponding keys an
     "language_certificates": [{   (Please list all keys even when they have no values (value will be "N/A" in this case))
         "certificate_language": ["string"],
         "certificate_name": ["string"],
-        "certificate_point_level": ["string"]
+        "certificate_point_level": ["string"],
+        "start_time": ["string"],
+        "end_time": ["string"]
     }],
     "other_certificates": [{     (Certificates that are not relevant to language certificates. Please list all keys even when they have no values (it's value will be "N/A" in this case))
         "certificate_name": ["string"],
-        "certificate_point_level": ["string"]
+        "certificate_point_level": ["string"],
+        "start_time": ["string"],
+        "end_time": ["string"]
     }]
   },
   "industry": ["string"] (Based on information provided in [Resume] and industries listed below, you must choose the working industry that the candidate is currently working on (Do not leave thí field empty or "N/A" value):

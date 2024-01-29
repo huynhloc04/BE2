@@ -12,7 +12,7 @@ from postjob.db_service.db_service import DatabaseService
 from authentication import get_current_active_user
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import APIRouter, status, Depends, Security, HTTPException
-from config import JD_SAVED_DIR
+from config import JD_SAVED_DIR, CV_SAVED_DIR
 
 
 router = APIRouter(prefix="/searchcv", tags=["SearchCV"])
@@ -28,6 +28,7 @@ def basic_search(
             credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     pass
 
+#   Upload JD => JD Parsing
 @router.post("/recruiter/upload-jd",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
@@ -56,6 +57,7 @@ def upload_jd(
     )
 
 
+#   Filter above JD with multiple CV (CV used basic_search)
 @router.post("recruiter/batch-filter",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
@@ -177,3 +179,34 @@ def list_candidate(
                             "item_lst": results[(data.page_index-1)*data.limit: (data.page_index-1)*data.limit + data.limit]
                         }
     )
+
+
+#   Upload JD => JD Parsing
+@router.post("/recruiter/upload-cv",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def upload_cv(
+            data_form: schema.UploadResume,
+            db_session: Session = Depends(db.get_session),
+            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+    if data_form.cv_file.content_type != 'application/pdf':
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Must be PDF file")
+    
+    #   Extract and save results
+    cleaned_filename = DatabaseService.clean_filename(data_form.cv_file.filename)
+    with open(os.path.join(CV_SAVED_DIR,  cleaned_filename), 'w+b') as file:
+        shutil.copyfileobj(data_form.cv_file.file, file)    
+    #   JD parsing
+    resume_db, version_db = service.Collaborator.Resume.cv_parsing(data_form, cleaned_filename, db_session, current_user)
+    #   Resume valuation
+    # valuate_result = service.Collaborator.Resume.resume_valuate(resume_db, db_session)   #   cv_id, session
+    # return schema.CustomResponse(
+    #                 message="Uploaded resume successfully",
+    #                 data={
+    #                     "cv_id": resume_db.id,
+    #                     "valuate_result": valuate_result
+    #                 }     #   Front-end will use this result to show valuation temporarily to User 
+    #             )
