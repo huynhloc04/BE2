@@ -17,6 +17,7 @@ from config import (
                 CV_EXTRACTION_PATH,
                 JD_EXTRACTION_PATH, 
                 JD_SAVED_TEMP_DIR,
+                JD_SAVED_DIR,
                 CANDIDATE_AVATAR_DIR,
                 CV_SAVED_TEMP_DIR,
                 EDITED_JOB,
@@ -362,7 +363,7 @@ class Recruiter:
             # filename = cleaned_filename.split("/")[-1]
             #   Check duplicated filename
             if not DatabaseService.check_file_duplicate(cleaned_filename, JD_EXTRACTION_PATH):
-                prompt_template = Extraction.jd_parsing_template(cleaned_filename)
+                prompt_template = Extraction.jd_parsing_template(store_path=JD_SAVED_TEMP_DIR, filename=cleaned_filename)
 
                 #   Read parsig requirements
                 with open(JD_PARSE_PROMPT, "r") as file:
@@ -558,7 +559,7 @@ class Recruiter:
                     } for lang_cert in lang_certs],
                     "other_certificate": [{
                         "certificate_name": cert.certificate_name,
-                        "certificate_level": cert.certificate_level,
+                        "certificate_level": cert.certificate_point_level,
                     } for cert in other_certs],
                     "min_salary": job_result.min_salary,
                     "max_salary": job_result.max_salary,                
@@ -597,7 +598,7 @@ class Recruiter:
                     } for lang_cert in lang_certs],
                     "other_certificate": [{
                         "certificate_name": cert.certificate_name,
-                        "certificate_level": cert.certificate_level,
+                        "certificate_level": cert.certificate_point_level,
                     } for cert in other_certs],
                     "min_salary": job_result.min_salary,
                     "max_salary": job_result.max_salary,
@@ -712,7 +713,7 @@ class Recruiter:
                     "job_service": job_result.job_service,
                     "cv_point": General.get_resume_valuate(candidate_id, db_session).total_point,
                     "avatar": os.path.join(str(request.base_url), "static/resume/avatar/default_avatar.png"),
-                    "candidate_name": "_______________",
+                    "candidate_name": "Họ và tên",
                     "current_job": resume_result.ResumeVersion.current_job,
                     "industry": resume_result.ResumeVersion.industry,
                     "birthday": resume_result.ResumeVersion.birthday,
@@ -763,7 +764,7 @@ class Recruiter:
                         } for lang_cert in lang_certs],
                         "other_certificate": [{
                             "certificate_name": other_cert.certificate_name,
-                            "certificate_level": other_cert.certificate_level
+                            "certificate_level": other_cert.certificate_point_level
                         } for other_cert in other_certs]
                     }
                 }
@@ -825,7 +826,7 @@ class Recruiter:
                         } for lang_cert in lang_certs],
                         "other_certificate": [{
                             "certificate_name": other_cert.certificate_name,
-                            "certificate_level": other_cert.certificate_level
+                            "certificate_level": other_cert.certificate_point_level
                         } for other_cert in other_certs]
                     }
                 }
@@ -1083,7 +1084,7 @@ class Admin:
                     } for lang_cert in lang_certs],
                     "other_certificate": [{
                         "certificate_name": cert.certificate_name,
-                        "certificate_level": cert.certificate_level,
+                        "certificate_level": cert.certificate_point_level,
                     } for cert in other_certs],
                     "min_salary": job_result.min_salary,
                     "max_salary": job_result.max_salary,                
@@ -1118,11 +1119,11 @@ class Admin:
                     "language_certificate": [{
                         "language": lang_cert.certificate_language,
                         "certificate_name": lang_cert.certificate_name,
-                        "certificate_level": lang_cert.certificate_level,
+                        "certificate_level": lang_cert.certificate_point_level,
                     } for lang_cert in lang_certs],
                     "other_certificate": [{
                         "certificate_name": cert.certificate_name,
-                        "certificate_level": cert.certificate_level,
+                        "certificate_level": cert.certificate_point_level,
                     } for cert in other_certs],
                     "min_salary": job_result.min_salary,
                     "max_salary": job_result.max_salary,
@@ -1395,7 +1396,7 @@ class Collaborator:
                 } for lang_cert in lang_certs],
                 "other_certificate": [{
                     "certificate_name": cert.certificate_name,
-                    "certificate_level": cert.certificate_level,
+                    "certificate_level": cert.certificate_point_level,
                 } for cert in other_certs],
                 "min_salary": job_result.min_salary,
                 "max_salary": job_result.max_salary,
@@ -2119,7 +2120,7 @@ class Collaborator:
                     } for lang_cert in lang_certs],
                     "other_certificate": [{
                         "certificate_name": other_cert.certificate_name,
-                        "certificate_level": other_cert.certificate_level
+                        "certificate_level": other_cert.certificate_point_level
                     } for other_cert in other_certs]
                 }
             }
