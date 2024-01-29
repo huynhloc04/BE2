@@ -106,6 +106,22 @@ class General:
         resume = db_session.execute(select(model.Resume).where(model.Resume.id == cv_id)).scalars().first()
         job = db_session.execute(select(model.JobDescription).where(model.JobDescription.id == resume.job_id)).scalars().first()
         return job
+        
+    @staticmethod
+    def get_jd_file(request, job_id, db_session):
+        result = General.get_job_by_id(job_id, db_session)    
+        if not result:
+            raise HTTPException(status_code=404, detail="Job doesn't exist!")        
+        #   Return link to JD PDF file 
+        return os.path.join(str(request.base_url), result.jd_file)
+    
+    @staticmethod
+    def get_cv_file(request, cv_id, db_session):
+        result = General.get_detail_resume_by_id(cv_id, db_session)    
+        if not result:
+            raise HTTPException(status_code=404, detail="Resume doesn't exist!")        
+        #   Return link to JD PDF file 
+        return os.path.join(str(request.base_url), result.ResumeVersion.cv_file)
     
 
 class Recruiter:
@@ -473,7 +489,7 @@ class Collaborator:
 
             award_db = [model.ResumeAward(
                                         cv_id=resume_db.id,
-                                        name=result['name'],
+                                        name=result['award_name'],
                                         time=result['time'],
                                         description=result['description']
             ) for result in extracted_result['awards']]
@@ -540,59 +556,62 @@ class Collaborator:
         
 
         @staticmethod
-        def resume_valuate(resume_db: model.ResumeVersion, db_session: Session):
+        def resume_valuate(version_db: model.ResumeVersion, db_session: Session):
             #   Add "hard_point" initialization
             hard_point = 0
             for level, point in level_map.items():
-                if data.level in levels[int(level)]:
+                if version_db.level in levels[int(level)]:
                     hard_point += point
 
             #   ============================== Soft point ==============================
             #   Degrees
             degree_point = 0
             degrees = []
-            if data.education:
-                for education in General.json_parse(data.education[0]):
-                    if education["degree"] in ["Bachelor", "Master", "Ph.D"]:
-                        degrees.append(education["degree"])
-                degree_point = 0.5 * len(degrees)
+            #   Get education information
+            degrees = db_session.execute(select(model.ResumeEducation.degree).where(model.ResumeEducation.cv_id == version_db.cv_id)).all()
+            print("++++++++++++++++++++++++++++++++++++++++++++++++++++")
+            for degree in degrees:
+                if degree in ["Bachelor", "Master", "Ph.D"]:
+                    degrees.append(degree)
+            degree_point = 0.5 * len(degrees)
             #   Certificates
             certs_point = 0
             cert_lst = []
-            if data.language_certificates:
-                for cert in General.json_parse(data.language_certificates[0]):
-                    if cert['certificate_language'] == "English":
-                        if (cert['certificate_name'] == "TOEIC" and float(cert['certificate_point_level']) > 700) or (cert['certificate_name'] == "IELTS" and float(cert['certificate_point_level']) > 7.0):
-                            cert_lst.append({
-                                "certificate_language": cert['certificate_language'],
-                                "certificate_name": cert['certificate_name'],
-                                "certificate_point_level": cert['certificate_point_level']
-                            })
-                    elif cert['certificate_language'] == "Japan" and cert['certificate_point_level'] in ["N1", "N2"]:
+            #   Get certificate information
+            certs = db_session.execute(select(model.LanguageResumeCertificate).where(model.LanguageResumeCertificate.cv_id == version_db.cv_id)).all()
+            for cert in certs:
+                if cert.certificate_language == "English":
+                    if (cert.certificate_name == "TOEIC" and float(cert.certificate_point_level) > 700) or (cert.certificate_name == "IELTS" and float(cert.certificate_point_level) > 7.0):
                         cert_lst.append({
-                                "certificate_language": cert['certificate_language'],
-                                "certificate_name": cert['certificate_name'],
-                                "certificate_point_level": cert['certificate_point_level']
-                            })
-                    elif cert['certificate_language'] == "Korean":
-                        if cert['certificate_name'] == "Topik II" and cert['certificate_point_level'] in ["Level 5", "Level 6"]:
-                            cert_lst.append({
-                                "certificate_language": cert['certificate_language'],
-                                "certificate_name": cert['certificate_name'],
-                                "certificate_point_level": cert['certificate_point_level']
-                            })
-                    elif cert['certificate_language'] == "Chinese" and cert['certificate_point_level'] == ["HSK-5", "HSK-6"]:
+                            "certificate_language": cert.certificate_language,
+                            "certificate_name": cert.certificate_name,
+                            "certificate_point_level": cert.certificate_point_level
+                        })
+                elif cert.certificate_language == "Japan" and cert.certificate_point_level in ["N1", "N2"]:
+                    cert_lst.append({
+                            "certificate_language": cert.certificate_language,
+                            "certificate_name": cert.certificate_name,
+                            "certificate_point_level": cert.certificate_point_level
+                        })
+                elif cert.certificate_language == "Korean":
+                    if cert.certificate_name == "Topik II" and cert.certificate_point_level in ["Level 5", "Level 6"]:
                         cert_lst.append({
-                                "certificate_language": cert['certificate_language'],
-                                "certificate_name": cert['certificate_name'],
-                                "certificate_point_level": cert['certificate_point_level']
-                            })
+                            "certificate_language": cert.certificate_language,
+                            "certificate_name": cert.certificate_name,
+                            "certificate_point_level": cert.certificate_point_level
+                        })
+                elif cert.certificate_language == "Chinese" and cert.certificate_point_level == ["HSK-5", "HSK-6"]:
+                    cert_lst.append({
+                            "certificate_language": cert.certificate_language,
+                            "certificate_name": cert.certificate_name,
+                            "certificate_point_level": cert.certificate_point_level
+                        })
                 certs_point = 0.5 * len(cert_lst)
 
             #   Save valuation result to Db
             valuate_db = model.ValuationInfo(
-                                    cv_id=resume_db.id,
-                                    hard_item=data.level,
+                                    cv_id=version_db.cv_id,
+                                    hard_item=version_db.level,
                                     hard_point=hard_point,
                                     degrees=degrees,
                                     degree_point=degree_point,
@@ -602,7 +621,6 @@ class Collaborator:
             )
             db_session.add(valuate_db)
             #   Update Resume valuation status
-            resume = General.get_detail_resume_by_id(resume_db.id, db_session)
-            resume.ResumeVersion.status = schema.ResumeStatus.pricing_approved
+            version_db.status = schema.ResumeStatus.pricing_approved
             db.commit_rollback(db_session)
             return valuate_db

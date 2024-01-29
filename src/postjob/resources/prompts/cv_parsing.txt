@@ -47,7 +47,12 @@ Please extract the above [Resume] exactly according to the corresponding keys an
     "end_time": ["string"]
   }],
   "skills": ["string"]  (List of candidate's skills. Note as "N/A" if no skill available),
-  "awards": ["string"]  (List of candidate's achivements and awards. Note as "N/A" if no awards available),
+  "awards": (Please list all keys even when they have no values (value will be "N/A" in this case))
+  [{
+    "award_name": ["string"],
+    "time": ["string"],
+    "description": ["string"] (Detail descriptions about candidate's awards)
+  }],
   "projects": (Please list all keys even when they have no values (value will be "N/A" in this case))
   [{
     "project_name": ["string"],
