@@ -1714,7 +1714,7 @@ class Collaborator:
                                 "certificate_point_level": cert['certificate_point_level']
                             })
                     elif cert['certificate_language'] == "Korean":
-                        if cert['certificate_name'] == "Topik II" and cert['certificate_point_level'] in ["Level 5", "Level 6"]:
+                        if cert['certificate_name'] == "Topik_II" and cert['certificate_point_level'] in ["Level 5", "Level 6"]:
                             cert_lst.append({
                                 "certificate_language": cert['certificate_language'],
                                 "certificate_name": cert['certificate_name'],
