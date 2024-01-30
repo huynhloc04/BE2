@@ -212,6 +212,110 @@ def upload_cv(
                 )
 
 
+@router.get("/collaborator/get-resume-valuate",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_resume_valuate(
+                    cv_id: int,
+                    request: Request,
+                    db_session: Session = Depends(db.get_session)):
+
+    result = service.General.get_resume_valuate(cv_id, db_session)
+    
+    def parse_dict(data):
+        pairs = data.split()
+        # Initialize an empty dictionary to store the key-value pairs
+        certificate_dict = {}
+        for pair in pairs:
+            key, value = pair.split('=')
+            # Remove single quotes from the value
+            value = value.strip("'")
+            certificate_dict[key] = value
+        return certificate_dict
+    
+    #   Get resume pdf file
+    resume = service.General.get_detail_resume_by_id(cv_id, db_session)
+    level_lst = [str(level) for level in schema.Level]
+    hard_item = {
+        "level": result.hard_item if result.hard_item in level_lst else None,
+        "salary": result.hard_item if result.hard_item not in level_lst else None
+    }
+    return schema.CustomResponse(
+                    message="Get resume valuation successfully",
+                    data={
+                        "cv_id": cv_id,
+                        "cv_pdf": os.path.join(str(request.base_url), resume.ResumeVersion.cv_file),
+                        "hard_item": hard_item,
+                        "hard_point": result.hard_point,
+                        "degrees": result.degrees,
+                        "degree_point": result.degree_point,
+                        "certificates": [cert_dict for cert_dict in result.certificates],
+                        "certificates_point": result.certificates_point,
+                        "total_point": result.total_point
+                    }
+                )
+
+
+@router.put("/collaborator/update-resume-valuate",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def update_resume_valuate(
+                    data: schema.UpdateResumeValuation,
+                    db_session: Session = Depends(db.get_session)):
+
+    result = service.Collaborator.Resume.update_valuate(data, db_session)
+
+    level_lst = [str(level) for level in schema.Level]
+    hard_item = {
+        "level": result.hard_item if result.hard_item in level_lst else None,
+        "salary": result.hard_item if result.hard_item not in level_lst else None
+    }
+    return schema.CustomResponse(
+                    message="Resume re-valuated successfully",
+                    data={
+                        "resume_id": result.cv_id,
+                        "hard_item": hard_item,
+                        "hard_point": result.hard_point,
+                        "degrees": result.degrees,
+                        "degree_point": result.degree_point,
+                        "certificates": result.certificates,
+                        "certificates_point": result.certificates_point,
+                        "total_point": result.total_point
+                    }
+                )
+
+
+@router.post("/collaborator/list-candidate",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def list_candidate(
+            data: schema.CollabListResume,
+            db_session: Session = Depends(db.get_session),
+            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    results = service.Collaborator.Resume.list_candidate(data.is_draft, db_session, current_user)
+
+    total_items = len(results)
+    total_pages = math.ceil(total_items/data.limit)
+
+    return schema.CustomResponse(
+                    message=None,
+                    data={
+                        "total_items": total_items,
+                        "total_pages": total_pages,
+                        "item_lst": results[(data.page_index-1)*data.limit: (data.page_index-1)*data.limit + data.limit]
+                    }
+            )
+
+
+
+
+
+
 
 @router.get("/general/get-jd-pdf/{job_id}",
              status_code=status.HTTP_200_OK, 

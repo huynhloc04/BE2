@@ -440,16 +440,17 @@ class Collaborator:
             resume_db = model.Resume(user_id=current_user.id)
             db_session.add(resume_db)
             db.commit_rollback(db_session)
+            db_session.refresh(resume_db)
 
             version_db = model.ResumeVersion(
                                         cv_id=resume_db.id,
                                         filename=extracted_result["cv_file"].split('/')[-1],
                                         cv_file=extracted_result["cv_file"],
                                         name=extracted_result['personal_information']['name'],
-                                        level=extracted_result['levels'],
+                                        level=extracted_result['levels'][0],
                                         gender=extracted_result['personal_information']['gender'],
                                         industry=industry if industry else extracted_result['industry'],
-                                        current_job=extracted_result['job_title'],
+                                        current_job=extracted_result['job_title'][0],
                                         skills=extracted_result['skills'],
                                         email=extracted_result['contact_information']['email'],
                                         phone=extracted_result['contact_information']['phone'],
@@ -461,12 +462,14 @@ class Collaborator:
                                         website=extracted_result['personal_information']['website'],
                                         facebook=extracted_result['personal_information']['facebook'],
                                         instagram=extracted_result['personal_information']['instagram'],
-                                        objectives=extracted_result['objectives']
+                                        objectives=extracted_result['objectives'][0]
             )
             db_session.add(version_db)
+            db.commit_rollback(db_session)
+            db_session.refresh(version_db)
 
             education_db = [model.ResumeEducation(
-                                        cv_id=resume_db.id,
+                                        cv_id=version_db.cv_id,
                                         institute_name=result['institution_name'],
                                         major=result['major'],
                                         degree=result['degree'],
@@ -477,7 +480,7 @@ class Collaborator:
             db_session.add_all(education_db)
 
             experience_db = [model.ResumeExperience(
-                                        cv_id=resume_db.id,
+                                        cv_id=version_db.cv_id,
                                         company_name=result['company_name'],
                                         job_title=result['position'],
                                         role=result['role'],
@@ -489,7 +492,7 @@ class Collaborator:
             db_session.add_all(experience_db)
 
             award_db = [model.ResumeAward(
-                                        cv_id=resume_db.id,
+                                        cv_id=version_db.cv_id,
                                         name=result['award_name'],
                                         time=result['time'],
                                         description=result['description']
@@ -497,7 +500,7 @@ class Collaborator:
             db_session.add_all(award_db)
 
             project_db = [model.ResumeProject(
-                                        cv_id=resume_db.id,
+                                        cv_id=version_db.cv_id,
                                         project_name=result['project_name'],
                                         descriptions=result['detailed_descriptions'],
                                         start_time=result['start_time'],
@@ -506,7 +509,7 @@ class Collaborator:
             db_session.add_all(project_db)
 
             lang_cert_db = [model.LanguageResumeCertificate(
-                                        cv_id=resume_db.id,
+                                        cv_id=version_db.cv_id,
                                         certificate_language=result['certificate_language'],
                                         certificate_name=result['certificate_name'],
                                         certificate_point_level=result['certificate_point_level'],
@@ -516,13 +519,14 @@ class Collaborator:
             db_session.add_all(lang_cert_db)
 
             other_cert_db = [model.OtherResumeCertificate(
-                                        cv_id=resume_db.id,
+                                        cv_id=version_db.cv_id,
                                         certificate_name=result['certificate_name'],
                                         certificate_point_level=result['certificate_point_level'],
                                         start_time=result['start_time'],
                                         end_time=result['end_time']
             ) for result in extracted_result['certificates']['other_certificates']]
             db_session.add_all(other_cert_db)
+
             db.commit_rollback(db_session)
             return resume_db, version_db
 
@@ -549,12 +553,11 @@ class Collaborator:
             else:
                 #   Read available extracted result
                 saved_path = os.path.join(CV_EXTRACTION_PATH, cleaned_filename.split(".")[0] + ".json")
-                with open(saved_path) as file:
-                    extracted_result = file.read()
+                with open(saved_path) as user_file:
+                    extracted_result = user_file.read()
+                resume_db, version_db = Collaborator.Resume.save_cv_parsed_result(json.loads(extracted_result), data.industry, db_session, current_user)
                 #   Get existing database
-                version_db = db_session.execute(select(model.ResumeVersion).where(model.ResumeVersion.cv_file == os.path.join("static/resume/cv/uploaded_cvs", cleaned_filename)))
-            print("++++++++++++++++++++++++++++++++++++++")
-            print(version_db)
+                version_db = db_session.execute(select(model.ResumeVersion).where(model.ResumeVersion.cv_file == os.path.join("static/resume/cv/uploaded_cvs", cleaned_filename))).scalars().first()
             return extracted_result, version_db
         
 
@@ -571,10 +574,10 @@ class Collaborator:
             degree_point = 0
             degrees = []
             #   Get education information
-            degrees = db_session.execute(select(model.ResumeEducation.degree).where(model.ResumeEducation.cv_id == version_db.cv_id)).all()
-            for degree in degrees:
-                if degree in ["Bachelor", "Master", "Ph.D"]:
-                    degrees.append(degree)
+            degree_db = db_session.execute(select(model.ResumeEducation.degree).where(model.ResumeEducation.cv_id == version_db.cv_id)).all()
+            for degree in degree_db:
+                if degree[0] in ["Bachelor", "Master", "Ph.D"]:
+                    degrees.append(degree[0])
             degree_point = 0.5 * len(degrees)
             #   Certificates
             certs_point = 0
@@ -582,31 +585,33 @@ class Collaborator:
             #   Get certificate information
             certs = db_session.execute(select(model.LanguageResumeCertificate).where(model.LanguageResumeCertificate.cv_id == version_db.cv_id)).all()
             for cert in certs:
-                if cert.certificate_language == "English":
-                    if (cert.certificate_name == "TOEIC" and float(cert.certificate_point_level) > 700) or (cert.certificate_name == "IELTS" and float(cert.certificate_point_level) > 7.0):
+                if cert.LanguageResumeCertificate.certificate_language=='N/A' or cert.LanguageResumeCertificate.certificate_name=="N/A" or cert.LanguageResumeCertificate.certificate_point_level=='N/A':
+                    continue
+                if cert.LanguageResumeCertificate.certificate_language == "English":
+                    if (cert.LanguageResumeCertificate.certificate_name == "TOEIC" and float(cert.LanguageResumeCertificate.certificate_point_level) > 700) or (cert.LanguageResumeCertificate.certificate_name == "IELTS" and float(cert.LanguageResumeCertificate.certificate_point_level) > 7.0):
                         cert_lst.append({
-                            "certificate_language": cert.certificate_language,
-                            "certificate_name": cert.certificate_name,
-                            "certificate_point_level": cert.certificate_point_level
+                            "certificate_language": cert.LanguageResumeCertificate.certificate_language,
+                            "certificate_name": cert.LanguageResumeCertificate.certificate_name,
+                            "certificate_point_level": cert.LanguageResumeCertificate.certificate_point_level
                         })
-                elif cert.certificate_language == "Japan" and cert.certificate_point_level in ["N1", "N2"]:
+                elif cert.LanguageResumeCertificate.certificate_language == "Japan" and cert.LanguageResumeCertificate.certificate_point_level in ["N1", "N2"]:
                     cert_lst.append({
-                            "certificate_language": cert.certificate_language,
-                            "certificate_name": cert.certificate_name,
-                            "certificate_point_level": cert.certificate_point_level
+                            "certificate_language": cert.LanguageResumeCertificate.certificate_language,
+                            "certificate_name": cert.LanguageResumeCertificate.certificate_name,
+                            "certificate_point_level": cert.LanguageResumeCertificate.certificate_point_level
                         })
-                elif cert.certificate_language == "Korean":
-                    if cert.certificate_name == "Topik_II" and cert.certificate_point_level in ["Level 5", "Level 6"]:
+                elif cert.LanguageResumeCertificate.certificate_language == "Korean":
+                    if cert.LanguageResumeCertificate.certificate_name == "Topik_II" and cert.LanguageResumeCertificate.certificate_point_level in ["Level 5", "Level 6"]:
                         cert_lst.append({
-                            "certificate_language": cert.certificate_language,
-                            "certificate_name": cert.certificate_name,
-                            "certificate_point_level": cert.certificate_point_level
+                            "certificate_language": cert.LanguageResumeCertificate.certificate_language,
+                            "certificate_name": cert.LanguageResumeCertificate.certificate_name,
+                            "certificate_point_level": cert.LanguageResumeCertificate.certificate_point_level
                         })
-                elif cert.certificate_language == "Chinese" and cert.certificate_point_level == ["HSK-5", "HSK-6"]:
+                elif cert.LanguageResumeCertificate.certificate_language == "Chinese" and cert.LanguageResumeCertificate.certificate_point_level == ["HSK-5", "HSK-6"]:
                     cert_lst.append({
-                            "certificate_language": cert.certificate_language,
-                            "certificate_name": cert.certificate_name,
-                            "certificate_point_level": cert.certificate_point_level
+                            "certificate_language": cert.LanguageResumeCertificate.certificate_language,
+                            "certificate_name": cert.LanguageResumeCertificate.certificate_name,
+                            "certificate_point_level": cert.LanguageResumeCertificate.certificate_point_level
                         })
                 certs_point = 0.5 * len(cert_lst)
 
@@ -625,4 +630,129 @@ class Collaborator:
             #   Update Resume valuation status
             version_db.status = schema.ResumeStatus.pricing_approved
             db.commit_rollback(db_session)
-            return valuate_db
+            db_session.refresh(valuate_db)
+            return {
+                "cv_id": valuate_db.cv_id,
+                "hard_item": valuate_db.hard_item,
+                "hard_point": valuate_db.hard_point,
+                "degrees": valuate_db.degrees,
+                "degree_point": valuate_db.degree_point,
+                "certificates": valuate_db.certificates,
+                "certificates_point": valuate_db.certificates_point,
+                "total_point": valuate_db.total_point
+            }
+
+        
+        @staticmethod
+        def percent_estimate(filename: str):
+            prompt_template = Extraction.resume_percent_estimate(filename)      
+            #   Start parsing
+            extracted_result = OpenAIService.gpt_api(prompt_template)
+            point = extracted_result["point"]
+            return point/100
+        
+
+        @staticmethod
+        def update_valuate(data: schema.UpdateResumeValuation, db_session: Session):
+            result = General.get_detail_resume_by_id(data.cv_id, db_session) 
+            if not result:
+                raise HTTPException(status_code=404, detail="Resume doesn't exist!")
+            valuation_query = select(model.ValuationInfo).where(model.ValuationInfo.cv_id == data.cv_id)
+            valuate_result = db_session.execute(valuation_query).scalars().first()
+            if not valuate_result:
+                raise HTTPException(status_code=404, detail="This Resume has not been valuated!")
+            
+            #   Point initialization
+            hard_point = 0
+            if data.current_salary is not None:
+                percent = Collaborator.Resume.percent_estimate(filename=result.ResumeVersion.filename)
+                hard_point = round(percent*data.current_salary / 100000, 1)   # Convert money to point: 100000 (vnđ) => 1đ
+                valuate_result.hard_item = data.current_salary
+                valuate_result.hard_point = hard_point
+                #   Commit to Database
+                result.ResumeVersion.status = schema.ResumeStatus.pricing_approved
+                db.commit_rollback(db_session)
+            elif data.level:
+                for level, point in level_map.items():
+                    if data.level in levels[int(level)]:
+                        hard_point += point
+                        valuate_result.hard_item = data.level
+                        valuate_result.hard_point = hard_point
+                        #   Commit to Database
+                        result.ResumeVersion.status = schema.ResumeStatus.pricing_approved
+                        db.commit_rollback(db_session)
+                        break
+            else:
+                pass
+
+            #   ================================== Soft point ==================================
+            #   Degrees
+            degrees = []
+            degree_point = 0
+            if data.degrees:
+                degrees = [degree for degree in data.degrees if degree in ["Bachelor", "Master", "Ph.D"]]
+            #   Add "soft_point" to Database
+            degree_point = 0.5 * len(degrees)
+            valuate_result.degrees = degrees
+            valuate_result.degree_point = degree_point
+                
+            #   Certificates
+            certs = []                
+            certs_point = 0
+            if data.language_certificates:
+                for cert in data.language_certificates:
+                    if cert.certificate_language == "English":
+                        if (cert.certificate_name == "TOEIC" and float(cert.certificate_point_level) > 700) or (cert.certificate_name == "IELTS" and float(cert.certificate_point_level) > 7.0):
+                            certs.append(f"certificate_language='{cert.certificate_language}' certificate_name='{cert.certificate_name}' certificate_point_level='{cert.certificate_point_level}'")
+                    elif cert.certificate_language == "Japan" and cert.certificate_point_level in ["N1", "N2"]:
+                            certs.append(f"certificate_language='{cert.certificate_language}' certificate_name='{cert.certificate_name}' certificate_point_level='{cert.certificate_point_level}'")
+                    elif cert.certificate_language == "Korean":
+                        if cert.certificate_name == "Topik_II" and cert.certificate_point_level in ["Level_5", "Level_6"]:
+                            certs.append(f"certificate_language='{cert.certificate_language}' certificate_name='{cert.certificate_name}' certificate_point_level='{cert.certificate_point_level}'")
+                    elif cert.certificate_language == "Chinese" and cert.certificate_point_level == ["HSK-5", "HSK-6"]:
+                            certs.append(f"certificate_language='{cert.certificate_language}' certificate_name='{cert.certificate_name}' certificate_point_level='{cert.certificate_point_level}'")
+            certs_point = 0.5 * len(certs)
+            #   Add "soft_point" to Database
+            valuate_result.certificates = [str(cert) for cert in certs]
+            valuate_result.certificates_point = certs_point
+                    
+            #   Update total_point
+            valuate_result.total_point = hard_point + degree_point + certs_point
+            #   Update Resume valuation status
+            result.ResumeVersion.status = schema.ResumeStatus.pricing_approved
+            db.commit_rollback(db_session)
+            return valuate_result
+        
+    
+        @staticmethod
+        def list_candidate(is_draft: bool, db_session: Session, current_user): 
+            
+            query = select(model.Resume, model.ResumeVersion, model.JobDescription.job_service)    \
+                        .join(model.ResumeVersion, model.ResumeVersion.cv_id == model.Resume.id) \
+                        .outerjoin(model.JobDescription, model.Resume.job_id == model.JobDescription.id) \
+                        .filter(model.Resume.user_id == current_user.id,
+                                model.ResumeVersion.is_draft == is_draft)
+            results = db_session.execute(query).all()
+            print("===========================================")
+            print(results)
+            
+            if is_draft:
+                return [{
+                    "id": result.ResumeVersion.cv_id,
+                    "fullname": result.ResumeVersion.name,
+                    "job_title": result.ResumeVersion.current_job,
+                    "industry": result.ResumeVersion.industry,
+                    "job_service": result.ResumeVersion.created_at
+                    } for result in results]
+            else:
+                return [{
+                    "id": result.ResumeVersion.cv_id,
+                    "fullname": result.ResumeVersion.name,
+                    "email": result.ResumeVersion.email,
+                    "phone": result.ResumeVersion.phone,
+                    "job_title": result.ResumeVersion.current_job,
+                    "industry": result.ResumeVersion.industry,
+                    "job_service": General.get_job_by_id(result.Resume.job_id, db_session).job_service,
+                    "status": result.ResumeVersion.status,
+                    "referred_time": result.ResumeVersion.created_at
+                    } for result in results]
