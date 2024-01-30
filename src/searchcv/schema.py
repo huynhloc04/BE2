@@ -97,11 +97,11 @@ class UploadResume(BaseModel):
     @classmethod
     def as_form(cls, 
                 industry: Industry = Form(...),
-                avatar: UploadFile = File(...)):
+                cv_file: UploadFile = File(...)):
         
         return cls(
                 industry=industry,
-                avatar=avatar,
+                cv_file=cv_file,
             )
     
 

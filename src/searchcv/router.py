@@ -182,11 +182,11 @@ def list_candidate(
 
 
 #   Upload JD => JD Parsing
-@router.post("/recruiter/upload-cv",
+@router.post("/collaborator/upload-cv",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def upload_cv(
-            data_form: schema.UploadResume,
+            data_form: schema.UploadResume = Depends(schema.UploadResume.as_form),
             db_session: Session = Depends(db.get_session),
             credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
@@ -200,13 +200,13 @@ def upload_cv(
     with open(os.path.join(CV_SAVED_DIR,  cleaned_filename), 'w+b') as file:
         shutil.copyfileobj(data_form.cv_file.file, file)    
     #   JD parsing
-    resume_db, version_db = service.Collaborator.Resume.cv_parsing(data_form, cleaned_filename, db_session, current_user)
+    extracted_result, version_db = service.Collaborator.Resume.cv_parsing(data_form, cleaned_filename, db_session, current_user)
     #   Resume valuation
     valuate_result = service.Collaborator.Resume.resume_valuate(version_db, db_session)   #   cv_id, session
     return schema.CustomResponse(
                     message="Uploaded resume successfully",
                     data={
-                        "cv_id": resume_db.id,
+                        "cv_id": version_db.cv_id,
                         "valuate_result": valuate_result
                     }     #   Front-end will use this result to show valuation temporarily to User 
                 )

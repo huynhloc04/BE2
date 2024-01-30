@@ -60,15 +60,15 @@ class OTPRepo:
 
     
 levels = [
-        ["Executive", "Senior", "Engineer", "Developer"], 
-        ["Leader", "Supervisor", "Senior Leader", "Senior Supervisor", "Assitant Manager"], 
-        ["Manager", "Senior Manager", "Assitant Director"],
-        ["Vice Direcctor", "Deputy Direcctor"], 
-        ["Direcctor"], 
-        ["Head"], 
-        ["Group"], 
-        ["Chief Operating Officer", "Chief Executive Officer", "Chief Product Officer", "Chief Financial Officer"], 
-        ["General Manager", "General Director"]]
+    ["Executive", "Senior", "Engineer", "Developer"], 
+    ["Leader", "Supervisor", "Senior Leader", "Senior Supervisor", "Assitant Manager"], 
+    ["Manager", "Senior Manager", "Assitant Director"],
+    ["Vice Direcctor", "Deputy Direcctor"], 
+    ["Direcctor"], 
+    ["Head"], 
+    ["Group"], 
+    ["Chief Operating Officer", "Chief Executive Officer", "Chief Product Officer", "Chief Financial Officer"], 
+    ["General Manager", "General Director"]]
             
 level_map = {"0": 2, "1": 3, "2": 4, "3": 5, "4": 8, "5": 15, "6": 20, "7": 25, "8": 30}
     
@@ -444,6 +444,7 @@ class Collaborator:
             version_db = model.ResumeVersion(
                                         cv_id=resume_db.id,
                                         filename=extracted_result["cv_file"].split('/')[-1],
+                                        cv_file=extracted_result["cv_file"],
                                         name=extracted_result['personal_information']['name'],
                                         level=extracted_result['levels'],
                                         gender=extracted_result['personal_information']['gender'],
@@ -473,7 +474,7 @@ class Collaborator:
                                         start_time=result['start_time'],
                                         end_time=result['end_time']
             ) for result in extracted_result['education']]
-            db_session.add(education_db)
+            db_session.add_all(education_db)
 
             experience_db = [model.ResumeExperience(
                                         cv_id=resume_db.id,
@@ -485,7 +486,7 @@ class Collaborator:
                                         start_time=result['start_time'],
                                         end_time=result['end_time']
             ) for result in extracted_result['work_experience']]
-            db_session.add(experience_db)
+            db_session.add_all(experience_db)
 
             award_db = [model.ResumeAward(
                                         cv_id=resume_db.id,
@@ -493,7 +494,7 @@ class Collaborator:
                                         time=result['time'],
                                         description=result['description']
             ) for result in extracted_result['awards']]
-            db_session.add(award_db)
+            db_session.add_all(award_db)
 
             project_db = [model.ResumeProject(
                                         cv_id=resume_db.id,
@@ -502,7 +503,7 @@ class Collaborator:
                                         start_time=result['start_time'],
                                         end_time=result['end_time']
             ) for result in extracted_result['projects']]
-            db_session.add(project_db)
+            db_session.add_all(project_db)
 
             lang_cert_db = [model.LanguageResumeCertificate(
                                         cv_id=resume_db.id,
@@ -512,7 +513,7 @@ class Collaborator:
                                         start_time=result['start_time'],
                                         end_time=result['end_time']
             ) for result in extracted_result['certificates']['language_certificates']]
-            db_session.add(lang_cert_db)
+            db_session.add_all(lang_cert_db)
 
             other_cert_db = [model.OtherResumeCertificate(
                                         cv_id=resume_db.id,
@@ -521,7 +522,7 @@ class Collaborator:
                                         start_time=result['start_time'],
                                         end_time=result['end_time']
             ) for result in extracted_result['certificates']['other_certificates']]
-            db_session.add(other_cert_db)
+            db_session.add_all(other_cert_db)
             db.commit_rollback(db_session)
             return resume_db, version_db
 
@@ -544,24 +545,26 @@ class Collaborator:
                 #   Save extracted result
                 saved_path = DatabaseService.store_cv_extraction(extracted_json=extracted_result, cv_file=cleaned_filename)
                 #   Save to database
-                resume_db = Collaborator.Resume.save_cv_parsed_result(extracted_result, data.industry, db_session, current_user)
+                resume_db, version_db = Collaborator.Resume.save_cv_parsed_result(extracted_result, data.industry, db_session, current_user)
             else:
                 #   Read available extracted result
                 saved_path = os.path.join(CV_EXTRACTION_PATH, cleaned_filename.split(".")[0] + ".json")
                 with open(saved_path) as file:
                     extracted_result = file.read()
                 #   Get existing database
-                resume_db = db_session.execute(select(model.ResumeVersion).where(model.ResumeVersion.cv_file == os.path.join("static/resume/cv/uploaded_cvs", cleaned_filename)))
-            return extracted_result, resume_db
+                version_db = db_session.execute(select(model.ResumeVersion).where(model.ResumeVersion.cv_file == os.path.join("static/resume/cv/uploaded_cvs", cleaned_filename)))
+            print("++++++++++++++++++++++++++++++++++++++")
+            print(version_db)
+            return extracted_result, version_db
         
 
         @staticmethod
         def resume_valuate(version_db: model.ResumeVersion, db_session: Session):
             #   Add "hard_point" initialization
             hard_point = 0
-            for level, point in level_map.items():
-                if version_db.level in levels[int(level)]:
-                    hard_point += point
+            for level_, point_ in level_map.items():
+                if version_db.level in levels[int(level_)]:
+                    hard_point += point_
 
             #   ============================== Soft point ==============================
             #   Degrees

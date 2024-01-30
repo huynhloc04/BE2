@@ -56,9 +56,9 @@ Please extract the above [Resume] exactly according to the corresponding keys an
   "projects": (Please list all keys even when they have no values (value will be "N/A" in this case))
   [{
     "project_name": ["string"],
+    "detailed_descriptions": ["string"] (List of candidate's project descriptions. Note as "N/A" if no descriptions available),
     "start_time": ["string"],
-    "end_time": ["string"],
-    "detailed_descriptions": ["string"] (Do not omit any information)
+    "end_time": ["string"]
   }],
   "job_title": ["string"],    (The lastest job title or job position of candidate is currently working on),
   "certificates": {   (Please find exactly certificate information exactly mentioned in Resume. A certificate contains three main fields: "certificate_language", "certificate_name" and "certificate_point_level"
