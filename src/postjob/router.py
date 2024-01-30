@@ -687,6 +687,28 @@ def fill_extracted_resume(
                     }     #   Front-end will use this result to show valuation temporarily to User 
                 )
 
+#   Get information filled from User => Check duplicate (by email & phone) => Save to DB 
+@router.post("/collaborator/fill-extracted-resume-dummy",
+             status_code=status.HTTP_200_OK,
+             response_model=schema.CustomResponse)
+def fill_extracted_resume_dummy(
+                    data_form: schema.FillResume = Depends(schema.FillResume.as_form),
+                    db_session: Session = Depends(db.get_session),
+                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+    resume_db, version_db = service.Collaborator.Resume.fill_resume_dummy(data_form, db_session, current_user)
+    #   Resume valuation
+    valuate_result = service.Collaborator.Resume.resume_valuate(data_form, resume_db, db_session)
+    return schema.CustomResponse(
+                    message="Re-fill resume successfully",
+                    data={
+                        "cv_id": resume_db.id,
+                        "valuate_result": valuate_result
+                    }     #   Front-end will use this result to show valuation temporarily to User 
+                )
+
 
 # @router.post("/collaborator/resume-valuate",
 #              status_code=status.HTTP_200_OK, 
@@ -767,7 +789,7 @@ def get_resume_valuate(
                         "hard_point": result.hard_point,
                         "degrees": result.degrees,
                         "degree_point": result.degree_point,
-                        "certificates": [parse_dict(cert_dict) for cert_dict in result.certificates],
+                        "certificates": [cert_dict for cert_dict in result.certificates],
                         "certificates_point": result.certificates_point,
                         "total_point": result.total_point
                     }
@@ -908,7 +930,7 @@ def get_matching_result(
     )
 
 
-@router.get("/collaborator/get-list-candidate/{is_draft}",
+@router.get("/collaborator/get-list-candidate",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def list_candidate(

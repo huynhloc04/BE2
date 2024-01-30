@@ -121,3 +121,50 @@ class ResumeStatus(str, Enum):
 
     def __str__(self):
         return f"{self.value}"
+    
+
+class Level(str, Enum):     
+    Executive = "Executive"
+    Senior = "Senior"
+    Engineer = "Engineer"
+    Developer = "Developer"
+    Leader = "Leader"
+    Supervisor = "Supervisor"
+    Senior_Leader = "Senior Leader"
+    Senior_Supervisor = "Senior Supervisor"
+    Assitant_Manager = "Assitant Manager"
+    Manager = "Manager"
+    Senior_Manager = "Senior Manager"
+    Assitant_Director = "Assitant Director"
+    Vice_Direcctor = "Vice Direcctor"
+    Deputy_Direcctor = "Deputy Direcctor"
+    Director = "Director"
+    Head = "Head"
+    Group = "Group"
+    COO = "Chief Operating Officer"
+    CEO = "Chief Executive Officer"
+    CPO = "Chief Product Officer"
+    CFO = "Chief Financial Officer"
+    General_Manager = "General Manager"
+    General_Director = "General Director"
+
+    def __str__(self):
+        return f"{self.value}"
+    
+class LanguageCertificate(BaseModel):
+    certificate_language: Optional[str]
+    certificate_name: Optional[str]
+    certificate_point_level: Optional[str]    
+    
+class UpdateResumeValuation(BaseModel):
+    cv_id: Optional[int]
+    level: Optional[Level]
+    current_salary: Optional[float]
+    degrees: Optional[List[str]]
+    language_certificates: Optional[List[LanguageCertificate]]
+
+
+class CollabListResume(BaseModel):
+    page_index: int
+    limit: int 
+    is_draft: bool

@@ -1610,9 +1610,6 @@ class Collaborator:
         def fill_resume(data_form: schema.FillResume,
                         db_session: Session,
                         user):      
-            print("________________________________")
-            print(data_form.skills)
-            print("________________________________")
             #   Save UploadedFile first
             cleaned_filename = DatabaseService.clean_filename(data_form.cv_file.filename)
             resume_db = model.Resume(
@@ -1677,6 +1674,75 @@ class Collaborator:
             db.commit_rollback(db_session) 
             return resume_db, version_db
         
+        
+        @staticmethod
+        def fill_resume_dummy(data_form: schema.FillResume,
+                        db_session: Session,
+                        user):      
+            #   Save UploadedFile first
+            cleaned_filename = DatabaseService.clean_filename(data_form.cv_file.filename)
+            resume_db = model.Resume(
+                                user_id=user.id,
+                                job_id=data_form.job_id,
+                            )       
+            db_session.add(resume_db)
+            db.commit_rollback(db_session)
+            version_db = model.ResumeVersion(
+                                cv_id=resume_db.id,
+                                filename=cleaned_filename,
+                                skills=[skill[1:-1] for skill in data_form.skills[0][1:-1].split(",")],
+                                avatar=os.path.join("static/resume/avatar", data_form.avatar.filename),
+                                cv_file=os.path.join("static/resume/cv/uploaded_cvs", cleaned_filename)
+            )
+            db_session.add(version_db)
+            db.commit_rollback(db_session)
+            #   Save CV file
+            with open(os.path.join(CV_SAVED_TEMP_DIR,  cleaned_filename), 'w+b') as file:
+                shutil.copyfileobj(data_form.cv_file.file, file) 
+            #   Save avatar image
+            with open(os.path.join("static/resume/avatar",  data_form.avatar.filename), 'w+b') as file:
+                shutil.copyfileobj(data_form.avatar.file, file) 
+                
+            result = General.get_detail_resume_by_id(resume_db.id, db_session) 
+            if not result:
+                raise HTTPException(status_code=404, detail="Resume doesn't exist!")
+
+            #   If the resume never existed in System => add to Database
+            for key, value in dict(data_form).items():
+                if value is not None and key not in [
+                                                "job_id",
+                                                "avatar",
+                                                "cv_file",
+                                                "education",
+                                                "work_experiences",
+                                                "awards",
+                                                "skills",
+                                                "projects",
+                                                "language_certificates",
+                                                "other_certificates"]:
+                    setattr(result.ResumeVersion, key, value) 
+            if data_form.education:
+                edus = [model.ResumeEducation(cv_id=resume_db.id, **json.loads(education[1:-1])) for education in data_form.education]
+                db_session.add_all(edus)
+            if data_form.work_experiences:
+                expers = [model.ResumeExperience(cv_id=resume_db.id, **json.loads(exper[1:-1])) for exper in data_form.work_experiences]
+                db_session.add_all(expers)
+            if data_form.awards:
+                awards = [model.ResumeAward(cv_id=resume_db.id, **json.loads(award[1:-1])) for award in data_form.awards]
+                db_session.add_all(awards)
+            if data_form.projects:
+                projects = [model.ResumeProject(cv_id=resume_db.id, **json.loads(project[1:-1])) for project in data_form.projects]
+                db_session.add_all(projects)
+            if data_form.language_certificates:
+                lang_certs = [model.LanguageResumeCertificate(cv_id=resume_db.id, **json.loads(lang_cert[1:-1])) for lang_cert in data_form.language_certificates]
+                db_session.add_all(lang_certs)
+            if data_form.other_certificates:
+                other_certs = [model.OtherResumeCertificate(cv_id=resume_db.id, **json.loads(other_cert[1:-1])) for other_cert in data_form.other_certificates]
+                db_session.add_all(other_certs)
+                
+            db.commit_rollback(db_session) 
+            return resume_db, version_db
+        
 
         @staticmethod
         def resume_valuate(data: schema.FillResume, resume_db: model.Resume, db_session: Session):
@@ -1700,6 +1766,8 @@ class Collaborator:
             cert_lst = []
             if data.language_certificates:
                 for cert in General.json_parse(data.language_certificates[0]):
+                    if cert['certificate_language']=='N/A' or cert['certificate_name']=='N/A' or cert['certificate_point_level']=='N/A': 
+                        continue
                     if cert['certificate_language'] == "English":
                         if (cert['certificate_name'] == "TOEIC" and float(cert['certificate_point_level']) > 700) or (cert['certificate_name'] == "IELTS" and float(cert['certificate_point_level']) > 7.0):
                             cert_lst.append({
@@ -1744,7 +1812,16 @@ class Collaborator:
             resume = General.get_detail_resume_by_id(resume_db.id, db_session)
             resume.ResumeVersion.status = schema.ResumeStatus.pricing_approved
             db.commit_rollback(db_session)
-            return valuate_db
+            return {
+                "cv_id": valuate_db.cv_id,
+                "hard_item": valuate_db.hard_item,
+                "hard_point": valuate_db.hard_point,
+                "degrees": valuate_db.degrees,
+                "degree_point": valuate_db.degree_point,
+                "certificates": valuate_db.certificates,
+                "certificates_point": valuate_db.certificates_point,
+                "total_point": valuate_db.total_point
+            }
         
         # @staticmethod
         # def confirm_resume_valuate(cv_id: int, data: schema.ResumeValuateResult, db_session: Session):
