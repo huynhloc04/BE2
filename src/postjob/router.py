@@ -279,28 +279,6 @@ def choose_resume(
                 )
 
 
-# @router.post("/recruiter/cv-parsing",
-#              status_code=status.HTTP_200_OK, 
-#              response_model=schema.CustomResponse)
-# def cv_parsing(
-#         cv_id: int,
-#         db_session: Session = Depends(db.get_session),
-#         credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-#     # Get curent active user
-#     _, current_user = get_current_active_user(db_session, credentials)
-
-#     extracted_result, saved_path = service.Collaborator.Resume.cv_parsing(cv_id, db_session, current_user)
-
-#     return schema.CustomResponse(
-#                     message="Extract CV successfully!",
-#                     data={
-#                         "extracted_result": extracted_result,
-#                         "json_saved_path": saved_path
-#                     }
-#     )
-
-
 @router.post("/recruiter/choose-interview",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
@@ -700,7 +678,7 @@ def fill_extracted_resume_dummy(
     _, current_user = get_current_active_user(db_session, credentials)
     resume_db, version_db = service.Collaborator.Resume.fill_resume_dummy(data_form, db_session, current_user)
     #   Resume valuation
-    valuate_result = service.Collaborator.Resume.resume_valuate(data_form, resume_db, db_session)
+    valuate_result = service.Collaborator.Resume.resume_valuate_dummy(data_form, resume_db, db_session)
     return schema.CustomResponse(
                     message="Re-fill resume successfully",
                     data={
@@ -831,6 +809,23 @@ def update_resume_draft(
                     message="Create resume draft successfully",
                     data=None
                 )
+    
+    
+@router.put("/collaborator/update-resume-info",
+             status_code=status.HTTP_200_OK,
+             response_model=schema.CustomResponse)
+def update_resume_info(
+                    data_form: schema.UpdateResume = Depends(schema.UpdateResume.as_form),
+                    db_session: Session = Depends(db.get_session),
+                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+    service.Collaborator.Resume.update_resume_info(data_form, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Update resume successfully",
+                    data=None 
+                )
 
 
 @router.post("/collaborator/resume-matching",
@@ -930,7 +925,7 @@ def get_matching_result(
     )
 
 
-@router.get("/collaborator/get-list-candidate",
+@router.post("/collaborator/list-candidate",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def list_candidate(
@@ -961,9 +956,9 @@ def list_candidate(
     
 # ===========================================================
 #                       General APIs
-# ===========================================================
+# ===========================================================s
     
-@router.get("/general/get-jd-pdf/{job_id}",
+@router.get("/general/get-jd-pdf",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def get_jd_file(request: Request,
@@ -977,7 +972,7 @@ def get_jd_file(request: Request,
             )
     
     
-@router.get("/general/get-cv-pdf/{cv_id}",
+@router.get("/general/get-cv-pdf",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def get_cv_file(request: Request,

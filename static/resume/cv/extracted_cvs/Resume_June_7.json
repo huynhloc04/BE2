@@ -1,0 +1,149 @@
+{
+  "levels": [
+    "Developer"
+  ],
+  "education": [
+    {
+      "institution_name": "Drexel University",
+      "degree": "Bachelor of Science in Computer Science",
+      "major": "N/A",
+      "gpa": "N/A",
+      "start_time": "N/A",
+      "end_time": "Expected 2023"
+    }
+  ],
+  "work_experience": [
+    {
+      "company_name": "Drexel University",
+      "position": "Researcher",
+      "role": "N/A",
+      "level": "N/A",
+      "working_industry": "Education",
+      "detailed_working_description": [
+        "Collaborated with Professor Shadi Rezapour on developing an NLP model to identify and categorize substance abuse from social networks.",
+        "Collected, assembled, and preprocessed data from 35 subreddits spanning over 4 years.",
+        "Designed a high-performance pipeline for downloading Reddit data, achieving a 13500x speed improvement compared to the standard Reddit library.",
+        "Our paper, Healing with Artificial Intelligence (HEART) Data Pipeline, is being reviewed by American Medical Informatics Association."
+      ],
+      "start_time": "May. 2022",
+      "end_time": "June. 2023"
+    },
+    {
+      "company_name": "Drexel University",
+      "position": "Junior Developer",
+      "role": "N/A",
+      "level": "N/A",
+      "working_industry": "Education",
+      "detailed_working_description": [
+        "Built software solutions to extend the functionality of existing Drexel University systems using Java, .Net, and web technology stacks.",
+        "Translated business requirements into formal software specifications.",
+        "Created, extended and maintained Java web applications, developed data models to be deployed in Microsoft SQL Server, Oracle, NoSQL and PostgreSQL databases."
+      ],
+      "start_time": "Sep. 2021",
+      "end_time": "March. 2022"
+    },
+    {
+      "company_name": "FPT.AI",
+      "position": "Software Engineer Intern",
+      "role": "N/A",
+      "level": "N/A",
+      "working_industry": "Software & IT Services",
+      "detailed_working_description": [
+        "Refined and deployed an advanced ID fraud detection model for Vietnamese national ID cards, surpassing the company’s existing model in accuracy and speed. Enhanced fraud detection capabilities and successfully implemented for commercial use.",
+        "Collected, assembled, and preprocessed raw data to support multiple model training needs, ensuring the availability of high-quality data for accurate and effective modeling.",
+        "Designed, cultivated, and deployed an ID fraud detection app utilizing the EfficientNet model fine-tuned on scanned ID images, incorporating user-friendly features and interfaces, conducting thorough testing and validation, and providing training and support to ensure its successful adoption and use."
+      ],
+      "start_time": "Oct. 2020",
+      "end_time": "March. 2021"
+    },
+    {
+      "company_name": "WhyFit",
+      "position": "Full Stack Developer",
+      "role": "N/A",
+      "level": "N/A",
+      "working_industry": "Wellness & Fitness",
+      "detailed_working_description": [
+        "Developed new features that help businesses run and manage their wellness benefits and initiatives from an administrative and end-user perspective by primarily using Ruby on Rails, HTML, CSS, JavaScript.",
+        "Built a dynamic page for the resources section of the website that allows users to select wellness businesses that would display on Google Maps and implemented the new tool into the web page.",
+        "Worked on the implementation of third-party services into the WhyFit platform. Used FitBit API and Apple Health API for iOS to collect personal data and incorporated it with the WhyFit system.",
+        "Collaborated with the sales team to develop a script using Python and Telnet protocol that would check if the email address on the WhyFit mailing list exists on the email recipient server and is valid."
+      ],
+      "start_time": "Sep. 2019",
+      "end_time": "March. 2020"
+    }
+  ],
+  "skills": [
+    "Python",
+    "Java",
+    "Javascript"
+  ],
+  "awards": [
+    {
+      "award_name": "N/A",
+      "time": "N/A",
+      "description": "N/A"
+    }
+  ],
+  "projects": [
+    {
+      "project_name": "Good Meal",
+      "detailed_descriptions": [
+        "Led a full-stack development team for the 'Good Meal' project, driving successful project execution.",
+        "Improved expertise in Node.js, utilizing APIs for data integration and optimizing response formatting.",
+        "Enhanced accuracy and resolved errors in chat GPT system, contributing to improved performance and user experience."
+      ],
+      "start_time": "N/A",
+      "end_time": "N/A"
+    }
+  ],
+  "job_title": [
+    "Researcher"
+  ],
+  "certificates": {
+    "language_certificates": [
+      {
+        "certificate_language": "English",
+        "certificate_name": "TOEIC",
+        "certificate_point_level": "N/A",
+        "start_time": "N/A",
+        "end_time": "N/A"
+      }
+    ],
+    "other_certificates": [
+      {
+        "certificate_name": "N/A",
+        "certificate_point_level": "N/A",
+        "start_time": "N/A",
+        "end_time": "N/A"
+      }
+    ]
+  },
+  "industry": [
+    "Education"
+  ],
+  "objectives": [
+    "N/A"
+  ],
+  "personal_information": {
+    "name": "Minh Nguyen",
+    "current_job_position": "Researcher",
+    "gender": "N/A",
+    "linkedin": "N/A",
+    "website": "N/A",
+    "facebook": "N/A",
+    "instagram": "N/A",
+    "earliest_university_year": "N/A",
+    "birthday": "N/A"
+  },
+  "contact_information": {
+    "phone": "+267 939 7112",
+    "email": "minhkhac.pro@gmail.com",
+    "country": "N/A",
+    "city/province": "N/A",
+    "address": "N/A"
+  },
+  "orientations": [
+    "N/A"
+  ],
+  "cv_file": "static/resume/cv/uploaded_cvs/Resume_June_7.pdf"
+}

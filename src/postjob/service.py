@@ -89,7 +89,7 @@ class OTPRepo:
         
     @staticmethod
     def check_token(db_session: Session, token: str):
-        token = (db_session.execute(select(model.JWTModel).where(model.JWTModel.token == token))).scalar_one_or_none()
+        token = db_session.execute(select(model.JWTModel).where(model.JWTModel.token == token)).scalar_one_or_none()
         if token:
             return True
         return False
@@ -634,8 +634,7 @@ class Recruiter:
                         "job_title": result.current_job,
                         "industry": result.industry,
                         "status": result.status,
-                        "job_service": "Posting Job",
-                        # "job_service": General.get_job_from_resume(result.cv_id, db_session).job_service,
+                        "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
                         "referred_time": result.created_at
                     } for result in resume_results]
             
@@ -649,8 +648,7 @@ class Recruiter:
                         "job_title": result.ResumeVersion.current_job,
                         "industry": result.ResumeVersion.industry,
                         "status": result.ResumeVersion.status,
-                        "job_service": "Posting Job",
-                        # "job_service": General.get_job_from_resume(result.ResumeVersion.cv_id, db_session).job_service,
+                        "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
                         "referred_time": result.ResumeVersion.created_at
                     } for result in results]
             elif state == schema.CandidateState.choosen_candidate:
@@ -663,9 +661,7 @@ class Recruiter:
                         "id": result.ResumeVersion.cv_id,
                         "fullname": result.ResumeVersion.name,
                         "job_title": result.ResumeVersion.current_job,
-                        "industry": result.ResumeVersion.industry,
-                        "job_service": "Posting Job",
-                        # "job_service": General.get_job_from_resume(result.ResumeVersion.cv_id, db_session).job_service,
+                        "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
                         "status": result.ResumeVersion.status,
                         "referred_time": result.ResumeVersion.created_at
                     } for result in results]
@@ -680,8 +676,7 @@ class Recruiter:
                         "job_title": result.ResumeVersion.current_job,
                         "industry": result.ResumeVersion.industry,
                         "status": result.ResumeVersion.status,
-                        "job_service": "PostingJob",
-                        "job_service": General.get_job_from_resume(result.ResumeVersion.cv_id, db_session).job_service,
+                        "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
                         "referred_time": result.ResumeVersion.created_at
                     } for result in results]
             else:
@@ -742,6 +737,7 @@ class Recruiter:
                     "educations": [{
                         "institute": edu.institute_name,
                         "degree": edu.degree,
+                        "gpa": edu.gpa,
                         "major": edu.major,
                         "start_time": edu.start_time,
                         "end_time": edu.end_time,
@@ -1249,7 +1245,7 @@ class Admin:
                 "candidate_name": result.name,
                 "job_title": result.current_job,
                 "industry": result.industry,
-                "job_service": General.get_job_from_resume(result.cv_id, db_session).job_service,
+                "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
                 "referred_date": result.created_at,
             } for result in results]      
             
@@ -1266,8 +1262,7 @@ class Admin:
                         "fullname": result.name,
                         "job_title": result.current_job,
                         "industry": result.industry,
-                        # "job_service": "Posting Job",
-                        "job_service": General.get_job_from_resume(result.cv_id, db_session).job_service,
+                        "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
                         "status": result.status,
                         "referred_time": result.created_at
                     } for result in results]
@@ -1283,8 +1278,7 @@ class Admin:
                         "job_title": result.current_job,
                         "industry": result.industry,
                         "status": result.status,
-                        # "job_service": "Posting Job",
-                        "job_service": General.get_job_from_resume(result.cv_id, db_session).job_service,
+                        "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
                         "referred_time": result.created_at
                     } for result in results]
             elif state == schema.CandidateStatus.approved:
@@ -1297,8 +1291,7 @@ class Admin:
                         "fullname": result.name,
                         "job_title": result.current_job,
                         "industry": result.industry,
-                        # "job_service": "Posting Job",
-                        "job_service": General.get_job_from_resume(result.cv_id, db_session).job_service,
+                        "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
                         "status": result.status,
                         "referred_time": result.created_at
                     } for result in results]
@@ -1314,7 +1307,7 @@ class Admin:
                         "industry": result.industry,
                         "status": result.status,
                         # "job_service": "PostingJob",
-                        "job_service": General.get_job_from_resume(result.cv_id, db_session).job_service,
+                        "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
                         "referred_time": result.created_at
                     } for result in results]
             else:
@@ -1355,8 +1348,6 @@ class Collaborator:
             job_result = db_session.execute(job_query).scalars().first() 
             if not job_result:
                 raise HTTPException(status_code=404, detail="Job doesn't exist!")
-            print("=====================================")
-            print(job_result)
             #   Company
             company_query = select(model.Company).where(model.Company.id == job_result.company_id)
             company_result = db_session.execute(company_query).scalars().first() 
@@ -1628,7 +1619,7 @@ class Collaborator:
             db_session.add(version_db)
             db.commit_rollback(db_session)
             #   Save CV file
-            with open(os.path.join(CV_SAVED_TEMP_DIR,  cleaned_filename), 'w+b') as file:
+            with open(os.path.join(CV_SAVED_DIR,  cleaned_filename), 'w+b') as file:
                 shutil.copyfileobj(data_form.cv_file.file, file) 
             #   Save avatar image
             with open(os.path.join("static/resume/avatar",  data_form.avatar.filename), 'w+b') as file:
@@ -1676,41 +1667,34 @@ class Collaborator:
         
         
         @staticmethod
-        def fill_resume_dummy(data_form: schema.FillResume,
-                        db_session: Session,
-                        user):      
+        def update_resume_info(data_form: schema.UpdateResume, db_session: Session):      
             #   Save UploadedFile first
-            cleaned_filename = DatabaseService.clean_filename(data_form.cv_file.filename)
-            resume_db = model.Resume(
-                                user_id=user.id,
-                                job_id=data_form.job_id,
-                            )       
-            db_session.add(resume_db)
-            db.commit_rollback(db_session)
-            version_db = model.ResumeVersion(
-                                cv_id=resume_db.id,
-                                filename=cleaned_filename,
-                                skills=[skill[1:-1] for skill in data_form.skills[0][1:-1].split(",")],
-                                avatar=os.path.join("static/resume/avatar", data_form.avatar.filename),
-                                cv_file=os.path.join("static/resume/cv/uploaded_cvs", cleaned_filename)
-            )
-            db_session.add(version_db)
-            db.commit_rollback(db_session)
-            #   Save CV file
-            with open(os.path.join(CV_SAVED_TEMP_DIR,  cleaned_filename), 'w+b') as file:
-                shutil.copyfileobj(data_form.cv_file.file, file) 
-            #   Save avatar image
-            with open(os.path.join("static/resume/avatar",  data_form.avatar.filename), 'w+b') as file:
-                shutil.copyfileobj(data_form.avatar.file, file) 
-                
-            result = General.get_detail_resume_by_id(resume_db.id, db_session) 
+            result = db_session.execute(model.ResumeVersion).where(model.ResumeVersion.cv_id == data_form.cv_id).scalars().first()
             if not result:
                 raise HTTPException(status_code=404, detail="Resume doesn't exist!")
+            if data_form.avatar:
+                #  Delete old avatar and save the new one\
+                if result.avatar:
+                    os.remove(result.avatar) 
+                result.avatar = os.path.join("static/resume/avatar", data_form.avatar.filename)
+                with open(os.path.join("static/resume/avatar",  data_form.avatar.filename), 'w+b') as file:
+                    shutil.copyfileobj(data_form.avatar.file, file) 
+            if data_form.cv_file:
+                cleaned_filename = DatabaseService.clean_filename(data_form.cv_file.filename)
+                result.filename = cleaned_filename
+                #  Delete old avatar and save the new one
+                if result.cv_file:
+                    os.remove(result.cv_file)
+                result.cv_file = os.path.join(CV_SAVED_DIR, cleaned_filename)
+                with open(os.path.join(CV_SAVED_DIR,  cleaned_filename), 'w+b') as file:
+                    shutil.copyfileobj(data_form.cv_file.file, file) 
+            if data_form.skills:
+                result.skills = [skill[1:-1] for skill in data_form.skills[0][1:-1].split(",")]
 
             #   If the resume never existed in System => add to Database
             for key, value in dict(data_form).items():
                 if value is not None and key not in [
-                                                "job_id",
+                                                "cv_id",
                                                 "avatar",
                                                 "cv_file",
                                                 "education",
@@ -1722,26 +1706,25 @@ class Collaborator:
                                                 "other_certificates"]:
                     setattr(result.ResumeVersion, key, value) 
             if data_form.education:
-                edus = [model.ResumeEducation(cv_id=resume_db.id, **json.loads(education[1:-1])) for education in data_form.education]
+                edus = [model.ResumeEducation(cv_id=data_form.cv_id, **education) for education in General.json_parse(data_form.education[0])]
                 db_session.add_all(edus)
             if data_form.work_experiences:
-                expers = [model.ResumeExperience(cv_id=resume_db.id, **json.loads(exper[1:-1])) for exper in data_form.work_experiences]
+                expers = [model.ResumeExperience(cv_id=data_form.cv_id, **exper) for exper in General.json_parse(data_form.work_experiences[0])]
                 db_session.add_all(expers)
             if data_form.awards:
-                awards = [model.ResumeAward(cv_id=resume_db.id, **json.loads(award[1:-1])) for award in data_form.awards]
+                awards = [model.ResumeAward(cv_id=data_form.cv_id, **award) for award in General.json_parse(data_form.awards[0])]
                 db_session.add_all(awards)
             if data_form.projects:
-                projects = [model.ResumeProject(cv_id=resume_db.id, **json.loads(project[1:-1])) for project in data_form.projects]
+                projects = [model.ResumeProject(cv_id=data_form.cv_id, **project) for project in General.json_parse(data_form.projects[0])]
                 db_session.add_all(projects)
             if data_form.language_certificates:
-                lang_certs = [model.LanguageResumeCertificate(cv_id=resume_db.id, **json.loads(lang_cert[1:-1])) for lang_cert in data_form.language_certificates]
+                lang_certs = [model.LanguageResumeCertificate(cv_id=data_form.cv_id, **lang_cert) for lang_cert in General.json_parse(data_form.language_certificates[0])]
                 db_session.add_all(lang_certs)
             if data_form.other_certificates:
-                other_certs = [model.OtherResumeCertificate(cv_id=resume_db.id, **json.loads(other_cert[1:-1])) for other_cert in data_form.other_certificates]
+                other_certs = [model.OtherResumeCertificate(cv_id=data_form.cv_id, **other_cert) for other_cert in General.json_parse(data_form.other_certificates[0])]
                 db_session.add_all(other_certs)
                 
             db.commit_rollback(db_session) 
-            return resume_db, version_db
         
 
         @staticmethod
@@ -1783,6 +1766,155 @@ class Collaborator:
                             })
                     elif cert['certificate_language'] == "Korean":
                         if cert['certificate_name'] == "Topik_II" and cert['certificate_point_level'] in ["Level 5", "Level 6"]:
+                            cert_lst.append({
+                                "certificate_language": cert['certificate_language'],
+                                "certificate_name": cert['certificate_name'],
+                                "certificate_point_level": cert['certificate_point_level']
+                            })
+                    elif cert['certificate_language'] == "Chinese" and cert['certificate_point_level'] == ["HSK-5", "HSK-6"]:
+                        cert_lst.append({
+                                "certificate_language": cert['certificate_language'],
+                                "certificate_name": cert['certificate_name'],
+                                "certificate_point_level": cert['certificate_point_level']
+                            })
+                certs_point = 0.5 * len(cert_lst)
+
+            #   Save valuation result to Db
+            valuate_db = model.ValuationInfo(
+                                    cv_id=resume_db.id,
+                                    hard_item=data.level,
+                                    hard_point=hard_point,
+                                    degrees=degrees,
+                                    degree_point=degree_point,
+                                    certificates=[str(cert_dict) for cert_dict in cert_lst],
+                                    certificates_point=certs_point,
+                                    total_point=hard_point + degree_point + certs_point
+            )
+            db_session.add(valuate_db)
+            #   Update Resume valuation status
+            resume = General.get_detail_resume_by_id(resume_db.id, db_session)
+            resume.ResumeVersion.status = schema.ResumeStatus.pricing_approved
+            db.commit_rollback(db_session)
+            return {
+                "cv_id": valuate_db.cv_id,
+                "hard_item": valuate_db.hard_item,
+                "hard_point": valuate_db.hard_point,
+                "degrees": valuate_db.degrees,
+                "degree_point": valuate_db.degree_point,
+                "certificates": valuate_db.certificates,
+                "certificates_point": valuate_db.certificates_point,
+                "total_point": valuate_db.total_point
+            }
+        
+        
+        @staticmethod
+        def fill_resume_dummy(data_form: schema.FillResume,
+                        db_session: Session,
+                        user):      
+            #   Save UploadedFile first
+            cleaned_filename = DatabaseService.clean_filename(data_form.cv_file.filename)
+            resume_db = model.Resume(
+                                user_id=user.id,
+                                job_id=data_form.job_id,
+                            )       
+            db_session.add(resume_db)
+            db.commit_rollback(db_session)
+            version_db = model.ResumeVersion(
+                                cv_id=resume_db.id,
+                                filename=cleaned_filename,
+                                avatar=os.path.join("static/resume/avatar", data_form.avatar.filename),
+                                cv_file=os.path.join("static/resume/cv/uploaded_cvs", cleaned_filename)
+            )
+            db_session.add(version_db)
+            db.commit_rollback(db_session)
+            #   Save CV file
+            with open(os.path.join(CV_SAVED_TEMP_DIR,  cleaned_filename), 'w+b') as file:
+                shutil.copyfileobj(data_form.cv_file.file, file) 
+            #   Save avatar image
+            with open(os.path.join("static/resume/avatar",  data_form.avatar.filename), 'w+b') as file:
+                shutil.copyfileobj(data_form.avatar.file, file) 
+                
+            result = General.get_detail_resume_by_id(resume_db.id, db_session) 
+            if not result:
+                raise HTTPException(status_code=404, detail="Resume doesn't exist!")
+
+            #   If the resume never existed in System => add to Database
+            for key, value in dict(data_form).items():
+                if value is not None and key not in [
+                                                "job_id",
+                                                "avatar",
+                                                "cv_file",
+                                                "education",
+                                                "work_experiences",
+                                                "awards",
+                                                "projects",
+                                                "language_certificates",
+                                                "other_certificates"]:
+                    setattr(result.ResumeVersion, key, value) 
+            if data_form.education:
+                edus = [model.ResumeEducation(cv_id=resume_db.id, **json.loads(education[1:-1])) for education in data_form.education]
+                db_session.add_all(edus)
+            if data_form.work_experiences:
+                expers = [model.ResumeExperience(cv_id=resume_db.id, **json.loads(exper[1:-1])) for exper in data_form.work_experiences]
+                db_session.add_all(expers)
+            if data_form.awards:
+                awards = [model.ResumeAward(cv_id=resume_db.id, **json.loads(award[1:-1])) for award in data_form.awards]
+                db_session.add_all(awards)
+            if data_form.projects:
+                projects = [model.ResumeProject(cv_id=resume_db.id, **json.loads(project[1:-1])) for project in data_form.projects]
+                db_session.add_all(projects)
+            if data_form.language_certificates:
+                lang_certs = [model.LanguageResumeCertificate(cv_id=resume_db.id, **json.loads(lang_cert[1:-1])) for lang_cert in data_form.language_certificates]
+                db_session.add_all(lang_certs)
+            if data_form.other_certificates:
+                other_certs = [model.OtherResumeCertificate(cv_id=resume_db.id, **json.loads(other_cert[1:-1])) for other_cert in data_form.other_certificates]
+                db_session.add_all(other_certs)
+                
+            db.commit_rollback(db_session) 
+            return resume_db, version_db
+        
+
+        @staticmethod
+        def resume_valuate_dummy(data: schema.FillResume, resume_db: model.Resume, db_session: Session):
+            #   Add "hard_point" initialization
+            hard_point = 0
+            for level, point in level_map.items():
+                if data.level in levels[int(level)]:
+                    hard_point += point
+
+            #   ============================== Soft point ==============================
+            #   Degrees
+            degree_point = 0
+            degrees = []
+            if data.education:
+                for education in data.education:
+                    education = json.loads(education[1:-1])
+                    if education["degree"] in ["Bachelor", "Master", "Ph.D"]:
+                        degrees.append(education["degree"])
+                degree_point = 0.5 * len(degrees)
+            #   Certificates
+            certs_point = 0
+            cert_lst = []
+            if data.language_certificates:
+                for cert in data.language_certificates:
+                    cert = json.loads(cert[1:-1])
+                    if cert['certificate_language']=='N/A' or cert['certificate_name']=='N/A' or cert['certificate_point_level']=='N/A': 
+                        continue
+                    if cert['certificate_language'] == "English":
+                        if (cert['certificate_name'] == "TOEIC" and float(cert['certificate_point_level']) > 700) or (cert['certificate_name'] == "IELTS" and float(cert['certificate_point_level']) > 7.0):
+                            cert_lst.append({
+                                "certificate_language": cert['certificate_language'],
+                                "certificate_name": cert['certificate_name'],
+                                "certificate_point_level": cert['certificate_point_level']
+                            })
+                    elif cert['certificate_language'] == "Japan" and cert['certificate_point_level'] in ["N1", "N2"]:
+                        cert_lst.append({
+                                "certificate_language": cert['certificate_language'],
+                                "certificate_name": cert['certificate_name'],
+                                "certificate_point_level": cert['certificate_point_level']
+                            })
+                    elif cert['certificate_language'] == "Korean":
+                        if cert['certificate_name'] == "Topik_II" and cert['certificate_point_level'] in ["Level_5", "Level_6"]:
                             cert_lst.append({
                                 "certificate_language": cert['certificate_language'],
                                 "certificate_name": cert['certificate_name'],
@@ -2225,34 +2357,36 @@ class Collaborator:
                     "explanation": matching_result.overall_explain
                 }
             }
-
+        
     
         @staticmethod
         def list_candidate(is_draft: bool, db_session: Session, current_user): 
-            
-            query = select(model.Resume, model.ResumeVersion)    \
+            if is_draft:
+                query = select(model.Resume, model.ResumeVersion)    \
                         .join(model.ResumeVersion, model.ResumeVersion.cv_id == model.Resume.id) \
                         .filter(model.Resume.user_id == current_user.id,
-                                model.ResumeVersion.is_draft == is_draft)
-            results = db_session.execute(query).all()
-            
-            if is_draft:
+                                model.ResumeVersion.is_draft == True)
+                results = db_session.execute(query).all()
                 return [{
                     "id": result.ResumeVersion.cv_id,
                     "fullname": result.ResumeVersion.name,
                     "job_title": result.ResumeVersion.current_job,
                     "industry": result.ResumeVersion.industry,
-                    "drafted_time": result.ResumeVersion.created_at
+                    "job_service": result.ResumeVersion.created_at
                     } for result in results]
             else:
+                query = select(model.Resume, model.ResumeVersion, model.JobDescription.job_service)    \
+                        .join(model.ResumeVersion, model.ResumeVersion.cv_id == model.Resume.id) \
+                        .outerjoin(model.JobDescription, and_(model.Resume.job_id == model.JobDescription.id, model.Resume.job_id == None)) \
+                        .filter(model.Resume.user_id == current_user.id,
+                                model.ResumeVersion.is_draft == False)
+                results = db_session.execute(query).all()
                 return [{
                     "id": result.ResumeVersion.cv_id,
                     "fullname": result.ResumeVersion.name,
-                    "email": result.ResumeVersion.email,
-                    "phone": result.ResumeVersion.phone,
                     "job_title": result.ResumeVersion.current_job,
                     "industry": result.ResumeVersion.industry,
-                    "job_service": General.get_job_by_id(result.Resume.job_id, db_session).job_service,
+                    "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
                     "status": result.ResumeVersion.status,
                     "referred_time": result.ResumeVersion.created_at
                     } for result in results]

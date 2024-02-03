@@ -630,6 +630,98 @@ class FillResume(BaseModel):
                 projects=projects,
                 language_certificates=language_certificates,
                 other_certificates=other_certificates)
+
+
+class UpdateResume(BaseModel):
+    cv_id: int
+    avatar: Optional[UploadFile]
+    cv_file: Optional[UploadFile]
+    name: Optional[str]
+    industry: Optional[Industry]
+    level: Optional[Level]
+    current_job: Optional[str]      
+    phone: Optional[str]
+    email: Optional[str]
+    address: Optional[str]
+    city: Optional[str]
+    country: Optional[str]        
+    objectives: Optional[List[str]]
+    birthday: Optional[datetime]  # => age    
+    gender: Optional[str]
+    descriptions: Optional[str]
+    identification_code: Optional[str]    
+    linkedin: Optional[str]
+    website: Optional[str]
+    facebook: Optional[str]
+    instagram: Optional[str]  
+    education: Optional[List[str]]
+    work_experiences: Optional[List[str]]
+    skills: Optional[List[str]]
+    awards: Optional[List[str]]
+    projects: Optional[List[str]]
+    language_certificates: Optional[List[str]]
+    other_certificates: Optional[List[str]]
+
+    @classmethod
+    def as_form(cls, 
+                cv_id: int = Form(None),
+                avatar: Optional[UploadFile] = File(None),
+                cv_file: Optional[UploadFile] = File(None),
+                name: Optional[str] = Form(None),
+                industry: Optional[Industry] = Form(None),
+                level: Optional[Level] = Form(None),
+                current_job: Optional[str] = Form(None),
+                phone: Optional[str] = Form(None),
+                email: Optional[str] = Form(None),
+                address: Optional[str] = Form(None),
+                descriptions: Optional[str] = Form(None),
+                city: Optional[str] = Form(None),
+                country: Optional[str] = Form(None),
+                objectives: List[str] = Form(None),
+                birthday: Optional[datetime] = Form(None),
+                gender: Optional[str] = Form(None),
+                identification_code: Optional[str] = Form(None),
+                linkedin: Optional[str] = Form(None),
+                website: Optional[str] = Form(None),
+                facebook: Optional[str] = Form(None),
+                instagram: Optional[str] = Form(None),
+                skills: Optional[List[str]] = Form(None),
+                education: Optional[List[str]] = Form(None),
+                work_experiences: Optional[List[str]] = Form(None),
+                awards: Optional[List[str]] = Form(None),
+                projects: Optional[List[str]] = Form(None),
+                language_certificates: Optional[List[str]] = Form(None),
+                other_certificates: Optional[List[str]] = Form(None)):
+        
+        return cls(
+                cv_id=cv_id,
+                avatar=avatar,
+                cv_file=cv_file,
+                name=name,
+                industry=industry,
+                descriptions=descriptions,
+                level=level,
+                current_job=current_job,
+                phone=phone,
+                email=email,
+                address=address,
+                city=city,
+                country=country,
+                objectives=objectives,
+                birthday=birthday,
+                gender=gender,
+                identification_code=identification_code,
+                linkedin=linkedin,
+                website=website,
+                facebook=facebook,
+                instagram=instagram,
+                education=education,
+                work_experiences=work_experiences,
+                skills=skills,
+                awards=awards,
+                projects=projects,
+                language_certificates=language_certificates,
+                other_certificates=other_certificates)
     
 
 class RecruitPauseJob(BaseModel):

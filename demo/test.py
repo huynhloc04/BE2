@@ -1,46 +1,25 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from datetime import datetime
+
+from fastapi import FastAPI
+from pydantic import BaseModel
 
 app = FastAPI()
 
-# Enable CORS
-origins = ["*"]  # You might want to specify your allowed origins here
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
-# Import and use your routes
-# Replace "your_routes_module" with the actual module name containing your routes
-app.include_router(your_routes_module.router)
+class Subscription(BaseModel):
+    username: str
+    monthly_fee: float
+    start_date: datetime
 
-# Endpoint not found handler
-@app.exception_handler(404)
-async def not_found_exception_handler(request, exc):
-    return JSONResponse(
-        status_code=404,
-        content={"code": 404, "message": "Endpoint not found"},
-    )
 
-# Server-side error handler
-@app.exception_handler(500)
-async def server_error_handler(request, exc):
-    return JSONResponse(
-        status_code=500,
-        content={"code": 500, "error": "Something went wrong, please try again!"},
-    )
+@app.webhooks.post("new-subscription")
+def new_subscription(body: Subscription):
+    """
+    When a new user subscribes to your service we'll send you a POST request with this
+    data to the URL that you register for the event `new-subscription` in the dashboard.
+    """
 
-# Root endpoint
-@app.get("/")
-async def read_root():
-    return {"message": "Hello, FastAPI!"}
 
-# Run the application
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(app, host="127.0.0.1", port=4300, reload=True)
+@app.get("/users/")
+def read_users():
+    return ["Rick", "Morty"]

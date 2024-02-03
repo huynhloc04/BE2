@@ -28,37 +28,37 @@ Please extract the above [Resume] exactly according to the corresponding keys an
   ),
   "education": ["list"] (Please list all keys even when they have no values (value will be "N/A" in this case).)
   [{
-    "institution_name": ["string"],
-    "degree": ["string"],
-    "major": ["string"],
-    "gpa": ["string"],
-    "start_time": ["string"],
-    "end_time": ["string"]
+    "institution_name": "string",
+    "degree": "string",
+    "major": "string",
+    "gpa": "string",
+    "start_time": "string",
+    "end_time": "string"
   }],
   "work_experience": (Please list all keys even when they have no values (value will be "N/A" in this case). Do not combine companies together, please keep them separately)
   [{
-    "company_name": ["string"],
-    "position": ["string"],
-    "role": ["string"],
-    "level": ["string"],
-    "working_industry: ["string"], 
+    "company_name": "string",
+    "position": "string",
+    "role": "string",
+    "level": "string",
+    "working_industry: "string", 
     "detailed_working_description": ["string"]  (List of detailed working descriptions at the company that the candidate has worked for),
-    "start_time": ["string"],
-    "end_time": ["string"]
+    "start_time": "string",
+    "end_time": "string"
   }],
   "skills": ["string"]  (List of candidate's skills. Note as "N/A" if no skill available),
   "awards": (Please list all keys even when they have no values (value will be "N/A" in this case))
   [{
-    "award_name": ["string"],
-    "time": ["string"],
-    "description": ["string"] (Detail descriptions about candidate's awards)
+    "award_name": "string",
+    "time": "string",
+    "description": "string" (Detail descriptions about candidate's awards)
   }],
   "projects": (Please list all keys even when they have no values (value will be "N/A" in this case))
   [{
-    "project_name": ["string"],
+    "project_name": "string",
     "detailed_descriptions": ["string"] (List of candidate's project descriptions. Note as "N/A" if no descriptions available),
-    "start_time": ["string"],
-    "end_time": ["string"]
+    "start_time": "string",
+    "end_time": "string"
   }],
   "job_title": ["string"],    (The lastest job title or job position of candidate is currently working on),
   "certificates": {   (Please find exactly certificate information exactly mentioned in Resume. A certificate contains three main fields: "certificate_language", "certificate_name" and "certificate_point_level"
@@ -73,17 +73,17 @@ Please extract the above [Resume] exactly according to the corresponding keys an
         - ["Level_1" or "Level_2"] corresponds to "Topik_I" and ["Level_3", "Level_4", "Level_4", "Level_5", "Level_6"] corresponds to "Topik_II" of "Korean" language.
       ). The results must appear in [Resume] and follows strictly format defined as below. If you cannot find any certificate, please note as "N/A".
     "language_certificates": [{   (Please list all keys even when they have no values (value will be "N/A" in this case))
-        "certificate_language": ["string"],
-        "certificate_name": ["string"],
-        "certificate_point_level": ["string"],
-        "start_time": ["string"],
-        "end_time": ["string"]
+        "certificate_language": "string",
+        "certificate_name": "string",
+        "certificate_point_level": "string",
+        "start_time": "string",
+        "end_time": "string"
     }],
     "other_certificates": [{     (Certificates that are not relevant to language certificates. Please list all keys even when they have no values (it's value will be "N/A" in this case))
-        "certificate_name": ["string"],
-        "certificate_point_level": ["string"],
-        "start_time": ["string"],
-        "end_time": ["string"]
+        "certificate_name": "string",
+        "certificate_point_level": "string",
+        "start_time": "string",
+        "end_time": "string"
     }]
   },
   "industry": ["string"] (Based on information provided in [Resume] and industries listed below, you must choose the working industry that the candidate is currently working on (Do not leave thí field empty or "N/A" value):
@@ -112,27 +112,27 @@ Please extract the above [Resume] exactly according to the corresponding keys an
     ),
   "objectives": ["string"]  (List of candidate's working objectives. Note as "N/A" if no objective available),
   "personal_information": { (Please list all keys even when they have no values (value will be "N/A" in this case))
-    "name": ["string"], 
-    "current_job_position": ["string"],
-    "gender": ["string"],   ("male" or "female")
-    "linkedin": ["string"],
-    "website": ["string"],
-    "facebook": ["string"],
-    "instagram": ["string"],
-    "earliest_university_year": ["string"],
-    "birthday": ["string"], (if the birthday is not available, calculate exactly "year of birth" based on the earliest education year if birthday information is not provided in resume. The earliest education when candidate is 18 years old, so "year of birth" equal "Earliest university year" minus 18.)
+    "name": "string", 
+    "current_job_position": "string",
+    "gender": "string",   ("male" or "female")
+    "linkedin": "string",
+    "website": "string",
+    "facebook": "string",
+    "instagram": "string",
+    "earliest_university_year": "string",
+    "birthday": "string", (if the birthday is not available, calculate exactly "year of birth" based on the earliest education year if birthday information is not provided in resume. The earliest education when candidate is 18 years old, so "year of birth" equal "Earliest university year" minus 18.)
   },
   "contact_information": {  (Please list all keys even when they have no values (value will be "N/A" in this case))
-    "phone": ["string"],
-    "email": ["string"],
-    "country": ["string"],
-    "city/province": ["string"],
-    "address": ["string"]   (Address do not include city or province)
+    "phone": "string",
+    "email": "string",
+    "country": "string",
+    "city/province": "string",
+    "address": "string"   (Address do not include city or province)
   },
   "orientations": ["string"]   (List all working orientations of candidate. Note as "N/A" if no objectives found)
 }
 
 Importants:
-  - ["string"] mean a list of string, even if there is only one item, put it in a list of one string item.
+  - ["string"] value means a list of string, even if there is only one item and must be put in a list of one string item. "string" value means one item of string.
   - All of the answers must be strictly obtained from information provided in the Resume, and absolutely do not generate information that is not mentioned in the Resume. Any information is not found, please note it as "N/A" 
   - All the key has to be all lower form and each word must connect by underscore "_"

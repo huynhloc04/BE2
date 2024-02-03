@@ -40,6 +40,7 @@ class User(TableBase, table=True):
     phone: str = Field(default=None)
     role: str = Field(default=None)
     point: float = Field(default=0)
+    warranty_point: float = Field(default=0)    #   Only Collaborator
     avatar: str = Field(default=None)
     country: str = Field(default=None)
     city: str = Field(default=None)
@@ -301,23 +302,30 @@ class RecruitResumeJoin(SQLModel, table=True):
         foreign_key="resumes.id",
         primary_key=True,
     )
-    package: str = Field(default=None)                      #   Basic / Platinum
+    package: str = Field(default=None)            #   Basic / Platinum
     is_rejected: bool = Field(default=False)      #   Recruiter rejects Resumes
     decline_reason: str = Field(default=None, sa_column=Column(TEXT))
-    interview_form : str = Field(default=None)
     
-class RecruitResumeCart(SQLModel, table=True):    
-    __tablename__ = "recruit_resume_carts"
+class InterviewSchedule(SQLModel, table=True): 
+    __tablename__ = "interview_schedules"
+    #   Recruiter
     user_id: Optional[int] = Field(
         default=None,
         foreign_key="users.id",
         primary_key=True,
     )
-    resume_id: Optional[int] = Field(
+    #   Candidate
+    candidate_id: Optional[int] = Field(
         default=None,
         foreign_key="resumes.id",
         primary_key=True,
     )
+    date: datetime = Field(default=None)
+    location: str = Field(default=None, sa_column=Column(TEXT))
+    start_time: datetime = Field(default=None)
+    end_time: datetime = Field(default=None)
+    note: Optional[str] = Field(default=None, sa_column=Column(TEXT))
+    
     
     
 #   ==============================================================
@@ -339,3 +347,8 @@ class TransactionHistory(TableBase, table=True):
     quantity: int = Field(default=0)
     total_price: float = Field(default=0)
     transaction_form: str =  Field(default='banking')
+    
+
+class PaymentOTP(TableBase, table=True):
+    __tablename__ = "payment_codes"    
+    id_code: str = Field(unique=True, nullable=False)

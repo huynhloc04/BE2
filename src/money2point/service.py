@@ -1,32 +1,48 @@
 import model
-import os, shutil, json
-import pandas as pd
-import pyarrow as pa
+import os, re
+import json
+import random
 import subprocess
-import pyarrow.parquet as pq
+from datetime import datetime
+from typing import Dict, Any
+from authentication import get_current_active_user_token
+from fastapi import Request, HTTPException
 from config import db
+from dotenv import load_dotenv
 from money2point import schema
-from sqlmodel import Session, func, and_, or_, not_
-from sqlalchemy import select
-from fastapi import HTTPException, Request, BackgroundTasks, UploadFile, status
-from postjob.gg_service.gg_service import GoogleService
-from postjob.api_service.extraction_service import Extraction
-from postjob.api_service.openai_service import OpenAIService
-from postjob.db_service.db_service import DatabaseService
-from config import (JD_SAVED_DIR, 
-                    CV_SAVED_DIR, 
-                    CV_PARSE_PROMPT, 
-                    JD_PARSE_PROMPT,
-                    CV_EXTRACTION_PATH,
-                    JD_EXTRACTION_PATH, 
-                    CANDIDATE_AVATAR_DIR,
-                    SAVED_TEMP,
-                    EDITED_JOB,
-                    MATCHING_PROMPT,
-                    MATCHING_DIR)
+from sqlmodel import Session, select
+from config import PAYMENT_DIR
+
+load_dotenv()
+
+from_date = "2024-01-01"
+page = 1
+page_size = 20
+sort = "DESC"
+api_url = os.environ.get("API_URL")
+api_key_or_token = os.environ.get("API_KEY_OR_TOKEN")
+
+curl_command = [
+        "curl",
+        "--location",
+        "--request",
+        "GET",
+        f"'{api_url}?fromDate={from_date}&page={page}&pageSize={page_size}&sort={sort}'",
+        "--header",
+        f"'Authorization: Apikey {api_key_or_token}'"
+    ]
+curl_command_str = " ".join(curl_command)
 
 
 class General:   
+    
+    def format_time(data):
+        my_datetime = datetime.fromisoformat(data)
+        # Extracting date, month, and year
+        day = my_datetime.day
+        month = my_datetime.month
+        year = my_datetime.year
+        return f"{year}-{month}-{day}"
 
     def get_userjob_by_id(job_id: int, db_session: Session, current_user):
         job_query = select(model.JobDescription).where(
@@ -75,41 +91,104 @@ class MoneyPoint:
     def list_point_package(db_session: Session):
         package_db = db_session.execute(select(model.PointPackage)).scalars().all()
         return package_db
-    
 
     @staticmethod
-    def purchase_point(
-            data: schema.PurchasePoint,
-            curl_command_str: str,
-            db_session: Session,
-            current_user):
+    def get_point_package(package_id: int,
+                          db_session: Session):
+        result = db_session.execute(select(model.PointPackage).where(model.PointPackage.id == package_id)).scalars().first()
+        return result
+                
+    
+    @staticmethod
+    def purchase_point(request: Request, data_form: schema.PurchasePoint, db_session: Session, credentials):
+        id_codes = db_session.execute(select(model.PaymentOTP.id_code)).all()
+        while True:
+            payment_otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+            if payment_otp not in id_codes:
+                payment_db = model.PaymentOTP(id_code=payment_otp)
+                db_session.add(payment_db)
+                db.commit_rollback(db_session)
+                #   Save data as temporarily
+                data = {
+                    "id_code": payment_otp,
+                    "auth_credentials": credentials.credentials,
+                    "package_id": data_form.package_id,
+                    "quantity": data_form.quantity,
+                    "total_price": data_form.total_price,
+                    "transaction_form": data_form.transaction_form
+                }
+                #   Get current user and save transaction information for that user
+                _, customer = get_current_active_user_token(credentials.credentials, db_session)
+                with open(os.path.join(PAYMENT_DIR, f'user_{customer.id}_transaction.json'), 'w') as file:
+                    json.dump(data, file)
+                return {
+                    "id_code": payment_otp,
+                    "bank_name": "Ngân hàng TMCP Tiên Phong - Chi nhánh TP Hồ Chí Minh.",
+                    "transaction": "Phòng giao dịch Nguyễn Oanh.",
+                    "account_owner": "CÔNG TY CP CỘNG ĐỒNG SHARECV VIỆT NAM.",
+                    "account_number": "02061973979",
+                    "qr_code": os.path.join(str(request.base_url), 'static/payment/sharecv_qr.png')
+                }
+                
+    def get_current_time():
+        current_time = datetime.now()
+        # Extract year, month, and day
+        year = current_time.year
+        month = current_time.month
+        day = current_time.day
+        return f"{year}-{month}-{day}"
+        
+    #   Check to see if this consumer is the one who made the transaction   
+    @staticmethod
+    def check_customer(data: Dict[str, Any], id_code: str, total_price: float):
+        for record in data["data"]["records"]:
+            transaction_idcode = re.findall(r'\b\d+\b', record['description'])[0]
+            transaction_time = General.format_time(record['when'])
+            transaction_amount = float(abs(record['amount']))
+            if transaction_idcode == id_code and  \
+                transaction_time == MoneyPoint.get_current_time() and     \
+                transaction_amount == float(total_price):
+                return True
+        
 
+    @staticmethod
+    def make_transaction(db_session: Session):
         result = subprocess.run(
                         curl_command_str,
                         shell=True,
                         capture_output=True,
                         text=True
-        )
-        #   Check if banked money == required money
-        if result.returncode["data"]["records"][0]["amount"] == data.total_price:
-            point_package = db_session.execute(select(model.PointPackage).where(model.PointPackage.id == data.package_id)).scalars().first()
-            current_user.point += data.quantity * point_package.point
-            #   Add to purchase history
-            purchase_db = model.TransactionHistory(
-                                            user_id=current_user.id,
-                                            point=point_package.point,
-                                            price=point_package.price,
-                                            quantity=data.quantity,
-                                            total_price=data.total_price,
-                                            transaction_form=data.transaction_form
-            ) 
-            db_session.add(purchase_db)
-            db.commit_rollback(db_session)
-
-        return {
-            "return_code": result.returncode["data"]["records"][0],
-            "response_content": result.stdout
-        }
+        )     
+        print("==============================================")
+        print(curl_command_str)
+        print("==============================================")
+        #   Get current user: customer and update data
+        _, customer = get_current_active_user_token(data['auth_credentials'], db_session)
+        #   Read saved transaction data
+        with open(os.path.join(PAYMENT_DIR, f'user_{customer.id}_transaction.json'), 'r') as file:
+            data = json.load(file)
+        #   Check wheather transaction exists
+        if not MoneyPoint.check_customer(json.loads(result.stdout), data['id_code'], data['total_price']):
+            raise HTTPException(status_code=404, detail="Transaction doesn't exist!")
+        point_package = db_session.execute(select(model.PointPackage).where(model.PointPackage.id == data['package_id'])).scalars().first()
+        customer.point += data['quantity'] * point_package.point
+        #   Add to purchase history
+        purchase_db = model.TransactionHistory(
+                                        user_id=customer.id,
+                                        point=point_package.point,
+                                        price=point_package.price,
+                                        quantity=data['quantity'],
+                                        total_price=data['total_price'],
+                                        transaction_form=data['transaction_form']
+        ) 
+        db_session.add(purchase_db)
+        db.commit_rollback(db_session)
+        #   Save transaction information
+        with open(os.path.join(PAYMENT_DIR, 'transaction_info.json'), 'w') as file:
+            json.dump(json.loads(result.stdout), file)
+        #   Remove saved transaction data
+        os.remove(os.path.join(PAYMENT_DIR, 'package_info.json'))
+            
 
     @staticmethod
     def list_history_purchase(db_session: Session, current_user):
@@ -123,45 +202,4 @@ class MoneyPoint:
             "total_price": result.total_price,
             "transaction_form": result.transaction_form,
             "transaction_date": result.created_at,
-        } for result in results]
-
-
-
-class MoneyResume:
-
-    @staticmethod
-    def get_job_from_resume(cv_id: int, db_session: Session):
-        resume = db_session.execute(select(model.Resume).where(model.Resume.id == cv_id)).scalars().first()
-        job = db_session.execute(select(model.JobDescription).where(model.JobDescription.id == resume.job_id)).scalars().first()
-        return job
-    
-    @staticmethod
-    def get_package_from_resume(cv_id: int, db_session: Session, current_user):
-        query = select(model.RecruitResumeJoin).where(and_(model.RecruitResumeJoin.resume_id == cv_id,
-                                                           model.RecruitResumeJoin.user_id == current_user.id))
-        result = db_session.execute(query).scalars().first()
-        return result
-    
-    @staticmethod
-    def get_resume_valuate(cv_id, db_session):
-        valuation_query = select(model.ValuationInfo).where(model.ValuationInfo.cv_id == cv_id)
-        valuate_result = db_session.execute(valuation_query).scalars().first()
-        if not valuate_result:
-            raise HTTPException(status_code=404, detail="This resume has not been valuated!")
-        return valuate_result
-
-    @staticmethod
-    def list_resume_cart(db_session: Session, current_user):
-        cart_query = select(model.UserResumeCart, model.ResumeVersion)    \
-                                .join(model.ResumeVersion, model.UserResumeCart.resume_id == model.ResumeVersion.cv_id)  \
-                                .filter(model.UserResumeCart.user_id == current_user.id)
-        results = db_session.execute(cart_query).all()
-        return [{
-            "package_id": result.UserResumeCart.resume_id,
-            "job_title": result.ResumeVersion.current_job,
-            "industry": result.ResumeVersion.industry,
-            "birthday": result.ResumeVersion.birthday,
-            "job_service": MoneyResume.get_job_from_resume(result.ResumeVersion.cv_id, db_session).job_service,
-            "package": MoneyResume.get_package_from_resume(result.ResumeVersion.cv_id, db_session, current_user).package,
-            "resume_point": MoneyResume.get_resume_valuate(result.ResumeVersion.cv_id, db_session).total_point,
         } for result in results]

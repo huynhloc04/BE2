@@ -25,6 +25,7 @@ SAVED_TEMP = "static/resume/cv/temp"
 MATCHING_DIR = "static/matching"
 JD_SAVED_TEMP_DIR = "static/job/temp"
 CV_SAVED_TEMP_DIR = "static/resume/cv/temp"
+PAYMENT_DIR = 'static/payment/user_trans'
 
 load_dotenv()
 DATABASE_URL = os.environ.get("DATABASE_URL")

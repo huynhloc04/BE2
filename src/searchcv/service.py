@@ -427,6 +427,88 @@ class Recruiter:
             else:
                 pass
 
+        
+        @staticmethod
+        def reject_candidate(data: schema.RecruitRejectCandidate, db_session: Session, current_user):
+            reject_db = model.RecruitResumeJoin(
+                                        user_id=current_user.id,
+                                        resume_id=data.cv_id,
+                                        is_rejected=True,
+                                        decline_reason=data.decline_reason
+            )    
+            db_session.add(reject_db)
+            db.commit_rollback(db_session)
+            
+            
+        @staticmethod
+        def choose_candidate_basic(cv_id: int, db_session: Session, current_user):
+            #   Check wheather recruiter's point is available
+            valuation_result = General.get_resume_valuate(cv_id, db_session)
+            if current_user.point < valuation_result.total_point:
+                raise HTTPException(status_code=500, 
+                                    detail=f"You are {valuation_result.total_point - current_user.point} points short when using this service. Please add more points")
+            basic_resume = model.RecruitResumeJoin(
+                                        user_id=current_user.id,    #   Current recruiter's account
+                                        resume_id=cv_id,
+                                        package="basic"
+            )           
+            db_session.add(basic_resume) 
+            #   Update point of recuiter's account
+            current_user.point -=  valuation_result.total_point
+            db.commit_rollback(db_session)
+            
+            
+        @staticmethod
+        def choose_candidate_platinum(data: schema.ChoosePlatinum, db_session: Session, current_user):
+            #   Check wheather recruiter's point is available
+            valuation_result = General.get_resume_valuate(data.cv_id, db_session)
+            if current_user.point < valuation_result.total_point * 10:
+                raise HTTPException(status_code=500, 
+                                    detail=f"You are {valuation_result.total_point*10 - current_user.point} points short when using this service. Please add more points")
+            platinum_resume = model.RecruitResumeJoin(
+                                        user_id=current_user.id,    #   Current recruiter's account
+                                        resume_id=data.cv_id,
+                                        package="platinum"
+            )           
+            db_session.add(platinum_resume) 
+            #   Update point of recuiter's account
+            current_user.point -=  valuation_result.total_point * 10
+            
+            #   Save interview schedule
+            schedule_db = model.InterviewSchedule(
+                                        user_id=current_user.id,
+                                        candidate_id=data.cv_id,
+                                        date=data.date,
+                                        location=data.location,
+                                        start_time=data.start_time,
+                                        end_time=data.end_time,
+                                        note=data.note
+            )
+            db_session.add(schedule_db)
+            #   Update Resume status
+            resume = General.get_detail_resume_by_id(data.cv_id, db_session)
+            resume.ResumeVersion.sstatus = schema.ResumeStatus.waiting_accept_interview
+            db.commit_rollback(db_session)
+        
+        
+        @staticmethod
+        def list_interview_schedule(db_session: Session, current_user):
+            query = select(model.Resume, model.ResumeVersion, model.InterviewSchedule)  \
+                        .join(model.Resume, model.Resume.id == model.ResumeVersion.cv_id)   \
+                        .outerjoin(model.InterviewSchedule, model.InterviewSchedule.candidate_id == model.ResumeVersion.cv_id)   \
+                        .filter(model.InterviewSchedule.user_id == current_user.id)
+            results = db_session.execute(query).all()
+            return [{
+                "candidate_id": result.InterviewSchedule.candidate_id,
+                "candidate_name": result.ResumeVersion.name,
+                "job_title": result.ResumeVersion.current_job,
+                "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
+                "status": result.ResumeVersion.status,
+                "interview_date": result.InterviewSchedule.date,
+                "interview_time": f"{result.InterviewSchedule.start_time} - {result.InterviewSchedule.end_time}",
+                "interview_location": result.InterviewSchedule.location
+            } for result in results]
+
 
 class Collaborator:
 
@@ -726,17 +808,12 @@ class Collaborator:
     
         @staticmethod
         def list_candidate(is_draft: bool, db_session: Session, current_user): 
-            
-            query = select(model.Resume, model.ResumeVersion, model.JobDescription.job_service)    \
-                        .join(model.ResumeVersion, model.ResumeVersion.cv_id == model.Resume.id) \
-                        .outerjoin(model.JobDescription, model.Resume.job_id == model.JobDescription.id) \
-                        .filter(model.Resume.user_id == current_user.id,
-                                model.ResumeVersion.is_draft == is_draft)
-            results = db_session.execute(query).all()
-            print("===========================================")
-            print(results)
-            
             if is_draft:
+                query = select(model.Resume, model.ResumeVersion)    \
+                        .join(model.ResumeVersion, model.ResumeVersion.cv_id == model.Resume.id) \
+                        .filter(model.Resume.user_id == current_user.id,
+                                model.ResumeVersion.is_draft == True)
+                results = db_session.execute(query).all()
                 return [{
                     "id": result.ResumeVersion.cv_id,
                     "fullname": result.ResumeVersion.name,
@@ -745,14 +822,178 @@ class Collaborator:
                     "job_service": result.ResumeVersion.created_at
                     } for result in results]
             else:
+                query = select(model.Resume, model.ResumeVersion, model.JobDescription.job_service)    \
+                        .join(model.ResumeVersion, model.ResumeVersion.cv_id == model.Resume.id) \
+                        .outerjoin(model.JobDescription, and_(model.Resume.job_id == model.JobDescription.id, model.Resume.job_id == None)) \
+                        .filter(model.Resume.user_id == current_user.id,
+                                model.ResumeVersion.is_draft == False)
+                results = db_session.execute(query).all()
                 return [{
                     "id": result.ResumeVersion.cv_id,
                     "fullname": result.ResumeVersion.name,
-                    "email": result.ResumeVersion.email,
-                    "phone": result.ResumeVersion.phone,
                     "job_title": result.ResumeVersion.current_job,
                     "industry": result.ResumeVersion.industry,
-                    "job_service": General.get_job_by_id(result.Resume.job_id, db_session).job_service,
+                    "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
                     "status": result.ResumeVersion.status,
                     "referred_time": result.ResumeVersion.created_at
                     } for result in results]
+        
+        
+        @staticmethod
+        def update_resume_info(data_form: schema.UpdateResume, db_session: Session):      
+            #   Save UploadedFile first
+            result = db_session.execute(model.ResumeVersion).where(model.ResumeVersion.cv_id == data_form.cv_id).scalars().first()
+            if not result:
+                raise HTTPException(status_code=404, detail="Resume doesn't exist!")
+            if data_form.avatar:
+                #  Delete old avatar and save the new one\
+                if result.avatar:
+                    os.remove(result.avatar) 
+                result.avatar = os.path.join("static/resume/avatar", data_form.avatar.filename)
+                with open(os.path.join("static/resume/avatar",  data_form.avatar.filename), 'w+b') as file:
+                    shutil.copyfileobj(data_form.avatar.file, file) 
+            if data_form.cv_file:
+                cleaned_filename = DatabaseService.clean_filename(data_form.cv_file.filename)
+                result.filename = cleaned_filename
+                #  Delete old avatar and save the new one
+                if result.cv_file:
+                    os.remove(result.cv_file)
+                result.cv_file = os.path.join(CV_SAVED_DIR, cleaned_filename)
+                with open(os.path.join(CV_SAVED_DIR,  cleaned_filename), 'w+b') as file:
+                    shutil.copyfileobj(data_form.cv_file.file, file) 
+            if data_form.skills:
+                result.skills = [skill[1:-1] for skill in data_form.skills[0][1:-1].split(",")]
+
+            #   If the resume never existed in System => add to Database
+            for key, value in dict(data_form).items():
+                if value is not None and key not in [
+                                                "cv_id",
+                                                "avatar",
+                                                "cv_file",
+                                                "education",
+                                                "work_experiences",
+                                                "awards",
+                                                "skills",
+                                                "projects",
+                                                "language_certificates",
+                                                "other_certificates"]:
+                    setattr(result.ResumeVersion, key, value) 
+            if data_form.education:
+                edus = [model.ResumeEducation(cv_id=data_form.cv_id, **education) for education in General.json_parse(data_form.education[0])]
+                db_session.add_all(edus)
+            if data_form.work_experiences:
+                expers = [model.ResumeExperience(cv_id=data_form.cv_id, **exper) for exper in General.json_parse(data_form.work_experiences[0])]
+                db_session.add_all(expers)
+            if data_form.awards:
+                awards = [model.ResumeAward(cv_id=data_form.cv_id, **award) for award in General.json_parse(data_form.awards[0])]
+                db_session.add_all(awards)
+            if data_form.projects:
+                projects = [model.ResumeProject(cv_id=data_form.cv_id, **project) for project in General.json_parse(data_form.projects[0])]
+                db_session.add_all(projects)
+            if data_form.language_certificates:
+                lang_certs = [model.LanguageResumeCertificate(cv_id=data_form.cv_id, **lang_cert) for lang_cert in General.json_parse(data_form.language_certificates[0])]
+                db_session.add_all(lang_certs)
+            if data_form.other_certificates:
+                other_certs = [model.OtherResumeCertificate(cv_id=data_form.cv_id, **other_cert) for other_cert in General.json_parse(data_form.other_certificates[0])]
+                db_session.add_all(other_certs)
+                
+            db.commit_rollback(db_session) 
+            
+
+        @staticmethod
+        def get_detail_candidate(request: Request, cv_id: int, db_session: Session):
+            
+            resume_result = General.get_detail_resume_by_id(cv_id, db_session) 
+            if not resume_result:
+                raise HTTPException(status_code=404, detail="Resume doesn't exist!")
+            job_result = General.get_job_by_id(resume_result.Resume.job_id, db_session)
+            if not job_result:
+                raise HTTPException(status_code=404, detail="Job doesn't exist!")
+            
+            return {
+                "cv_id": cv_id,
+                "avatar": os.path.join(str(request.base_url), resume_result.ResumeVersion.avatar),
+                "candidate_name": resume_result.ResumeVersion.name,
+                "job_service": job_result.job_service,
+                "status": resume_result.ResumeVersion.status,                
+                "current_job": resume_result.ResumeVersion.current_job,
+                "industry": resume_result.ResumeVersion.industry,
+                "birthday": resume_result.ResumeVersion.birthday,
+                "gender": resume_result.ResumeVersion.gender,
+                "objectives": resume_result.ResumeVersion.objectives,
+                "linkedin": resume_result.ResumeVersion.linkedin,
+                "website": resume_result.ResumeVersion.website,
+                "facebook": resume_result.ResumeVersion.facebook,
+                "instagram": resume_result.ResumeVersion.instagram,
+                "cv_file": os.path.join(str(request.base_url), resume_result.ResumeVersion.cv_file)
+            }
+    
+    
+        @staticmethod
+        def get_matching_result(cv_id: int, db_session: Session):
+            #   Get resume information
+            resume = General.get_detail_resume_by_id(cv_id, db_session)
+            matching_query = select(model.ResumeMatching).where(model.ResumeMatching.cv_id == cv_id,
+                                                                model.ResumeMatching.job_id == resume.Resume.job_id)
+            matching_result = db_session.execute(matching_query).scalars().first()
+            if not matching_result:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This CV and JD have not been matched")
+        
+            return {
+                "job_title": {
+                    "score": matching_result.title_score,
+                    "explanation": matching_result.title_explain
+                },
+                "experience": {
+                    "score": matching_result.exper_score,
+                    "explanation": matching_result.exper_explain
+                },
+                "skill": {
+                    "score": matching_result.skill_score,
+                    "explanation": matching_result.skill_explain
+                },
+                "education": {
+                    "score": matching_result.education_score,
+                    "explanation": matching_result.education_explain
+                },
+                "orientation": {
+                    "score": matching_result.orientation_score,
+                    "explanation": matching_result.orientation_explain
+                },
+                "overall": {
+                    "score": matching_result.overall_score,
+                    "explanation": matching_result.overall_explain
+                }
+            }
+        
+        
+        @staticmethod
+        def list_interview_schedule(db_session: Session, current_user):
+            query = select(model.Resume, model.ResumeVersion, model.InterviewSchedule)  \
+                        .join(model.Resume, model.Resume.id == model.ResumeVersion.cv_id)   \
+                        .outerjoin(model.InterviewSchedule, model.InterviewSchedule.candidate_id == model.ResumeVersion.cv_id)   \
+                        .filter(model.InterviewSchedule.user_id == current_user.id)
+            results = db_session.execute(query).all()
+            return [{
+                "candidate_id": result.InterviewSchedule.candidate_id,
+                "candidate_name": result.ResumeVersion.name,
+                "job_title": result.ResumeVersion.current_job,
+                "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
+                "status": result.ResumeVersion.status,
+                "interview_date": result.InterviewSchedule.date,
+                "interview_time": f"{result.InterviewSchedule.start_time} - {result.InterviewSchedule.end_time}",
+                "interview_location": result.InterviewSchedule.location
+            } for result in results]
+            
+        
+        @staticmethod
+        def reschedule(data: schema.ChoosePlatinum, db_session: Session):
+            schedule_result = db_session.execute(select(model.InterviewSchedule)    \
+                                        .where(model.InterviewSchedule.candidate_id == data.cv_id)).scalars().first()
+            schedule_result.date = data.date
+            schedule_result.location = data.location
+            schedule_result.start_time = data.start_time
+            schedule_result.end_time = data.end_time
+            schedule_result.note = data.note
+            db.commit_rollback(db_session)
+            
