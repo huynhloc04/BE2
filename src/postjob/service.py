@@ -565,8 +565,9 @@ class Recruiter:
                     "skills": job_result.skills,
                     "received_job_time": job_result.received_job_time,
                     "working_time": {
-                                "week": job_result.working_time.split(' ')[0],
-                                "time": job_result.working_time.split(' ')[1]
+                                "week": job_result.working_time.split(',')[0],
+                                "startTime": job_result.working_time.split(',')[1],
+                                "endTime": job_result.working_time.split(',')[2]
                     },
                     "descriptions": General.string_parse(job_result.descriptions),
                     "requirements": General.string_parse(job_result.requirements),
@@ -610,8 +611,9 @@ class Recruiter:
                     "skills": job_result.skills,
                     "received_job_time": job_result.received_job_time,
                     "working_time": {
-                                "week": job_result.working_time.split(' ')[0],
-                                "time": job_result.working_time.split(' ')[1]
+                                "week": job_result.working_time.split(',')[0],
+                                "startTime": job_result.working_time.split(',')[1],
+                                "endTime": job_result.working_time.split(',')[2]
                     },
                     "descriptions": General.string_parse(job_result.descriptions),
                     "requirements": General.string_parse(job_result.requirements),
@@ -655,8 +657,9 @@ class Recruiter:
                     "skills": job_result.skills,
                     "received_job_time": job_result.received_job_time,
                     "working_time": {
-                                "week": job_result.working_time.split(' ')[0],
-                                "time": job_result.working_time.split(' ')[1]
+                                "week": job_result.working_time.split(',')[0],
+                                "startTime": job_result.working_time.split(',')[1],
+                                "endTime": job_result.working_time.split(',')[2]
                     },
                     "descriptions": General.string_parse(job_result.descriptions),
                     "requirements": General.string_parse(job_result.requirements),
@@ -1145,8 +1148,9 @@ class Admin:
                     "country": job_result.country,
                     "job_type": job_result.job_type,
                     "working_time": {
-                                "week": job_result.working_time.split(' ')[0],
-                                "time": job_result.working_time.split(' ')[1]
+                                "week": job_result.working_time.split(',')[0],
+                                "startTime": job_result.working_time.split(',')[1],
+                                "endTime": job_result.working_time.split(',')[2]
                     },
                     "descriptions": General.string_parse(job_result.descriptions),
                     "requirements": General.string_parse(job_result.requirements),
@@ -1185,8 +1189,9 @@ class Admin:
                     "skills": job_result.skills,
                     "received_job_time": job_result.received_job_time,
                     "working_time": {
-                                "week": job_result.working_time.split(' ')[0],
-                                "time": job_result.working_time.split(' ')[1]
+                                "week": job_result.working_time.split(',')[0],
+                                "startTime": job_result.working_time.split(',')[1],
+                                "endTime": job_result.working_time.split(',')[2]
                     },
                     "descriptions": General.string_parse(job_result.descriptions),
                     "requirements": General.string_parse(job_result.requirements),
@@ -1531,8 +1536,9 @@ class Collaborator:
                     "skills": job_result.skills,
                     "received_job_time": job_result.received_job_time,
                     "working_time": {
-                                "week": job_result.working_time.split(' ')[0],
-                                "time": job_result.working_time.split(' ')[1]
+                                "week": job_result.working_time.split(',')[0],
+                                "startTime": job_result.working_time.split(',')[1],
+                                "endTime": job_result.working_time.split(',')[2]
                     },
                     "descriptions": General.string_parse(job_result.descriptions),
                     "requirements": General.string_parse(job_result.requirements),
