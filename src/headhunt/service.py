@@ -1,8 +1,9 @@
 import model
+import time
 import os, shutil, json
 from config import db
-from datetime import datetime
-from postjob import schema
+from datetime import datetime, timedelta
+from headhunt import schema
 from sqlmodel import Session, func, and_, or_, not_
 from sqlalchemy import select
 from fastapi import HTTPException, Request, BackgroundTasks, UploadFile, status
@@ -18,7 +19,6 @@ from config import (
                 JD_SAVED_TEMP_DIR,
                 JD_SAVED_DIR,
                 CV_SAVED_DIR,
-                CANDIDATE_AVATAR_DIR,
                 CV_SAVED_TEMP_DIR,
                 EDITED_JOB,
                 MATCHING_PROMPT,
@@ -303,6 +303,21 @@ class General:
         for i, j in zip(open_indices, close_indices):
             parsed_json.append(json.loads(data[i: j+1]))
         return parsed_json
+    
+    def count_remaining_days(cv_id: int, headhunt_point: float, user: model.User, db_session: Session):
+        while True:
+            resume_db = db_session.execute(select(model.RecruitResumeJoin).where(model.RecruitResumeJoin.resume_id == cv_id)).scalars().first()
+            remain_time = resume_db.remain_warantty_time
+            if remain_time > 0:
+                resume_db.remain_warantty_time -= 1
+                db.commit_rollback(db_session)
+                if remain_time == 0:
+                    user.point = headhunt_point
+                    user.warranty_point = 0
+                    db.commit_rollback(db_session)
+            else:
+                time.sleep(86400)
+
             
     def get_job_by_id(job_id: int, db_session: Session):
         job_query = select(model.JobDescription).where(model.JobDescription.id == job_id)
@@ -323,7 +338,7 @@ class General:
     
     def background_send_email(input_data):
         for recipient in input_data.values():
-            GoogleService.CONTENT_GOOGLE(msg=recipient["content"], input_email=recipient["email"])
+            GoogleService.CONTENT_GOOGLE(recipient["content"], recipient["email"])
         
     @staticmethod
     def get_jd_file(request, job_id, db_session):
@@ -394,10 +409,10 @@ class Recruiter:
             #   Get company information
             company_result = db_session.execute(select(model.Company).where(model.Company.user_id == user.id)).scalars().first()
             db_job = model.JobDescription(
-                            user_id=user.id,
-                            company_id=company_result.id,
-                            job_service="PostJob",
-                            jd_file=os.path.join("static/job/uploaded_jds", cleaned_filename)
+                        user_id=user.id,
+                        company_id=company_result.id,
+                        job_service="Headhunt",
+                        jd_file=os.path.join("static/job/uploaded_jds", cleaned_filename)
             )
             db_session.add(db_job)
             db.commit_rollback(db_session)
@@ -419,7 +434,9 @@ class Recruiter:
                 db_session.add_all(lang_certs)
             if data_form.other_certificates:
                 other_certs = [model.OtherJobCertificate(job_id=db_job.id, **other_cert) for other_cert in General.json_parse(data_form.other_certificates[0])]
-                db_session.add_all(other_certs)                
+                db_session.add_all(other_certs)
+
+                
             db.commit_rollback(db_session) 
             
             
@@ -559,7 +576,7 @@ class Recruiter:
                     "status": job_result.status,
                     "job_service": job_result.job_service,
                     "job_title": job_result.job_title,
-                    "industries": job_result.industries,
+                    "industry": job_result.industries,
                     "gender": job_result.gender,
                     "job_type": job_result.job_type,
                     "skills": job_result.skills,
@@ -573,9 +590,9 @@ class Recruiter:
                     "benefits": General.string_parse(job_result.benefits),
                     "levels": job_result.levels,
                     "roles": job_result.roles,
-                    "yoe": {
-                        "from": job_result.yoe.split("-")[0],
-                        "to": job_result.yoe.split("-")[1]
+                    "working_time": {
+                                "week": job_result.working_time.split(' ')[0],
+                                "time": job_result.working_time.split(' ')[1]
                     },
                     "num_recruit": job_result.num_recruit,
                     "education": [{
@@ -596,7 +613,10 @@ class Recruiter:
                     "max_salary": job_result.max_salary,                
                     "address": job_result.address,
                     "city": job_result.city,
-                    "country": job_result.country
+                    "country": job_result.country,
+                    "point": job_result.point,
+                    "correspone_price": job_result.correspone_price,
+                    "warranty_time": job_result.warranty_time
                 }
             elif job_result.status==schema.JobStatus.reviewing:
                 return {
@@ -639,7 +659,10 @@ class Recruiter:
                     #   Working localtion             
                     "address": job_result.address,
                     "city": job_result.city,
-                    "country": job_result.country
+                    "country": job_result.country,
+                    "point": job_result.point,
+                    "correspone_price": job_result.correspone_price,
+                    "warranty_time": job_result.warranty_time
                 }
             elif job_result.status==schema.JobStatus.recruiting:
                 return {
@@ -684,7 +707,10 @@ class Recruiter:
                     #   Working localtion                       
                     "address": job_result.address,
                     "city": job_result.city,
-                    "country": job_result.country
+                    "country": job_result.country,
+                    "point": job_result.point,
+                    "correspone_price": job_result.correspone_price,
+                    "warranty_time": job_result.warranty_time
                 }
             else:
                 pass
@@ -932,134 +958,92 @@ class Recruiter:
             
             
         @staticmethod
-        def choose_candidate_basic(cv_id: int, db_session: Session, current_user):
+        def choose_candidate(cv_id: int, background_taks: BackgroundTasks, db_session: Session, current_user):
             #   Check wheather recruiter's point is available
             valuation_result = General.get_resume_valuate(cv_id, db_session)
-            if current_user.point < valuation_result.total_point:
-                return valuation_result.total_point - current_user.point
-            else:
-                basic_resume = model.RecruitResumeJoin(
-                                            user_id=current_user.id,    #   Current recruiter's account
-                                            resume_id=cv_id,
-                                            package="basic"
-                )           
-                db_session.add(basic_resume) 
-                #   Update point of recuiter's account
-                current_user.point -=  valuation_result.total_point
-                #   Update point of collaborator's account
-                resume = General.get_detail_resume_by_id(cv_id, db_session)
-                collab = db_session.execute(select(model.User).where(model.User.id == resume.Resume.user_id)).scalars().first()
-                collab.point += valuation_result.total_point
-                resume.ResumeVersion.point_recieved_time = datetime.now()                
-                db.commit_rollback(db_session)
-                return 0
-            
-            
-        # @staticmethod
-        # def choose_candidate_platinum(data: schema.ChoosePlatinum, db_session: Session, current_user):
-        #     #   Check wheather recruiter's point is available
-        #     valuation_result = General.get_resume_valuate(data.cv_id, db_session)
-        #     if current_user.point < valuation_result.total_point * 10:
-        #         return valuation_result.total_point - current_user.point
-        #     else:
-        #         platinum_resume = model.RecruitResumeJoin(
-        #                                 user_id=current_user.id,    #   Current recruiter's account
-        #                                 resume_id=data.cv_id,
-        #                                 package="platinum"
-        #         )           
-        #         db_session.add(platinum_resume) 
-        #         #   Update point of recuiter's account
-        #         current_user.point -=  valuation_result.total_point * 10
-        #         #   Update point of collaborator's account
-        #         resume = General.get_detail_resume_by_id(data.cv_id, db_session)
-        #         collab = db_session.execute(select(model.User).where(model.User.id == resume.Resume.user_id)).scalars().first()
-        #         collab.point += valuation_result.total_point
-        #         resume.ResumeVersion.point_recieved_time = datetime.now()
-                
-        #         #   Save interview schedule
-        #         schedule_db = model.InterviewSchedule(
-        #                                     user_id=current_user.id,
-        #                                     candidate_id=data.cv_id,
-        #                                     date=data.date,
-        #                                     location=data.location,
-        #                                     start_time=data.start_time,
-        #                                     end_time=data.end_time,
-        #                                     note=data.note
-        #         )
-        #         db_session.add(schedule_db)
-        #         #   Update Resume status
-        #         resume = General.get_detail_resume_by_id(data.cv_id, db_session)
-        #         resume.ResumeVersion.status = schema.ResumeStatus.waiting_accept_interview
-        #         db.commit_rollback(db_session)
-        #         return 0
-        
-            
-        @staticmethod
-        def book_interview(data: schema.ChoosePlatinum, db_session: Session, current_user):
-                #   Save interview schedule
-                schedule_db = model.InterviewSchedule(
-                                            user_id=current_user.id,
-                                            candidate_id=data.cv_id,
-                                            date=data.date,
-                                            location=data.location,
-                                            start_time=data.start_time,
-                                            end_time=data.end_time,
-                                            note=data.note
-                )
-                db_session.add(schedule_db)
-                db.commit_rollback(db_session)
-            
-            
-        @staticmethod
-        def confirm_interview(data: schema.ResumeIndex, db_session: Session, current_user):
-            #   Check wheather recruiter's point is available
-            valuation_result = General.get_resume_valuate(data.cv_id, db_session)
-            if current_user.point < valuation_result.total_point * 10:
-                return valuation_result.total_point - current_user.point
-            else:
-                platinum_resume = model.RecruitResumeJoin(
+            job = General.get_job_from_resume(cv_id, db_session)
+            if current_user.point < job.headunt_point:
+                raise HTTPException(status_code=500, 
+                                    detail=f"You are {valuation_result.total_point*10 - current_user.point} points short when using this service. Please add more points")
+            resume_db = model.RecruitResumeJoin(
                                         user_id=current_user.id,    #   Current recruiter's account
-                                        resume_id=data.cv_id,
-                                        package="platinum"
-                )           
-                db_session.add(platinum_resume) 
-                #   Update point of recuiter's account
-                current_user.point -=  valuation_result.total_point * 10
-                #   Update point of collaborator's account
-                resume = General.get_detail_resume_by_id(data.cv_id, db_session)
-                collab = db_session.execute(select(model.User).where(model.User.id == resume.Resume.user_id)).scalars().first()
-                collab.point += valuation_result.total_point
-                resume.ResumeVersion.point_recieved_time = datetime.now()
-                #   Update Resume status
-                resume = General.get_detail_resume_by_id(data.cv_id, db_session)
-                resume.ResumeVersion.status = schema.ResumeStatus.waiting_accept_interview
-                db.commit_rollback(db_session)
-                return 0
-            
-        @staticmethod
-        def cancel_interview(data: schema.ResumeIndex, db_session: Session):
-            interview_db = db_session.execute(select(model.InterviewSchedule).where(model.InterviewSchedule.candidate_id == data.cv_id)).scalars().first()
-            db_session.delete(interview_db)
+                                        resume_id=cv_id,
+                                        remain_warantty_time=job.warranty_time
+            )           
+            db_session.add(resume_db) 
+            #   Update point of recruiter's account
+            current_user.point -=  job.headhunt_point
+            #   Update point of collaborator's account
+            resume = General.get_detail_resume_by_id(cv_id, db_session)
+            collab = db_session.execute(select(model.User).where(model.User.id == resume.Resumme.user_id)).scalars().first()
+            collab.warranty_point += job.headhunt_point
+            resume.ResumeVersion.point_recieved_time = datetime.now()
             db.commit_rollback(db_session)
-        
+            #   Start calculate the remaining warranty time
+            background_taks.add(General.count_remaining_days, 
+                                resume,
+                                job.headhunt_point, 
+                                collab, 
+                                db_session)
+            
         
         @staticmethod
-        def list_interview_schedule(db_session: Session, current_user):
-            query = select(model.Resume, model.ResumeVersion, model.InterviewSchedule)  \
-                        .join(model.Resume, model.Resume.id == model.ResumeVersion.cv_id)   \
-                        .outerjoin(model.InterviewSchedule, model.InterviewSchedule.candidate_id == model.ResumeVersion.cv_id)   \
-                        .filter(model.InterviewSchedule.user_id == current_user.id)
-            results = db_session.execute(query).all()
-            return [{
-                "candidate_id": result.InterviewSchedule.candidate_id,
-                "candidate_name": result.ResumeVersion.name,
-                "job_title": result.ResumeVersion.current_job,
-                "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
-                "status": result.ResumeVersion.status,
-                "interview_date": result.InterviewSchedule.date,
-                "interview_time": f"{result.InterviewSchedule.start_time} - {result.InterviewSchedule.end_time}",
-                "interview_location": result.InterviewSchedule.location
-            } for result in results]
+        def schedule_booking(data: schema.InterviewBooking, db_session: Session, current_user):
+            #   Save interview schedule
+            schedule_db = model.InterviewSchedule(
+                                        user_id=current_user.id,
+                                        candidate_id=data.cv_id,
+                                        date=data.date,
+                                        location=data.location,
+                                        start_time=data.start_time,
+                                        end_time=data.end_time,
+                                        note=data.note
+            )
+            db_session.add(schedule_db)
+            #   Update Resume status
+            resume = General.get_detail_resume_by_id(data.cv_id, db_session)
+            resume.ResumeVersion.sstatus = schema.ResumeStatus.waiting_accept_interview_booking
+            db.commit_rollback(db_session)
+            
+        
+        @staticmethod
+        def send_test(data: schema.TestSending, 
+                      background_tasks: BackgroundTasks, 
+                      db_session: Session):
+            #   Get candidate information: 
+            resume = General.get_detail_resume_by_id(data.cv_id, db_session)
+        
+            #   Send mail and save information to DB
+            with open(os.path.join("data", data.test_file.filename), 'w+b') as file:
+                shutil.copyfileobj(data.test_file.file, file)
+            # Use background task to send email in the background
+            message = f"""
+            Xin chào {resume.ResumeVersion.name}.
+            
+            Email nhận trả lời test: {data.recruit_email}
+            
+            Bạn có một nội dung phỏng vấn được gửi từ nhà tuyển dụng.
+            
+            Chú ý: 
+                {data.note}
+
+            Cảm ơn.
+            """
+            #   Get collaborator information
+            collab = db_session.execute(select(model.User).where(model.User.id == resume.Resume.user_id)).scalars().first()
+            background_tasks.add_task(GoogleService.CONTENT_GOOGLE, msg=message, file_path=os.path.join("static/resume/cv/send_test", data.test_file.filename), input_email=collab.email)
+            resume = General.get_detail_resume_by_id(data.cv_id, db_session)
+            resume.ResumeVersion.sstatus = schema.ResumeStatus.waiting_accept_interview_test
+            db.commit_rollback(db_session)
+            return {"message": "Email will be sent in the background."}
+            
+        
+        @staticmethod
+        def phone(cv_id: int, db_session: Session):
+            resume = General.get_detail_resume_by_id(cv_id, db_session)
+            resume.ResumeVersion.status = schema.ResumeStatus.waiting_accept_interview_phone
+            db.commit_rollback(db_session)
+            return resume.ResumeVersion.email
             
 
         @staticmethod
@@ -1139,7 +1123,6 @@ class Admin:
                     "job_service": job_result.job_service,
                     "job_title": job_result.job_title,
                     "industries": job_result.industries,
-                    "gender": job_result.gender,
                     "address": job_result.address,
                     "city": job_result.city,
                     "country": job_result.country,
@@ -1258,13 +1241,11 @@ class Admin:
                 
                 
         @staticmethod
-        def deactive_job(data: schema.JobIndex, db_session: Session):
+        def is_active_job(data: schema.AdminPauseJob, db_session: Session):
             job = General.get_job_by_id(data.job_id, db_session)
             if not job:
                 raise HTTPException(status_code=404, detail="Job not found!")
-            job.is_active = False
-            #   Revise job after a certain period (6 months)
-            
+            job.is_active = data.is_active
             db.commit_rollback(db_session)
             
             
@@ -1350,7 +1331,7 @@ class Admin:
                     raise HTTPException(status_code=404, detail="Could not find any relevant candidates!")
                 return [{
                         "id": result.ResumeVersion.cv_id,
-                        "fullname": result.ResumeVersion.name,
+                        "fullname": result.ResumeVersionname,
                         "job_title": result.ResumeVersion.current_job,
                         "industry": result.ResumeVersion.industry,
                         "status": result.ResumeVersion.status,
@@ -1525,7 +1506,7 @@ class Collaborator:
                     "status": job_result.status,
                     "job_service": job_result.job_service,
                     "job_title": job_result.job_title,
-                    "industries": job_result.industries,
+                    "industry": job_result.industries,
                     "gender": job_result.gender,
                     "job_type": job_result.job_type,
                     "skills": job_result.skills,
@@ -1539,9 +1520,9 @@ class Collaborator:
                     "benefits": General.string_parse(job_result.benefits),
                     "levels": job_result.levels,
                     "roles": job_result.roles,
-                    "yoe": {
-                        "from": job_result.yoe.split("-")[0],
-                        "to": job_result.yoe.split("-")[1]
+                    "working_time": {
+                                "week": job_result.working_time.split(' ')[0],
+                                "time": job_result.working_time.split(' ')[1]
                     },
                     "num_recruit": job_result.num_recruit,
                     "education": [{
@@ -2593,11 +2574,9 @@ class Collaborator:
             
         
         @staticmethod
-        def reschedule(data: schema.ChoosePlatinum, db_session: Session):
+        def reschedule(data: schema.Reschedule, db_session: Session):
             schedule_result = db_session.execute(select(model.InterviewSchedule)    \
                                         .where(model.InterviewSchedule.candidate_id == data.cv_id)).scalars().first()
-            if not schedule_result:
-                raise HTTPException(status_code=404, detail="This resume has not yet been scheduled for an interview")
             schedule_result.date = data.date
             schedule_result.location = data.location
             schedule_result.start_time = data.start_time

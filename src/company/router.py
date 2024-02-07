@@ -14,7 +14,7 @@ security_bearer = HTTPBearer()
 #                           Company
 # ===========================================================
 
-@router.post("/recruiter/add-company-info",
+@router.post("/add-company-info",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def add_company_info(
@@ -36,7 +36,7 @@ def add_company_info(
     )
 
 
-@router.get("/recruiter/get-company-info",
+@router.get("/get-company-info",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def get_company_info(request: Request,
@@ -76,7 +76,7 @@ def get_company_info(request: Request,
     )
 
 
-@router.put("/recruiter/update-company-info",
+@router.put("/update-company-info",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def update_company_info(
@@ -98,7 +98,27 @@ def update_company_info(
     )
 
 
-@router.get("/recruiter/list-city",
+@router.get("/check-company-exist",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse,
+             summary='Check to see if recruiter have registered company information')
+def check_company_exist(
+                    db_session: Session = Depends(db.get_session),
+                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    is_exist = service.Company.check_company_exist(db_session, current_user)
+    return schema.CustomResponse(
+                    message="You have registered company information" if is_exist else "You have not registered coommpany information",
+                    data={
+                        "is_exist": is_exist
+                    }
+    )
+
+
+@router.get("/list-city",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def list_city():
@@ -108,7 +128,7 @@ def list_city():
                     data=[industry for industry in info]
             )
 
-@router.get("/recruiter/list-country",
+@router.get("/list-country",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def list_country():
@@ -119,7 +139,7 @@ def list_country():
             )
 
 
-@router.get("/recruiter/list-industry",
+@router.get("/list-industry",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def list_industry():
@@ -127,4 +147,21 @@ def list_industry():
     return schema.CustomResponse(
                     message="Get list industries successfully.",
                     data=[industry for industry in info]
+    )
+
+@router.post("/add-bank-info",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def add_bank_info(
+                data_form: schema.BankBase,
+                db_session: Session = Depends(db.get_session),
+                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    service.Bank.add_bank_info(data_form, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Add bank information successfully",
+                    data=None
     )

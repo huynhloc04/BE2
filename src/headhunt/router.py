@@ -3,14 +3,14 @@ from config import db
 from sqlmodel import Session
 from fastapi import UploadFile
 from starlette.requests import Request
-from postjob import schema, service
+from headhunt import schema, service
 from authentication import get_current_active_user
 from fastapi import APIRouter, status, Depends, BackgroundTasks, Security, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt
 
 
-router = APIRouter(prefix="/postjob", tags=["Post Job"])
+router = APIRouter(prefix="/headhunt", tags=["Headhunt"])
 security_bearer = HTTPBearer()
 
 # ===========================================================
@@ -28,7 +28,7 @@ def upload_jd(uploaded_file: UploadFile):
     extracted_result, _ = service.Recruiter.Job.jd_parsing(uploaded_file)
     return schema.CustomResponse(
                     message="Extract JD successfully!",
-                    data=json.loads(extracted_result)
+                    data=extracted_result
                 )
 
 
@@ -45,19 +45,6 @@ def fill_parsed_job(data: schema.FillJob = Depends(schema.FillJob.as_form),
     service.Recruiter.Job.fill_job(data, db_session, current_user)
     return schema.CustomResponse(
                     message="Fill-in job information successfully",
-                    data=None
-                )
-
-
-@router.put("/recruiter/update-job-info",
-             status_code=status.HTTP_200_OK, 
-             response_model=schema.CustomResponse)
-def update_job_info(data: schema.JobUpdate,
-                    db_session: Session = Depends(db.get_session)):
-
-    service.Recruiter.Job.update_job(data, db_session)
-    return schema.CustomResponse(
-                    message="Update job information successfully",
                     data=None
                 )
     
@@ -78,47 +65,21 @@ def create_draft_job(data: schema.FillDraftJob = Depends(schema.FillDraftJob.as_
                     data=None
                 )
 
-# @router.put("/recruiter/update-job-draft",
-#              status_code=status.HTTP_201_CREATED, 
-#              response_model=schema.CustomResponse)
-# def update_job_draft(
-#                 job_id: int,
-#                 is_draft: bool,
-#                 db_session: Session = Depends(db.get_session)):
 
-#     service.Recruiter.Job.create_draft(job_id, is_draft, db_session)
-#     return schema.CustomResponse(
-#                     message="Create job drate successfully",
-#                     data=None
-#                 )
-    
-@router.post("/recruiter/list-job",
+@router.put("/recruiter/update-job-info",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
-def list_created_job(
-                data: schema.RecruitListJob,
-                db_session: Session = Depends(db.get_session),
-                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
+def update_job_info(data: schema.JobUpdate,
+                    db_session: Session = Depends(db.get_session)):
 
-    jobs = service.Recruiter.Job.list_created_job(data.is_draft, db_session, current_user)
-
-    total_items = len(jobs)
-    total_pages = math.ceil(total_items/data.limit)
-
+    service.Recruiter.Job.update_job(data, db_session)
     return schema.CustomResponse(
-                    message=None,
-                    data={
-                        "total_items": total_items,
-                        "total_pages": total_pages,
-                        "item_lst": jobs[(data.page_index-1)*data.limit: (data.page_index-1)*data.limit + data.limit]
-                    }
-            )
+                    message="Update job information successfully",
+                    data=None
+                )
     
     
-@router.get("/recruiter/get-detailed-job/{job_id}",
+@router.get("/recruiter/get-detailed-job",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def get_detailed_job(
@@ -144,6 +105,31 @@ def is_active_job(data: schema.RecruitPauseJob, db_session: Session = Depends(db
                     message="Update job successfully",
                     data=None
                 )
+    
+@router.post("/recruiter/list-job",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def list_created_job(
+                data: schema.RecruitListJob,
+                db_session: Session = Depends(db.get_session),
+                credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    jobs = service.Recruiter.Job.list_created_job(data.is_draft, db_session, current_user)
+
+    total_items = len(jobs)
+    total_pages = math.ceil(total_items/data.limit)
+
+    return schema.CustomResponse(
+                    message=None,
+                    data={
+                        "total_items": total_items,
+                        "total_pages": total_pages,
+                        "item_lst": jobs[(data.page_index-1)*data.limit: (data.page_index-1)*data.limit + data.limit]
+                    }
+            )
     
     
 @router.post("/recruiter/list-candidate",
@@ -186,6 +172,77 @@ def get_detail_candidate(
             )
     
 
+@router.post("/recruiter/choose-candidate",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def choose_candidate(
+        data: schema.ResumeIndex,
+        background_taks: BackgroundTasks,
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    service.Recruiter.Resume.choose_candidate(data, background_taks, db_session, current_user)
+    return schema.CustomResponse(
+                    message=f"Transaction successfully!",
+                    data=None
+                )
+    
+
+@router.post("/recruiter/choose-interview_form/schedule-booking",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def schedule_booking(
+        data: schema.InterviewBooking,
+        db_session: Session = Depends(db.get_session),
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    service.Recruiter.Resume.schedule_booking(data, db_session, current_user)
+    return schema.CustomResponse(
+                    message=f"Transaction successfully!",
+                    data=None
+                )
+    
+
+@router.post("/recruiter/choose-interview_form/send-test",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def send_test(
+        background_taks: BackgroundTasks,
+        data: schema.TestSending = Depends(schema.TestSending.as_form),
+        db_session: Session = Depends(db.get_session)):
+    service.Recruiter.Resume.send_test(data, background_taks, db_session)
+    return schema.CustomResponse(
+                    message=f"Transaction successfully!",
+                    data=None
+                )
+    
+
+@router.get("/recruiter/choose-interview_form/phone",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def phone(
+    cv_id: int,
+    db_session: Session = Depends(db.get_session),
+    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    email = service.Recruiter.Resume.phone(cv_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Interview via phone!",
+                    data={
+                        "email": email
+                    }
+                )
+    
+
 @router.post("/recruiter/reject-resume",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
@@ -220,95 +277,9 @@ def remove_rejected_resume(
                     message="Resume has been restored.",
                     data=None
                 )
-    
-
-@router.post("/recruiter/choose-candidate-basic",
-             status_code=status.HTTP_201_CREATED, 
-             response_model=schema.CustomResponse)
-def choose_candidate_basic(
-        data: schema.ResumeIndex,
-        db_session: Session = Depends(db.get_session),
-        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
-
-    response = service.Recruiter.Resume.choose_candidate_basic(data.cv_id, db_session, current_user)
-    return schema.CustomResponse(
-                    message=f"Basic package has been chosen for this Resume.",
-                    data=response
-    )
-    
-
-# @router.post("/recruiter/choose-candidate-platinum",
-#              status_code=status.HTTP_201_CREATED, 
-#              response_model=schema.CustomResponse)
-# def choose_candidate_platinum(
-#         data: schema.ChoosePlatinum,
-#         db_session: Session = Depends(db.get_session),
-#         credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-#     # Get curent active user
-#     _, current_user = get_current_active_user(db_session, credentials)
-
-#     response = service.Recruiter.Resume.choose_candidate_platinum(data, db_session, current_user)
-#     return schema.CustomResponse(
-#                     message=f"Platinum package has been chosen for this Resume.",
-#                     data=response
-#                 )
-    
-
-@router.post("/recruiter/choose-candidate-platinum/book-interview",
-             status_code=status.HTTP_201_CREATED, 
-             response_model=schema.CustomResponse)
-def book_interview(
-        data: schema.ChoosePlatinum,
-        db_session: Session = Depends(db.get_session),
-        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
-
-    service.Recruiter.Resume.book_interview(data, db_session, current_user)
-    return schema.CustomResponse(
-                    message=f"Book interview successfully.",
-                    data=None
-                )
-    
-
-@router.post("/recruiter/choose-candidate-platinum/confirm-interview",
-             status_code=status.HTTP_201_CREATED, 
-             response_model=schema.CustomResponse)
-def confirm_interview(
-        data: schema.ResumeIndex,
-        db_session: Session = Depends(db.get_session),
-        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
-
-    response = service.Recruiter.Resume.confirm_interview(data, db_session, current_user)
-    return schema.CustomResponse(
-                    message=f"Choose platinum package successfully.",
-                    data=response
-                )
-    
-
-@router.delete("/recruiter/choose-candidate-platinum/cancel-interview",
-             status_code=status.HTTP_201_CREATED, 
-             response_model=schema.CustomResponse)
-def cancel_interview(
-        data: schema.ResumeIndex,
-        db_session: Session = Depends(db.get_session)):
-
-    response = service.Recruiter.Resume.cancel_interview(data, db_session)
-    return schema.CustomResponse(
-                    message=f"Choose platinum package successfully.",
-                    data=response
-                )
 
 
-@router.get("/recruiter/get-candidate-reply-interview",
+@router.get("/recruiter/get-candidate-reply-interview/{status}",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def get_candidate_reply_interview(
@@ -321,198 +292,6 @@ def get_candidate_reply_interview(
                     message="Update candidate reply.",
                     data=None
     )
-    
-# ===========================================================
-#                       Admin filters Job
-# ===========================================================
-    
-@router.post("/admin/list-job",
-             status_code=status.HTTP_200_OK, 
-             response_model=schema.CustomResponse)
-def list_job_status(
-                request: Request,
-                data: schema.AdminListJob,
-                db_session: Session = Depends(db.get_session)):    
-    jobs = service.Admin.Job.list_job_status(request, data.job_status, db_session)  
-    #   Pagination
-    total_items = len(jobs)
-    total_pages = math.ceil(total_items/data.limit)
-
-    return schema.CustomResponse(
-                        message="Get list job successfully!",
-                        data={
-                            "total_items": total_items,
-                            "total_pages": total_pages,
-                            "item_lst": jobs[(data.page_index-1)*data.limit: (data.page_index-1)*data.limit + data.limit]
-                        }
-    )
-    
-
-@router.get("/admin/get-detailed-job",
-             status_code=status.HTTP_200_OK, 
-             response_model=schema.CustomResponse)
-def get_detailed_job(
-            job_id: int,
-            db_session: Session = Depends(db.get_session),
-            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
-
-    jobs = service.Admin.Job.get_detail_job_status(job_id, db_session, current_user)
-    return schema.CustomResponse(
-                    message=None,
-                    data=jobs
-            )
-    
-    
-#   Admin approved/reject Job
-@router.post("/admin/review-job",
-             status_code=status.HTTP_200_OK, 
-             response_model=schema.CustomResponse)
-def review_job(
-        data_form: schema.AdminReviewJob,
-        db_session: Session = Depends(db.get_session)):
-
-    service.Admin.Job.review_job(data_form, db_session)
-    return schema.CustomResponse(
-                    message="Admin reviewed job.",
-                    data={
-                        "job_id": data_form.job_id,
-                        "status": "Job approved" if data_form.is_approved==True else "Job rejected"
-                    }
-            )
-
-
-@router.put("/admin/deactive-job",
-             status_code=status.HTTP_200_OK, 
-             response_model=schema.CustomResponse,
-             summary="Admin tạm dừng job")
-def deactive_job(data: schema.JobIndex, db_session: Session = Depends(db.get_session)):
-
-    service.Admin.Job.deactive_job(data, db_session)
-    return schema.CustomResponse(
-                    message="Update job successfully",
-                    data=None
-                )
-
-
-#   Khi admin click button: Chỉnh sửa" => Admin check/edit job information and send to NTD check (if JD not good)
-@router.post("/admin/edit-job-info",
-             status_code=status.HTTP_200_OK, 
-             response_model=schema.CustomResponse)
-def edit_job_info(
-                data: schema.JobUpdate,
-                db_session: Session = Depends(db.get_session)):
-    """
-        1. Admin edit job temporarily, save edited version to a json file, FE load that json file and show to user (NTD)
-        2. User (NTD) read/re-edit and re-send that job to Admin filter
-    """
-    save_dir = service.Admin.Job.save_temp_edit(data, db_session)
-    return schema.CustomResponse(
-                    message="Edit job information successfully",
-                    data=save_dir
-                )
-
-
-@router.post("/admin/list-candidate",
-             status_code=status.HTTP_200_OK, 
-             response_model=schema.CustomResponse,
-             summary="Admin views resume valuation results.")
-def list_candidate(
-            data: schema.AdminListCandidate,
-            db_session: Session = Depends(db.get_session)):
-
-    results = service.Admin.Resume.list_candidate(data.candidate_status, db_session)
-
-    #   Pagination
-    total_items = len(results)
-    total_pages = math.ceil(total_items/data.limit)
-
-    return schema.CustomResponse(
-                        message="Get list job successfully!",
-                        data={
-                            "total_items": total_items,
-                            "total_pages": total_pages,
-                            "item_lst": results[(data.page_index-1)*data.limit: (data.page_index-1)*data.limit + data.limit]
-                        }
-    )
-
-
-@router.post("/admin/get-matching-result",
-             status_code=status.HTTP_201_CREATED, 
-             response_model=schema.CustomResponse)
-def collaborator_get_matching_result(
-        data: schema.ResumeIndex,
-        db_session: Session = Depends(db.get_session)):
-
-    matching_result = service.Admin.Resume.get_matching_result(data.cv_id, db_session)
-    return schema.CustomResponse(
-                    message="CV-JD matching completed.",
-                    data={
-                        "resume_id": data.cv_id,
-                        "match_data": matching_result
-                    }
-    )
-    
-    
-#   Admin approved/reject AI's matching results
-@router.put("/admin/review-matching",
-             status_code=status.HTTP_200_OK,
-             response_model=schema.CustomResponse)
-def review_matching(
-        data_form: schema.AdminReviewMatching,
-        db_session: Session = Depends(db.get_session)):
-
-    service.Admin.Resume.admin_review_matching(data_form, db_session)
-    return schema.CustomResponse(
-                    message="Resume matching approved" if data_form.resume_status==schema.MatchedResult.admin_matching_approved else "Resume matching rejected",
-                    data={
-                        "resume_id": data_form.cv_id,
-                        "status": data_form.resume_status,
-                        "decline_reason": data_form.decline_reason
-                    }
-            )
-
-
-@router.post("/admin/get-resume-valuate",
-             status_code=status.HTTP_200_OK, 
-             response_model=schema.CustomResponse,
-             summary="Admin views resume valuation results.")
-def get_resume_valuate(
-                    data: schema.ResumeIndex,
-                    request: Request,
-                    db_session: Session = Depends(db.get_session)):
-
-    result = service.General.get_resume_valuate(data.cv_id, db_session)
-    
-    def parse_dict(data):
-        pairs = data.split()
-        # Initialize an empty dictionary to store the key-value pairs
-        certificate_dict = {}
-        for pair in pairs:
-            key, value = pair.split('=')
-            # Remove single quotes from the value
-            value = value.strip("'")
-            certificate_dict[key] = value
-        return certificate_dict
-    
-    #   Get resume pdf file
-    resume = service.General.get_detail_resume_by_id(data.cv_id, db_session)
-    return schema.CustomResponse(
-                    message="Get resume valuation successfully",
-                    data={
-                        "cv_id": data.cv_id,
-                        "cv_pdf": os.path.join(str(request.base_url), resume.ResumeVersion.cv_file),
-                        "hard_item": result.hard_item,
-                        "hard_point": result.hard_point,
-                        "degrees": result.degrees,
-                        "degree_point": result.degree_point,
-                        "certificates": [parse_dict(cert_dict) for cert_dict in result.certificates],
-                        "certificates_point": result.certificates_point,
-                        "total_point": result.total_point
-                    }
-                )
 
     
 # ===========================================================
@@ -526,9 +305,11 @@ def list_job(
         request: Request,
         data: schema.CollabListJob,
         db_session: Session = Depends(db.get_session),
-        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):    
+        credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
+
     results = service.Collaborator.Job.list_job(request, data.job_status, db_session, current_user)    
 
     #   Pagination
@@ -545,7 +326,7 @@ def list_job(
     )
 
 
-@router.get("/collaborator/get-detail-job/{job_id}",
+@router.get("/collaborator/get-detail-job",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def get_detail_job(
@@ -576,7 +357,7 @@ def add_favorite(
                     data=None
             )
     
-@router.get("/collaborator/get-general-info/{job_id}",
+@router.get("/collaborator/get-general-info",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def get_general_info(
@@ -630,6 +411,23 @@ def fill_extracted_resume(
                     }     #   Front-end will use this result to show valuation temporarily to User 
                 )
     
+
+@router.post("/collaborator/create-draft-resume",
+             status_code=status.HTTP_200_OK,
+             response_model=schema.CustomResponse)
+def create_draft_resume(
+                    data_form: schema.FillResume = Depends(schema.FillResume.as_form),
+                    db_session: Session = Depends(db.get_session),
+                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+    resume_db, version_db = service.Collaborator.Resume.create_draft_resume(data_form, db_session, current_user)
+    return schema.CustomResponse(
+                    message="Create draft resume successfully",
+                    data=None #   Front-end will use this result to show valuation temporarily to User 
+                )
+    
     
 @router.put("/collaborator/update-resume-info",
              status_code=status.HTTP_200_OK,
@@ -681,17 +479,6 @@ def get_resume_valuate(
 
     result = service.General.get_resume_valuate(cv_id, db_session)
     
-    def parse_dict(data):
-        pairs = data.split()
-        # Initialize an empty dictionary to store the key-value pairs
-        certificate_dict = {}
-        for pair in pairs:
-            key, value = pair.split('=')
-            # Remove single quotes from the value
-            value = value.strip("'")
-            certificate_dict[key] = value
-        return certificate_dict
-    
     #   Get resume pdf file
     resume = service.General.get_detail_resume_by_id(cv_id, db_session)
     level_lst = [str(level) for level in schema.Level]
@@ -735,23 +522,6 @@ def update_resume_valuate(
                         "certificates_point": result.certificates_point,
                         "total_point": result.total_point
                     }
-                )
-    
-
-@router.post("/collaborator/create-draft-resume",
-             status_code=status.HTTP_200_OK,
-             response_model=schema.CustomResponse)
-def create_draft_resume(
-                    data_form: schema.FillResume = Depends(schema.FillResume.as_form),
-                    db_session: Session = Depends(db.get_session),
-                    credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
-    
-    # Get curent active user
-    _, current_user = get_current_active_user(db_session, credentials)
-    resume_db, version_db = service.Collaborator.Resume.create_draft_resume(data_form, db_session, current_user)
-    return schema.CustomResponse(
-                    message="Create draft resume successfully",
-                    data=None #   Front-end will use this result to show valuation temporarily to User 
                 )
 
 
@@ -844,7 +614,9 @@ def get_matching_result(
 def list_candidate(
             data: schema.CollabListResume,
             db_session: Session = Depends(db.get_session),
-            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):    
+            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
@@ -911,10 +683,218 @@ def confirm_interview(
 @router.put("/collaborator/reschedule",
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
-def reschedule(data: schema.ChoosePlatinum, db_session: Session = Depends(db.get_session)):
+def reschedule(data: schema.Reschedule, db_session: Session = Depends(db.get_session)):
     service.Collaborator.Resume.reschedule(data, db_session)
 
     return schema.CustomResponse(
                         message="Collaborator update schedule successfully!",
                         data=None
     )
+    
+# ===========================================================
+#                       Admin filters Job
+# ===========================================================
+    
+@router.post("/admin/list-job",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def list_job_status(
+                request: Request,
+                data: schema.AdminListJob,
+                db_session: Session = Depends(db.get_session)):
+    
+    jobs = service.Admin.Job.list_job_status(request, data.job_status, db_session)  
+    #   Pagination
+    total_items = len(jobs)
+    total_pages = math.ceil(total_items/data.limit)
+
+    return schema.CustomResponse(
+                        message="Get list job successfully!",
+                        data={
+                            "total_items": total_items,
+                            "total_pages": total_pages,
+                            "item_lst": jobs[(data.page_index-1)*data.limit: (data.page_index-1)*data.limit + data.limit]
+                        }
+    )
+    
+
+@router.get("/admin/get-detailed-job",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_detailed_job(
+            job_id: int,
+            db_session: Session = Depends(db.get_session),
+            credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
+    
+    # Get curent active user
+    _, current_user = get_current_active_user(db_session, credentials)
+
+    jobs = service.Admin.Job.get_detail_job_status(job_id, db_session, current_user)
+    return schema.CustomResponse(
+                    message=None,
+                    data=jobs
+            )
+    
+    
+#   Admin approved/reject Job
+@router.post("/admin/review-job",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def review_job(
+        data_form: schema.AdminReviewJob,
+        db_session: Session = Depends(db.get_session)):
+
+    service.Admin.Job.review_job(data_form, db_session)
+    return schema.CustomResponse(
+                    message="Admin reviewed job.",
+                    data={
+                        "job_id": data_form.job_id,
+                        "status": "Job approved" if data_form.is_approved==True else "Job rejected"
+                    }
+            )
+
+
+@router.put("/admin/is-active-job",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse,
+             summary="Admin tạm dừng job")
+def is_active_job(data: schema.AdminPauseJob, db_session: Session = Depends(db.get_session)):
+
+    service.Admin.Job.is_active_job(data, db_session)
+    return schema.CustomResponse(
+                    message="Update job successfully",
+                    data=None
+                )
+
+
+#   Khi admin click button: Chỉnh sửa" => Admin check/edit job information and send to NTD check (if JD not good)
+@router.post("/admin/edit-job-info",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def edit_job_info(
+                data: schema.JobUpdate,
+                db_session: Session = Depends(db.get_session)):
+    """
+        1. Admin edit job temporarily, save edited version to a json file, FE load that json file and show to user (NTD)
+        2. User (NTD) read/re-edit and re-send that job to Admin filter
+    """
+    save_dir = service.Admin.Job.save_temp_edit(data, db_session)
+    return schema.CustomResponse(
+                    message="Edit job information successfully",
+                    data=save_dir
+                )
+
+
+@router.post("/admin/list-candidate",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse,
+             summary="Admin views resume valuation results.")
+def list_candidate(
+            data: schema.AdminListCandidate,
+            db_session: Session = Depends(db.get_session)):
+
+    results = service.Admin.Resume.list_candidate(data.candidate_status, db_session)
+
+    #   Pagination
+    total_items = len(results)
+    total_pages = math.ceil(total_items/data.limit)
+
+    return schema.CustomResponse(
+                        message="Get list job successfully!",
+                        data={
+                            "total_items": total_items,
+                            "total_pages": total_pages,
+                            "item_lst": results[(data.page_index-1)*data.limit: (data.page_index-1)*data.limit + data.limit]
+                        }
+    )
+    
+    
+@router.post("/collaborator/get-detailed-candidate",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_detailed_candidate(
+                request: Request,
+                data: schema.ResumeIndex,
+                db_session: Session = Depends(db.get_session)):
+
+    resume_info = service.Admin.Resume.get_detail_candidate(request, data.cv_id, db_session)
+    return schema.CustomResponse(
+                    message="Get resume information successfully!",
+                    data=resume_info
+            )
+
+
+@router.post("/admin/get-matching-result",
+             status_code=status.HTTP_201_CREATED, 
+             response_model=schema.CustomResponse)
+def collaborator_get_matching_result(
+        data: schema.ResumeIndex,
+        db_session: Session = Depends(db.get_session)):
+
+    matching_result = service.Admin.Resume.get_matching_result(data.cv_id, db_session)
+    return schema.CustomResponse(
+                    message="CV-JD matching completed.",
+                    data={
+                        "resume_id": data.cv_id,
+                        "match_data": matching_result
+                    }
+    )
+    
+    
+#   Admin approved/reject AI's matching results
+@router.put("/admin/review-matching",
+             status_code=status.HTTP_200_OK,
+             response_model=schema.CustomResponse)
+def review_matching(
+        data_form: schema.AdminReviewMatching,
+        db_session: Session = Depends(db.get_session)):
+
+    service.Admin.Resume.admin_review_matching(data_form, db_session)
+    return schema.CustomResponse(
+                    message="Resume matching approved" if data_form.resume_status==schema.MatchedResult.admin_matching_approved else "Resume matching rejected",
+                    data={
+                        "resume_id": data_form.cv_id,
+                        "status": data_form.resume_status,
+                        "decline_reason": data_form.decline_reason
+                    }
+            )
+
+
+@router.post("/admin/get-resume-valuate",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse,
+             summary="Admin views resume valuation results.")
+def get_resume_valuate(
+                    data: schema.ResumeIndex,
+                    request: Request,
+                    db_session: Session = Depends(db.get_session)):
+
+    result = service.General.get_resume_valuate(data.cv_id, db_session)
+    
+    def parse_dict(data):
+        pairs = data.split()
+        # Initialize an empty dictionary to store the key-value pairs
+        certificate_dict = {}
+        for pair in pairs:
+            key, value = pair.split('=')
+            # Remove single quotes from the value
+            value = value.strip("'")
+            certificate_dict[key] = value
+        return certificate_dict
+    
+    #   Get resume pdf file
+    resume = service.General.get_detail_resume_by_id(data.cv_id, db_session)
+    return schema.CustomResponse(
+                    message="Get resume valuation successfully",
+                    data={
+                        "cv_id": data.cv_id,
+                        "cv_pdf": os.path.join(str(request.base_url), resume.ResumeVersion.cv_file),
+                        "hard_item": result.hard_item,
+                        "hard_point": result.hard_point,
+                        "degrees": result.degrees,
+                        "degree_point": result.degree_point,
+                        "certificates": [parse_dict(cert_dict) for cert_dict in result.certificates],
+                        "certificates_point": result.certificates_point,
+                        "total_point": result.total_point
+                    }
+                )

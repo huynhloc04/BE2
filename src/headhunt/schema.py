@@ -132,7 +132,9 @@ class ResumeStatus(str, Enum):
     candidate_declined = "candidate_declined"
     admin_matching_approved = "admin_matching_approved"
     admin_matching_rejected = "admin_matching_rejected"
-    waiting_accept_interview = "waiting_accept_interview"
+    waiting_accept_interview_booking = "waiting_accept_interview_booking"
+    waiting_accept_interview_test = "waiting_accept_interview_test"
+    waiting_accept_interview_phone = "waiting_accept_interview_phone"
     candidate_accepted_interview = "candidate_accepted_interview"
     candidate_rejected_interview = "candidate_rejected_interview"
 
@@ -182,6 +184,36 @@ class JobStatus(str, Enum):
 
     def __str__(self):
         return f"{self.value}"
+    
+    
+class InterviewBooking(BaseModel):
+    cv_id: int
+    date: datetime
+    location: str
+    start_time: datetime
+    end_time: datetime
+    note: Optional[str]
+    
+    
+class TestSending(BaseModel):
+    cv_id: int
+    recruit_email: str
+    test_file: UploadFile
+    note: Optional[str]
+
+    @classmethod
+    def as_form(cls, 
+                cv_id: int = Form(...),
+                recruit_email: str = Form(...),
+                test_file: UploadFile = Form(...),
+                note: Optional[str] = Form(None)):
+        
+        return cls(
+            cv_id=cv_id,
+            recruit_email=recruit_email,
+            test_file=test_file,
+            note=note
+        )
 
     
 class CandidateStatus(str, Enum):
@@ -200,15 +232,11 @@ class InterviewForm(BaseModel):
 
 class RecruitRejectResume(BaseModel):
     cv_id: int
-    decline_reason: Optional[str]
+    decline_reason: str
 
 
 class ResumeIndex(BaseModel):
     cv_id: int
-
-
-class JobIndex(BaseModel):
-    job_id: int
     
     
 class DirectlyInterviewMail(BaseModel):
@@ -397,6 +425,7 @@ class OtherCertificate(BaseModel):
     certificate_name: Optional[str]
     certificate_level: Optional[str]
 
+
 class FillJob(BaseModel):
     jd_file: UploadFile
     job_title: str
@@ -411,7 +440,7 @@ class FillJob(BaseModel):
     benefits: str
     levels: List[str]
     roles: List[str]
-    yoe: str
+    yoe: int
     num_recruit: int
     education: Optional[List[str]]
     language_certificates: Optional[List[str]]
@@ -422,6 +451,9 @@ class FillJob(BaseModel):
     min_salary: Optional[float]
     max_salary: Optional[float]
     currency: Optional[str]
+    headhunt_point: int
+    correspone_price: float
+    warranty_time: int
     
 
     @classmethod
@@ -439,7 +471,7 @@ class FillJob(BaseModel):
                 benefits: str = Form(...),
                 levels: List[str] = Form(...),
                 roles: List[str] = Form(...),
-                yoe: str = Form(...),
+                yoe: int = Form(...),
                 num_recruit: int = Form(...),
                 education: Optional[List[str]] = Form(None),
                 language_certificates: Optional[List[str]] = Form(None),
@@ -449,7 +481,10 @@ class FillJob(BaseModel):
                 country: Optional[str] = Form(None),
                 min_salary: Optional[float] = Form(None),
                 max_salary: Optional[float] = Form(None),
-                currency: Optional[str] = Form(None)
+                currency: Optional[str] = Form(None),
+                headhunt_point: int = Form(...),
+                correspone_price: float = Form(...),
+                warranty_time: int = Form(...)
         ):
         return cls(
             jd_file=jd_file,
@@ -475,7 +510,10 @@ class FillJob(BaseModel):
             country=country,
             min_salary=min_salary,
             max_salary=max_salary,
-            currency=currency
+            currency=currency,
+            headhunt_point=headhunt_point,
+            correspone_price=correspone_price,
+            warranty_time=warranty_time
         )
 
 
@@ -585,13 +623,16 @@ class JobUpdate(BaseModel):
     benefits: Optional[List[str]]
     levels: Optional[List[Level]]
     roles: Optional[List[str]]
-    yoe: Optional[str]
+    yoe: Optional[int]
     num_recruit: Optional[int]
     min_salary: Optional[float]
     max_salary: Optional[float]
     currency: Optional[str]
     #   Chỉ xuất hiện bên trang Admin, và lúc NTD xem lại JD đã up (Admin check và gửi lại cho NTD)
     admin_decline_reason: Optional[str]
+    headhunt_point: int
+    correspone_price: float
+    warranty_time: int
 
     
 # ===========================================================
@@ -912,6 +953,11 @@ class AdminReviewJob(BaseModel):
     job_id: int
     is_approved: bool
     decline_reason: Optional[str]
+    
+
+class AdminPauseJob(BaseModel):
+    job_id: int
+    is_active: bool
 
 
 class AddCandidate(BaseModel):
@@ -979,7 +1025,30 @@ class UpdateResumeDraft(BaseModel):
     is_draft: bool 
     
     
-class ChoosePlatinum(BaseModel):
+class InterviewStatus(str, Enum):
+    accept = "accept"
+    reject = "reject"
+
+    def __str__(self):
+        return f"{self.value}"
+    
+class IsAcceptInterview(BaseModel):
+    cv_id: int
+    status: InterviewStatus
+    
+    
+class CollabConfirmInterview(BaseModel):
+    cv_id: int
+    status: InterviewStatus
+    decline_reason: Optional[str]
+
+        
+class AdminRejectJob(BaseModel):
+    job_id: int
+    decline_reason: Optional[str]
+    
+    
+class Reschedule(BaseModel):
     cv_id: int
     #   Schedule
     date: datetime
@@ -987,16 +1056,3 @@ class ChoosePlatinum(BaseModel):
     start_time: datetime
     end_time: datetime
     note: Optional[str]
-    
-    
-class InterviewStatus(str, Enum):
-    accept = "accept"
-    reject = "reject"
-
-    def __str__(self):
-        return f"{self.value}"
-
-        
-class AdminRejectJob(BaseModel):
-    job_id: int
-    decline_reason: Optional[str]

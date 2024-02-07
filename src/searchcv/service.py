@@ -2,7 +2,7 @@ import model
 import os, shutil, json
 from config import db
 from typing import List
-from pydantic import EmailStr
+from datetime import datetime
 from searchcv import schema
 from typing import List, Dict, Any
 from sqlmodel import Session, func, and_, or_, not_
@@ -74,6 +74,11 @@ level_map = {"0": 2, "1": 3, "2": 4, "3": 5, "4": 8, "5": 15, "6": 20, "7": 25, 
     
     
 class General:   
+    
+    @staticmethod
+    def get_company_from_interview(recruit_id: int, db_session: Session):
+        query = select(model.Company).where(model.Company.user_id == recruit_id)
+        return db_session.execute(query).scalars().first()
     
     @staticmethod
     def give_user_point(point: float, db_session: Session, current_user):
@@ -455,6 +460,11 @@ class Recruiter:
             db_session.add(basic_resume) 
             #   Update point of recuiter's account
             current_user.point -=  valuation_result.total_point
+            #   Update point of collaborator's account
+            resume = General.get_detail_resume_by_id(cv_id, db_session)
+            collab = db_session.execute(select(model.User).where(model.User.id == resume.Resume.user_id)).scalars().first()
+            collab.point += valuation_result.total_point
+            resume.ResummeVersion.point_recieved_time = datetime.now()
             db.commit_rollback(db_session)
             
             
@@ -473,11 +483,18 @@ class Recruiter:
             db_session.add(platinum_resume) 
             #   Update point of recuiter's account
             current_user.point -=  valuation_result.total_point * 10
+            #   Update point of collaborator's account
+            resume = General.get_detail_resume_by_id(data.cv_id, db_session)
+            collab = db_session.execute(select(model.User).where(model.User.id == resume.user_id)).scalars().first()
+            collab.point += valuation_result.total_point
+            resume.ResummeVersion.point_recieved_time = datetime.now()
             
             #   Save interview schedule
+            resume_result = db_session.execute(select(model.Resume).where(model.Resume.id == data.cv_id)).scalars().first()
             schedule_db = model.InterviewSchedule(
                                         user_id=current_user.id,
                                         candidate_id=data.cv_id,
+                                        collaborator_id=resume_result.user_id,
                                         date=data.date,
                                         location=data.location,
                                         start_time=data.start_time,
@@ -968,14 +985,16 @@ class Collaborator:
         
         
         @staticmethod
-        def list_interview_schedule(db_session: Session, current_user):
+        def list_interview_schedule(request: Request, db_session: Session, current_user):
             query = select(model.Resume, model.ResumeVersion, model.InterviewSchedule)  \
                         .join(model.Resume, model.Resume.id == model.ResumeVersion.cv_id)   \
                         .outerjoin(model.InterviewSchedule, model.InterviewSchedule.candidate_id == model.ResumeVersion.cv_id)   \
-                        .filter(model.InterviewSchedule.user_id == current_user.id)
+                        .filter(model.InterviewSchedule.collaborator_id == current_user.id)
             results = db_session.execute(query).all()
             return [{
                 "candidate_id": result.InterviewSchedule.candidate_id,
+                "company_logo": os.path.join(str(request.base_url), General.get_company_from_interview(result.InterviewSchedule.user_id, db_session).logo),
+                "company_name": General.get_company_from_interview(result.InterviewSchedule.user_id, db_session).company_name,
                 "candidate_name": result.ResumeVersion.name,
                 "job_title": result.ResumeVersion.current_job,
                 "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
@@ -997,3 +1016,98 @@ class Collaborator:
             schedule_result.note = data.note
             db.commit_rollback(db_session)
             
+            
+class Admin:
+    
+    class Resume: 
+        
+        @staticmethod
+        def list_candidate(state: str, db_session: Session):
+            if state == schema.CandidateStatus.all:
+                results = db_session.execute(select(model.ResumeVersion)    \
+                                                .where(model.ResumeVersion.is_lastest == True)).scalars().all()
+                if not results:
+                    raise HTTPException(status_code=404, detail="Could not find any relevant candidates!")
+                return [{
+                        "id": result.cv_id,
+                        "fullname": result.name,
+                        "job_title": result.current_job,
+                        "industry": result.industry,
+                        "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
+                        "status": result.status,
+                        "referred_time": result.created_at
+                    } for result in results]
+            
+            elif state == schema.CandidateStatus.pending:
+                results =  db_session.execute(select(model.ResumeVersion).where(and_(model.ResumeVersion.is_lastest == True,
+                                                            model.ResumeVersion.status == schema.ResumeStatus.candidate_accepted))).scalars().all()
+                if not results:
+                    raise HTTPException(status_code=404, detail="Could not find any relevant candidates!")
+                return [{
+                        "id": result.cv_id,
+                        "fullname": result.name,
+                        "job_title": result.current_job,
+                        "industry": result.industry,
+                        "status": result.status,
+                        "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
+                        "referred_time": result.created_at
+                    } for result in results]
+            elif state == schema.CandidateStatus.approved:
+                results =  db_session.execute(select(model.ResumeVersion).where(and_(model.ResumeVersion.is_lastest == True,
+                                                            model.ResumeVersion.is_ai_matched == True))).scalars().all()
+                if not results:
+                    raise HTTPException(status_code=404, detail="Could not find any relevant candidates!")
+                return [{
+                        "id": result.cv_id,
+                        "fullname": result.name,
+                        "job_title": result.current_job,
+                        "industry": result.industry,
+                        "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
+                        "status": result.status,
+                        "referred_time": result.created_at
+                    } for result in results]
+            elif state == schema.CandidateStatus.declined:
+                results =  db_session.execute(select(model.ResumeVersion).where(and_(model.ResumeVersion.is_lastest == True,
+                                                            model.ResumeVersion.is_ai_matched == False))).scalars().all()
+                if not results:
+                    raise HTTPException(status_code=404, detail="Could not find any relevant candidates!")
+                return [{
+                        "id": result.cv_id,
+                        "fullname": result.name,
+                        "job_title": result.current_job,
+                        "industry": result.industry,
+                        "status": result.status,
+                        "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
+                        "referred_time": result.created_at
+                    } for result in results]
+            else:
+                pass
+            
+
+        @staticmethod
+        def get_detail_candidate(request: Request, cv_id: int, db_session: Session):
+            
+            resume_result = General.get_detail_resume_by_id(cv_id, db_session) 
+            if not resume_result:
+                raise HTTPException(status_code=404, detail="Resume doesn't exist!")
+            job_result = General.get_job_by_id(resume_result.Resume.job_id, db_session)
+            if not job_result:
+                raise HTTPException(status_code=404, detail="Job doesn't exist!")
+            
+            return {
+                "cv_id": cv_id,
+                "avatar": os.path.join(str(request.base_url), resume_result.ResumeVersion.avatar),
+                "candidate_name": resume_result.ResumeVersion.name,
+                "job_service": job_result.job_service,
+                "status": resume_result.ResumeVersion.status,                
+                "current_job": resume_result.ResumeVersion.current_job,
+                "industry": resume_result.ResumeVersion.industry,
+                "birthday": resume_result.ResumeVersion.birthday,
+                "gender": resume_result.ResumeVersion.gender,
+                "objectives": resume_result.ResumeVersion.objectives,
+                "linkedin": resume_result.ResumeVersion.linkedin,
+                "website": resume_result.ResumeVersion.website,
+                "facebook": resume_result.ResumeVersion.facebook,
+                "instagram": resume_result.ResumeVersion.instagram,
+                "cv_file": os.path.join(str(request.base_url), resume_result.ResumeVersion.cv_file)
+            }

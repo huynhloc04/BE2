@@ -12,7 +12,7 @@
       {
         "id": 5646529,
         "tid": "FT24033409994719\\BNK",
-        "description": "CUSTOMER 072409   HUYNH TAN LOC   SearchCV    Ma giao dich  Trace939636 Trace 93 9636",
+        "description": "CUSTOMER abc-123456 - HUYNH TAN LOC - SearchCV  Ma giao dich  Trace939636 Trace 93 9636",
         "amount": 20000,
         "cusumBalance": 20000,
         "when": "2024-02-02T16:42:00",
@@ -31,7 +31,7 @@
       {
         "id": 5646385,
         "tid": "FT24033240162500",
-        "description": "CUSTOMER HUYNH TAN LOC chuyen khoan - Ma gia o dich/ Trace 795855",
+        "description": "CUSTOMER 576ty4836 HUYNH TAN LOC chuyen khoan - Ma gia o dich/ Trace 795855",
         "amount": -20000,
         "cusumBalance": 0,
         "when": "2024-02-02T16:28:00",

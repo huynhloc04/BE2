@@ -1,6 +1,6 @@
 import os
 from fastapi import Request 
-from datetime import datetime
+from datetime import datetime, time
 from sqlalchemy import text, Column, TIMESTAMP
 from sqlmodel import Field, SQLModel, Relationship, JSON
 from typing import List, Optional, Set, Dict
@@ -74,12 +74,12 @@ class JobDescription(TableBase, table=True):
     skills: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
     received_job_time: datetime = Field(default=None)
     working_time: str = Field(default=None)
-    descriptions: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
-    requirements: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
-    benefits: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
+    descriptions: str = Field(default=None, sa_column=Column(TEXT))
+    requirements: str = Field(default=None, sa_column=Column(TEXT))
+    benefits: str = Field(default=None, sa_column=Column(TEXT))
     levels: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
     roles: List[str] = Field(default=None, sa_column=Column(postgresql.ARRAY(String())))
-    yoe: int = Field(default=None)
+    yoe: str = Field(default=None)
     num_recruit: int = Field(default=None)
     min_salary: float = Field(default=None)
     max_salary: float = Field(default=None)
@@ -87,19 +87,28 @@ class JobDescription(TableBase, table=True):
     address: str = Field(default=None)
     city: str = Field(default=None)
     country: str = Field(default=None)
-    point: float = Field(default=None)
+    headhunt_point: int = Field(default=None)
+    correspone_price: float = Field(default=None)
+    warranty_time: int = Field(default=None)
     jd_file: str = Field(default=None)
     status: str = Field(default="pending")
     is_draft: bool = Field(default=False)
     is_active: bool = Field(default=True)
     is_admin_approved: bool = Field(default=False)      # Admin filtered Job
     admin_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
-    company_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
+
+
+class Bank(TableBase, table=True):
+    __tablename__ = 'banks'    
+    user_id: int = Field(default=None, foreign_key="users.id")
+    bank_name: str = Field(default=None)
+    branch_name: str = Field(default=None)
+    account_owner: str = Field(default=None)
+    account_number: str = Field(default=None)
 
 
 class Company(TableBase, table=True):
-    __tablename__ = 'companies'
-    
+    __tablename__ = 'companies'    
     user_id: int = Field(default=None, foreign_key="users.id")
     company_name: str = Field(default=None)
     industry: str = Field(default=None)
@@ -174,7 +183,7 @@ class ResumeVersion(TableBase, table=True):
     filename: str = Field(default=None)
     is_lastest: bool = Field(default=True)
     cv_file: str = Field(default=None)
-    name: str = Field(default=None) 
+    name: str = Field(default=None)
     avatar: str = Field(default=os.path.join(str(Request.base_url), 'static/resume/avatar/default_avatar.png')) 
     level: str = Field(default=None) 
     gender: str = Field(default=None)
@@ -198,6 +207,9 @@ class ResumeVersion(TableBase, table=True):
     is_draft: bool = Field(default=False)
     is_ai_matched: bool = Field(default=False)
     matching_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
+    interview_decline_reason: str = Field(default=None, sa_column=Column(TEXT))
+    point_recieved_time: datetime = Field(default=None)
+    point_draw_status: str = Field(default=None)
 
 
 class ResumeEducation(TableBase, table=True):
@@ -305,6 +317,8 @@ class RecruitResumeJoin(SQLModel, table=True):
     package: str = Field(default=None)            #   Basic / Platinum
     is_rejected: bool = Field(default=False)      #   Recruiter rejects Resumes
     decline_reason: str = Field(default=None, sa_column=Column(TEXT))
+    remain_warantty_time: int = Field(default=None)
+    
     
 class InterviewSchedule(SQLModel, table=True): 
     __tablename__ = "interview_schedules"
@@ -320,10 +334,11 @@ class InterviewSchedule(SQLModel, table=True):
         foreign_key="resumes.id",
         primary_key=True,
     )
+    collaborator_id: int = Field(default=None) 
     date: datetime = Field(default=None)
     location: str = Field(default=None, sa_column=Column(TEXT))
-    start_time: datetime = Field(default=None)
-    end_time: datetime = Field(default=None)
+    start_time: time = Field(default=None)
+    end_time: time = Field(default=None)
     note: Optional[str] = Field(default=None, sa_column=Column(TEXT))
     
     
@@ -341,14 +356,18 @@ class PointPackage(TableBase, table=True):
     
 class TransactionHistory(TableBase, table=True):    
     __tablename__ = "transaction_histories"
-    user_id: int = Field(default=None, foreign_key="users.id")
+    user_id: int = Field(default=None, foreign_key="users.id")  #   Recruiter
     point: int =  Field(default=None)   #   package_name
     price: float = Field(default=0)
     quantity: int = Field(default=0)
     total_price: float = Field(default=0)
     transaction_form: str =  Field(default='banking')
-    
+    transaction_otp: str =  Field(default=None)
 
-class PaymentOTP(TableBase, table=True):
-    __tablename__ = "payment_codes"    
-    id_code: str = Field(unique=True, nullable=False)
+    
+class DrawHistory(TableBase, table=True):    
+    __tablename__ = "draw_histories"
+    user_id: int = Field(default=None, foreign_key="users.id")  #   Collaborator
+    point: int =  Field(default=None) 
+    transaction_form: str =  Field(default='banking')
+    draw_status: str = Field(default='pending')

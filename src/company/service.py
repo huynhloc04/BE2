@@ -232,6 +232,13 @@ class Company:
     
     
     @staticmethod
+    def check_company_exist(db_session: Session, current_user):
+        query = select(model.Company).where(model.Company.user_id == current_user.id)
+        result = db_session.execute(query).scalars().first()
+        return True if result else False
+    
+    
+    @staticmethod
     def list_city():
         cities = [
             "Hà Nội", "Hồ Chí Minh", "An Giang", "Bà Rịa - Vũng Tàu", "Bạc Liêu", "Bắc Giang", "Bắc Kạn", "Bắc Ninh", "Bến Tre", "Bình Định", "Bình Dương", "Bình Phước", "Bình Thuận", "Cà Mau", "Cần Thơ", "Cao Bằng", "Đà Nẵng", "Đắk Lắk", "Đắk Nông", "Điện Biên", "Đồng Nai", "Đồng Tháp", "Gia Lai", "Hà Giang", "Hà Nam", "Hà Tĩnh", "Hải Dương", "Hải Phòng", "Hậu Giang", "Hòa Bình", "Hưng Yên", "Khánh Hòa", "Kiên Giang", "Kon Tum", "Lai Châu", "Lâm Đồng", "Lạng Sơn", "Lào Cai", "Long An", "Nam Định", "Nghệ An", "Ninh Bình", "Ninh Thuận", "Phú Thọ", "Phú Yên", "Quảng Bình", "Quảng Nam", "Quảng Ngãi", "Quảng Ninh", "Quảng Trị", "Sóc Trăng", "Sơn La", "Tây Ninh", "Thái Bình", "Thái Nguyên", "Thanh Hóa", "Thừa Thiên Huế", "Tiền Giang", "Trà Vinh", "Tuyên Quang", "Vĩnh Long", "Vĩnh Phúc", "Yên Bái" 
@@ -255,15 +262,22 @@ class Company:
         return industries
     
     
+class Bank:
+    
+    @staticmethod
+    def add_bank_info(data: schema.BankBase, db_session: Session, current_user):
+        bank_db = model.Bank(
+                        user_id=current_user.id,
+                        bank_name=data.bank_name,
+                        branch_name=data.branch_name,
+                        account_owner=data.account_owner,
+                        account_number=data.account_number
+        )
+        db_session.add(bank_db)
+        db.commit_rollback(db_session)
+    
+    
 class General:   
-
-    # def extract_time(data):
-    #     my_datetime = datetime.fromisoformat(datetime_string)
-    #     # Extracting date, month, and year
-    #     day = my_datetime.day
-    #     month = my_datetime.month
-    #     year = my_datetime.year
-    #     return f""
 
     @staticmethod
     def give_user_point(point: float, db_session: Session, current_user):

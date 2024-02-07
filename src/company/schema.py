@@ -5,9 +5,6 @@ from enum import Enum
 from fastapi import File, Form, UploadFile, Query
 from pydantic import BaseModel
 
-
-    
-    
     
 class Industry(str, Enum):
     education = "Education", 
@@ -196,3 +193,10 @@ class CompanyUpdate(BaseModel):
             facebook=facebook,
             instagram=instagram
         )
+
+class BankBase(BaseModel):
+    user_id: int
+    bank_name: str
+    branch_name: Optional[str]
+    account_owner: str
+    account_number: str

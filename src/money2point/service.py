@@ -2,10 +2,8 @@ import model
 import os, re
 import json
 import random
-import subprocess
 from datetime import datetime
-from typing import Dict, Any
-from authentication import get_current_active_user_token
+from typing import Dict, Any, List
 from fastapi import Request, HTTPException
 from config import db
 from dotenv import load_dotenv
@@ -100,26 +98,24 @@ class MoneyPoint:
                 
     
     @staticmethod
-    def purchase_point(request: Request, data_form: schema.PurchasePoint, db_session: Session, credentials):
-        id_codes = db_session.execute(select(model.PaymentOTP.id_code)).all()
+    def purchase_point(request: Request, data_form: schema.PurchasePoint, db_session: Session, current_user):
+        id_codes = db_session.execute(select(model.TransactionHistory.transaction_otp)).all()
         while True:
             payment_otp = ''.join([str(random.randint(0, 9)) for _ in range(6)])
             if payment_otp not in id_codes:
-                payment_db = model.PaymentOTP(id_code=payment_otp)
-                db_session.add(payment_db)
+                transaction_db = model.TransactionHistory(user_id=current_user.id, transaction_otp=payment_otp)
+                db_session.add(transaction_db)
                 db.commit_rollback(db_session)
                 #   Save data as temporarily
                 data = {
                     "id_code": payment_otp,
-                    "auth_credentials": credentials.credentials,
                     "package_id": data_form.package_id,
                     "quantity": data_form.quantity,
                     "total_price": data_form.total_price,
                     "transaction_form": data_form.transaction_form
                 }
                 #   Get current user and save transaction information for that user
-                _, customer = get_current_active_user_token(credentials.credentials, db_session)
-                with open(os.path.join(PAYMENT_DIR, f'user_{customer.id}_transaction.json'), 'w') as file:
+                with open(os.path.join(PAYMENT_DIR, f'{payment_otp}.json'), 'w') as file:
                     json.dump(data, file)
                 return {
                     "id_code": payment_otp,
@@ -129,77 +125,29 @@ class MoneyPoint:
                     "account_number": "02061973979",
                     "qr_code": os.path.join(str(request.base_url), 'static/payment/sharecv_qr.png')
                 }
-                
-    def get_current_time():
-        current_time = datetime.now()
-        # Extract year, month, and day
-        year = current_time.year
-        month = current_time.month
-        day = current_time.day
-        return f"{year}-{month}-{day}"
-        
-    #   Check to see if this consumer is the one who made the transaction   
-    @staticmethod
-    def check_customer(data: Dict[str, Any], id_code: str, total_price: float):
-        for record in data["data"]["records"]:
-            transaction_idcode = re.findall(r'\b\d+\b', record['description'])[0]
-            transaction_time = General.format_time(record['when'])
-            transaction_amount = float(abs(record['amount']))
-            if transaction_idcode == id_code and  \
-                transaction_time == MoneyPoint.get_current_time() and     \
-                transaction_amount == float(total_price):
-                return True
         
 
     @staticmethod
-    def make_transaction(db_session: Session):
-        result = subprocess.run(
-                        curl_command_str,
-                        shell=True,
-                        capture_output=True,
-                        text=True
-        )     
-        print("==============================================")
-        print(curl_command_str)
-        print("==============================================")
-        #   Get current user: customer and update data
-        _, customer = get_current_active_user_token(data['auth_credentials'], db_session)
-        #   Read saved transaction data
-        with open(os.path.join(PAYMENT_DIR, f'user_{customer.id}_transaction.json'), 'r') as file:
-            data = json.load(file)
-        #   Check wheather transaction exists
-        if not MoneyPoint.check_customer(json.loads(result.stdout), data['id_code'], data['total_price']):
+    def make_transaction(transaction: List[Dict[str, Any]], db_session: Session):
+        #   Get OTP from transaction form
+        otp = re.findall(r'\b\d+\b', transaction[0]['description'])[0]
+        #   Get transaction from DB
+        transaction = db_session.execute(select(model.TransactionHistory).where(model.TransactionHistory.transaction_otp == otp)).scalars().first()
+        if not transaction:
             raise HTTPException(status_code=404, detail="Transaction doesn't exist!")
+        #   Read saved transaction data
+        with open(os.path.join(PAYMENT_DIR, f'{otp}.json'), 'r') as file:
+            data = json.load(file)
         point_package = db_session.execute(select(model.PointPackage).where(model.PointPackage.id == data['package_id'])).scalars().first()
-        customer.point += data['quantity'] * point_package.point
+        #   Get user from user_id => Update point
+        user = db_session.execute(select(model.User).where(model.User.id == transaction.user_id)).scalars().first()
+        user.point += data['quantity'] * point_package.point
         #   Add to purchase history
-        purchase_db = model.TransactionHistory(
-                                        user_id=customer.id,
-                                        point=point_package.point,
-                                        price=point_package.price,
-                                        quantity=data['quantity'],
-                                        total_price=data['total_price'],
-                                        transaction_form=data['transaction_form']
-        ) 
-        db_session.add(purchase_db)
+        transaction.point=point_package.point,
+        transaction.price=point_package.price,
+        transaction.quantity=data['quantity'],
+        transaction.total_price=data['total_price'],
+        transaction.transaction_form=data['transaction_form']
         db.commit_rollback(db_session)
-        #   Save transaction information
-        with open(os.path.join(PAYMENT_DIR, 'transaction_info.json'), 'w') as file:
-            json.dump(json.loads(result.stdout), file)
         #   Remove saved transaction data
-        os.remove(os.path.join(PAYMENT_DIR, 'package_info.json'))
-            
-
-    @staticmethod
-    def list_history_purchase(db_session: Session, current_user):
-        query = select(model.TransactionHistory).where(model.TransactionHistory.user_id == current_user.id)
-        results = db_session.execute(query).scalars().all()
-        return [{
-            "id": result.id,
-            "point": result.point,
-            "price": result.price,
-            "quantity": result.quantity,
-            "total_price": result.total_price,
-            "transaction_form": result.transaction_form,
-            "transaction_date": result.created_at,
-        } for result in results]
+        os.remove(os.path.join(PAYMENT_DIR, f'{otp}.json'))

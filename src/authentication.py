@@ -28,22 +28,3 @@ def get_current_active_user(
             headers={"WWW-Authenticate": "Bearer"}
         )
     return token, current_user
-
-
-def get_current_active_user_token(
-                    token: str,
-                    db_session: Session = Depends(db.get_session)):
-    if service.OTPRepo.check_token(db_session, token):
-        raise HTTPException(status_code=401, detail="Authentication is required!")    
-    #   Decode
-    payload = jwt.decode(token, os.environ.get("SECRET_KEY"), algorithms=os.environ.get("ALGORITHM"))
-    email = payload.get("sub")
-        
-    current_user = service.AuthRequestRepository.get_user_by_email(db_session, email)
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Unauthorized, could not validate credentials.",
-            headers={"WWW-Authenticate": "Bearer"}
-        )
-    return token, current_user

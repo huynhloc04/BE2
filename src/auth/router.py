@@ -21,7 +21,7 @@ GOOGLE_CLIENT_SECRET =  os.getenv("GOOGLE_CLIENT_SECRET")
 google_sso = GoogleSSO(
     GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET, 
-    "http://localhost:6060/auth/callback",
+    "https://0475-2402-800-62f8-2bc4-7a79-f49-5a79-a976.ngrok-free.app/auth/callback",
     allow_insecure_http=True
 )
 

@@ -7,7 +7,8 @@ from postjob.router import router as postjob_router
 from money2point.router import router as money2point_router
 from searchcv.router import router as searchcv_router
 from company.router import router as company_router
-# from headhunt.router import router as headhunt_router
+from headhunt.router import router as headhunt_router
+from general.router import router as general_router
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi_events.middleware import EventHandlerASGIMiddleware
@@ -38,7 +39,8 @@ def init_app():
     app.include_router(company_router)
     app.include_router(postjob_router)
     app.include_router(searchcv_router)
-    # app.include_router(headhunt_router)
+    app.include_router(headhunt_router)
+    app.include_router(general_router)
     app.include_router(money2point_router)
     
     return app

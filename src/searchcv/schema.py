@@ -275,3 +275,18 @@ class InterviewStatus(str, Enum):
 class IsAcceptInterview(BaseModel):
     cv_id: int
     status: InterviewStatus
+
+    
+class CandidateStatus(str, Enum):
+    all = "all"
+    pending = "pending"
+    approved = "approved"
+    declined = "declined"
+
+    def __str__(self):
+        return f"{self.value}"
+
+class AdminListCandidate(BaseModel):
+    page_index: int
+    limit: int
+    candidate_status: CandidateStatus

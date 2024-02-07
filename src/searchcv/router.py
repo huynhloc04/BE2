@@ -304,17 +304,6 @@ def get_resume_valuate(
 
     result = service.General.get_resume_valuate(cv_id, db_session)
     
-    def parse_dict(data):
-        pairs = data.split()
-        # Initialize an empty dictionary to store the key-value pairs
-        certificate_dict = {}
-        for pair in pairs:
-            key, value = pair.split('=')
-            # Remove single quotes from the value
-            value = value.strip("'")
-            certificate_dict[key] = value
-        return certificate_dict
-    
     #   Get resume pdf file
     resume = service.General.get_detail_resume_by_id(cv_id, db_session)
     level_lst = [str(level) for level in schema.Level]
@@ -449,17 +438,7 @@ def is_accept_interview(data: schema.IsAcceptInterview, db_session: Session = De
     resume_db = service.General.get_detail_resume_by_id(data.cv_id, db_session)
     resume_db.ResumeVersion.status = schema.ResumeStatus.accepted_interview if status==schema.InterviewStatus.accept else schema.ResumeStatus.rejected_interview
     db.commit_rollback(db_session)
-
-
-@router.get("/collaborator/confirm-interview-schedule",
-             status_code=status.HTTP_200_OK, 
-             response_model=schema.CustomResponse)
-def confirm_interview_schedule(cv_id: int, db_session: Session = Depends(db.get_session)):
-
-    return schema.CustomResponse(
-                    message=None,
-                    data=None
-            )
+    
 
 #   ======== >>> Trigger a notification to Recruiter to announce that schedule has been changed...
 @router.put("/collaborator/reschedule",
@@ -481,13 +460,14 @@ def reschedule(data: schema.ChoosePlatinum, db_session: Session = Depends(db.get
 def list_interview_schedule(
                 limit: int, 
                 page_index: int,
+                request: Request,
                 db_session: Session = Depends(db.get_session),
                 credentials: HTTPAuthorizationCredentials = Security(security_bearer)):
     
     # Get curent active user
     _, current_user = get_current_active_user(db_session, credentials)
 
-    results = service.Collaborator.Resume.list_interview_schedule(db_session, current_user)
+    results = service.Collaborator.Resume.list_interview_schedule(request, db_session, current_user)
      #   Pagination
     total_items = len(results)
     total_pages = math.ceil(total_items/limit)
@@ -500,6 +480,7 @@ def list_interview_schedule(
                             "item_lst": results[(page_index-1)*limit: (page_index-1)*limit + limit]
                         }
     )
+    
 
 @router.get("/general/get-jd-pdf",
              status_code=status.HTTP_200_OK, 
@@ -527,3 +508,80 @@ def get_cv_file(request: Request,
                     message=None,
                     data=jd_file
             )
+    
+
+#   ========================================================================
+#                                   ADMIN
+#   ========================================================================
+
+
+@router.post("/admin/list-candidate",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse,
+             summary="Admin views resume valuation results.")
+def list_candidate(
+            data: schema.AdminListCandidate,
+            db_session: Session = Depends(db.get_session)):
+
+    results = service.Admin.Resume.list_candidate(data.candidate_status, db_session)
+
+    #   Pagination
+    total_items = len(results)
+    total_pages = math.ceil(total_items/data.limit)
+
+    return schema.CustomResponse(
+                        message="Get list job successfully!",
+                        data={
+                            "total_items": total_items,
+                            "total_pages": total_pages,
+                            "item_lst": results[(data.page_index-1)*data.limit: (data.page_index-1)*data.limit + data.limit]
+                        }
+    )
+    
+    
+@router.post("/admin/get-detailed-candidate",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_detailed_candidate(
+                request: Request,
+                data: schema.ResumeIndex,
+                db_session: Session = Depends(db.get_session)):
+
+    resume_info = service.Admin.Resume.get_detail_candidate(request, data.cv_id, db_session)
+    return schema.CustomResponse(
+                    message="Get resume information successfully!",
+                    data=resume_info
+            )
+
+
+@router.get("/admin/get-resume-valuate",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_resume_valuate(
+                    cv_id: int,
+                    request: Request,
+                    db_session: Session = Depends(db.get_session)):
+
+    result = service.General.get_resume_valuate(cv_id, db_session)
+    
+    #   Get resume pdf file
+    resume = service.General.get_detail_resume_by_id(cv_id, db_session)
+    level_lst = [str(level) for level in schema.Level]
+    hard_item = {
+        "level": result.hard_item if result.hard_item in level_lst else None,
+        "salary": result.hard_item if result.hard_item not in level_lst else None
+    }
+    return schema.CustomResponse(
+                    message="Get resume valuation successfully",
+                    data={
+                        "cv_id": cv_id,
+                        "cv_pdf": os.path.join(str(request.base_url), resume.ResumeVersion.cv_file),
+                        "hard_item": hard_item,
+                        "hard_point": result.hard_point,
+                        "degrees": result.degrees,
+                        "degree_point": result.degree_point,
+                        "certificates": [cert_dict for cert_dict in result.certificates],
+                        "certificates_point": result.certificates_point,
+                        "total_point": result.total_point
+                    }
+                )
