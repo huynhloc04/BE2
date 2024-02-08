@@ -262,12 +262,13 @@ class Admin:
             
             
         @staticmethod
-        def required_draw_history(db_session: Session):
+        def list_required_draw(db_session: Session):
             query = select(model.User, model.DrawHistory, model.Bank)   \
                         .join(model.User, model.User.id == model.DrawHistory.user_id)   \
                         .outerjoin(model.Bank, model.User.id == model.Bank.user_id)
             results = db_session.execute(query).all()
             return [{
+                "id": result.DrawHistory.id,
                 "account_info": [result.User.fullname, result.User.email, result.User.phone],
                 "bank_info": [result.Bank.bank_name, result.Bank.branch_name, result.Bank.account_owner, result.Bank.account_number],
                 "point": result.DrawHistory.point,
@@ -276,6 +277,27 @@ class Admin:
                 "draw_status": result.DrawHistory.draw_status,
             } for result in results]
             
+        @staticmethod
+        def cancel_required_draw(draw_id, db_session): 
+            draw_db = db_session.execute(select(model.DrawHistory).where(model.DrawHistory.id == draw_id)).scalars().first()
+            if not draw_db:
+                raise HTTPException(status_code=404, detail="Draw doesn't exist!")      
+            #   Update status
+            draw_db.draw_status = 'canceled'
+            db.commit_rollback(db_session)
+            
+        @staticmethod
+        def restore_required_draw(draw_id, db_session): 
+            draw_db = db_session.execute(select(model.DrawHistory).where(model.DrawHistory.id == draw_id)).scalars().first()
+            if not draw_db:
+                raise HTTPException(status_code=404, detail="Draw doesn't exist!")      
+            #   Update status
+            draw_db.draw_status = 'pending'
+            db.commit_rollback(db_session)
+            
+        @staticmethod
+        def money_transfer_history(db_session: Session):
+            pass
         
         
         

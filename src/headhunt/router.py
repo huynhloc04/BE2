@@ -809,7 +809,7 @@ def list_candidate(
     )
     
     
-@router.post("/collaborator/get-detailed-candidate",
+@router.post("/admin/get-detailed-candidate",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
 def get_detailed_candidate(

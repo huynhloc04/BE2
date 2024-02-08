@@ -18,6 +18,11 @@ class ResumeIndex(BaseModel):
     
 class JobIndex(BaseModel):
     job_id: int
+    
+class DrawBase(BaseModel):
+    page_index: int
+    limit: int
+    draw_id: int
 
     
 class DrawStatus(str, Enum):

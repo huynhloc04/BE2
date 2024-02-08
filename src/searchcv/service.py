@@ -341,11 +341,11 @@ class Recruiter:
                 return {
                     "candidate_id": candidate_id,
                     "job_service": job_result.job_service,
-                    "candidate_name": "Họ và tên",
+                    "candidate_name": "Candidate's Name",
                     "current_job": resume_result.ResumeVersion.current_job,
                     "industry": resume_result.ResumeVersion.industry,
                     "status": resume_result.ResumeVersion.status,
-                    "cv_point": General.get_resume_valuate(candidate_id, db_session).total_point,
+                    "total_point": General.get_resume_valuate(candidate_id, db_session).total_point,
                     "avatar": os.path.join(str(request.base_url), "static/resume/avatar/default_avatar.png"),
                     "birthday": resume_result.ResumeVersion.birthday,
                     "gender": resume_result.ResumeVersion.gender,
@@ -360,7 +360,7 @@ class Recruiter:
                     "current_job": resume_result.ResumeVersion.current_job,
                     "industry": resume_result.ResumeVersion.industry,
                     "status": resume_result.ResumeVersion.status,
-                    "cv_point": General.get_resume_valuate(candidate_id, db_session).total_point,
+                    "total_point": General.get_resume_valuate(candidate_id, db_session).total_point,
                     "avatar": os.path.join(str(request.base_url), "static/resume/avatar/default_avatar.png"),
                     "birthday": resume_result.ResumeVersion.birthday,
                     "gender": resume_result.ResumeVersion.gender,
@@ -371,20 +371,22 @@ class Recruiter:
                 pass
 
 
+
         @staticmethod
         def list_candidate(state: schema.CandidateState, db_session: Session): 
             
             if state == schema.CandidateState.all:
-                resume_results = db_session.execute(select(model.ResumeVersion)    \
-                                                .where(model.ResumeVersion.is_lastest == True)).scalars().all()
+                resume_results = db_session.execute(select(model.Resume, model.ResumeVersion)    \
+                                                .join(model.ResumeVersion, model.Resume.id == model.ResumeVersion.cv_id)
+                                                .where(model.ResumeVersion.is_lastest == True)).all()
                 return [{
-                        "id": result.cv_id,
-                        "fullname": result.name,
-                        "job_title": result.current_job,
-                        "industry": result.industry,
-                        "status": result.status,
-                        "job_service": General.get_job_from_resume(result.cv_id, db_session).job_service,
-                        "referred_time": result.created_at
+                        "id": result.ResumeVersion.cv_id,
+                        "fullname": result.ResumeVersion.name,
+                        "job_title": result.ResumeVersion.current_job,
+                        "industry": result.ResumeVersion.industry,
+                        "status": result.ResumeVersion.status,
+                        "job_service": General.get_job_from_resume(result.Resume.id, db_session).job_service if result.Resume.job_id else "SearchCV",
+                        "referred_time": result.ResumeVersion.created_at
                     } for result in resume_results]
             
             elif state == schema.CandidateState.new_candidate:

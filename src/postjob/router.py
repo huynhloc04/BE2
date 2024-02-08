@@ -298,10 +298,10 @@ def confirm_interview(
              status_code=status.HTTP_201_CREATED, 
              response_model=schema.CustomResponse)
 def cancel_interview(
-        data: schema.ResumeIndex,
+        cv_id: int,
         db_session: Session = Depends(db.get_session)):
 
-    response = service.Recruiter.Resume.cancel_interview(data, db_session)
+    response = service.Recruiter.Resume.cancel_interview(cv_id, db_session)
     return schema.CustomResponse(
                     message=f"Choose platinum package successfully.",
                     data=response
@@ -437,6 +437,21 @@ def list_candidate(
                             "item_lst": results[(data.page_index-1)*data.limit: (data.page_index-1)*data.limit + data.limit]
                         }
     )
+    
+    
+@router.post("/admin/get-detailed-candidate",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def get_detailed_candidate(
+                request: Request,
+                data: schema.ResumeIndex,
+                db_session: Session = Depends(db.get_session)):
+
+    resume_info = service.Admin.Resume.get_detail_candidate(request, data.cv_id, db_session)
+    return schema.CustomResponse(
+                    message="Get resume information successfully!",
+                    data=resume_info
+            )
 
 
 @router.post("/admin/get-matching-result",

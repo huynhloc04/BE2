@@ -222,20 +222,90 @@ def purchase_point_history(
     )
     
     
-@router.get("/admin/list-required-draw-history",
+@router.get("/admin/list-required-draw",
              status_code=status.HTTP_200_OK, 
              response_model=schema.CustomResponse)
-def required_draw_history(
+def list_required_draw(
             page_index: int,
             limit: int,
             db_session: Session = Depends(db.get_session)):
-    results = service.Admin.Resume.required_draw_history(db_session)
+    results = service.Admin.Resume.list_required_draw(db_session)
      #   Pagination
     total_items = len(results)
     total_pages = math.ceil(total_items/limit)
 
     return schema.CustomResponse(
                         message="List draw money history successfully!",
+                        data={
+                            "total_items": total_items,
+                            "total_pages": total_pages,
+                            "item_lst": results[(page_index-1)*limit: (page_index-1)*limit + limit]
+                        }
+    )
+    
+    
+@router.get("/admin/list-required-draw",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def list_required_draw(
+            page_index: int,
+            limit: int,
+            db_session: Session = Depends(db.get_session)):
+    results = service.Admin.Resume.list_required_draw(db_session)
+     #   Pagination
+    total_items = len(results)
+    total_pages = math.ceil(total_items/limit)
+
+    return schema.CustomResponse(
+                        message="List draw money history successfully!",
+                        data={
+                            "total_items": total_items,
+                            "total_pages": total_pages,
+                            "item_lst": results[(page_index-1)*limit: (page_index-1)*limit + limit]
+                        }
+    )
+    
+    
+@router.put("/admin/cancel-required-draw",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def cancel_required_draw(
+            data: schema.DrawBase,
+            db_session: Session = Depends(db.get_session)):
+    results = service.Admin.Resume.cancel_required_draw(data, db_session)
+    return schema.CustomResponse(
+                        message="Required draw canceled!",
+                        data=None
+    )
+    
+    
+@router.put("/admin/restore-required-draw",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def restore_required_draw(
+            data: schema.DrawBase,
+            db_session: Session = Depends(db.get_session)):
+    service.Admin.Resume.restore_required_draw(data, db_session)
+    return schema.CustomResponse(
+                        message="Required draw restored!",
+                        data=None
+    )
+    
+    
+@router.get("/admin/money-transfer-history",
+             status_code=status.HTTP_200_OK, 
+             response_model=schema.CustomResponse)
+def money_transfer_history(
+            page_index: int,
+            limit: int,
+            db_session: Session = Depends(db.get_session)):
+    results = service.Admin.Resume.money_transfer_history(db_session)
+     #   Pagination
+    total_items = len(results)
+    total_pages = math.ceil(total_items/limit)
+
+    return schema.CustomResponse(
+                        message="List money transfer history successfully!",
                         data={
                             "total_items": total_items,
                             "total_pages": total_pages,

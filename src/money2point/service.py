@@ -128,7 +128,33 @@ class MoneyPoint:
         
 
     @staticmethod
-    def make_transaction(transaction: List[Dict[str, Any]], db_session: Session):
+    def recruiter_make_transaction(transaction: List[Dict[str, Any]], db_session: Session):
+        #   Get OTP from transaction form
+        otp = re.findall(r'\b\d+\b', transaction[0]['description'])[0]
+        #   Get transaction from DB
+        transaction = db_session.execute(select(model.TransactionHistory).where(model.TransactionHistory.transaction_otp == otp)).scalars().first()
+        if not transaction:
+            raise HTTPException(status_code=404, detail="Transaction doesn't exist!")
+        #   Read saved transaction data
+        with open(os.path.join(PAYMENT_DIR, f'{otp}.json'), 'r') as file:
+            data = json.load(file)
+        point_package = db_session.execute(select(model.PointPackage).where(model.PointPackage.id == data['package_id'])).scalars().first()
+        #   Get user from user_id => Update point
+        user = db_session.execute(select(model.User).where(model.User.id == transaction.user_id)).scalars().first()
+        user.point += data['quantity'] * point_package.point
+        #   Add to purchase history
+        transaction.point=point_package.point,
+        transaction.price=point_package.price,
+        transaction.quantity=data['quantity'],
+        transaction.total_price=data['total_price'],
+        transaction.transaction_form=data['transaction_form']
+        db.commit_rollback(db_session)
+        #   Remove saved transaction data
+        os.remove(os.path.join(PAYMENT_DIR, f'{otp}.json'))
+        
+
+    @staticmethod
+    def recruiter_make_transaction(transaction: List[Dict[str, Any]], db_session: Session):
         #   Get OTP from transaction form
         otp = re.findall(r'\b\d+\b', transaction[0]['description'])[0]
         #   Get transaction from DB

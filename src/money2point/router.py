@@ -90,7 +90,21 @@ def make_transaction(data: dict, db_session: Session = Depends(db.get_session)):
         return
     transactions = data.get('data', [])
 
-    service.MoneyPoint.make_transaction(transactions, db_session)
+    service.MoneyPoint.recruiter_make_transaction(transactions, db_session)
+    return schema.CustomResponse(
+                    message="Transaction successfully!",
+                    data=None
+    )
+    
+    
+@router.post('/adin/make-transaction')
+def make_transaction(data: dict, db_session: Session = Depends(db.get_session)):
+    error = data.get('error', 0)
+    if error != 0:
+        return
+    transactions = data.get('data', [])
+
+    service.MoneyPoint.admin_make_transaction(transactions, db_session)
     return schema.CustomResponse(
                     message="Transaction successfully!",
                     data=None
